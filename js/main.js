@@ -38,8 +38,18 @@ app.main = {
 		rotationalVelocity:0,
 		rotationalAcceleration:0,
 		rotation:0,
+		thrusterStrength:500,
+		sideThrusterStrength:50,
 		color:'red',
 		lastLaserFrame:0
+	},
+	camera:{
+		x:0,
+		y:0,
+		rotation:0,
+		zoom:1,
+		width:0,
+		height:0
 	},
 	asteroids:[],
     // methods
@@ -56,6 +66,8 @@ app.main = {
 		this.canvas2.height = this.HEIGHT;
 		this.ctx2 = this.canvas2.getContext('2d');
 		this.makeAsteroids.bind(this)();
+		this.camera.width = this.WIDTH;
+		this.camera.height = this.HEIGHT;
 		// start the game loop
 		this.update();
 	},
@@ -127,23 +139,38 @@ app.main = {
 		ship.accelerationY = 0;
 		ship.rotationalAcceleration = 0;
 	},
-	shipThrusters:function(ship){
-		var baseAccel = [0,-50];
+	shipThrusters:function(ship, strength){
+		var baseAccel = [0,-strength];
 		var rotatedAccel = rotate(0,0,baseAccel[0],baseAccel[1],-ship.rotation);
 		ship.accelerationX = rotatedAccel[0];
 		ship.accelerationY = rotatedAccel[1];
 	},
-	shipSideThrusters: function(ship, cw){
-		ship.rotationalAcceleration = (cw)?20:-20;
+	shipSideThrusters: function(ship, strength){
+		ship.rotationalAcceleration = strength;
 	},
-	drawAsteroids: function(ctx,asteroids,ship, screenWidth,screenHeight, debug){
+	shipRotationStabilizers:function(ship){
+		ship.rotationalAcceleration = 0;
+		if(ship.rotationalVelocity>0)
+			this.shipSideThrusters(ship,-ship.sideThrusterStrength*3);
+		else if(ship.rotationalVelocity<0)
+			this.shipSideThrusters(ship,ship.sideThrusterStrength*3);
+	},
+	shipForwardStabilizers:function(ship){
+		ship.accelerationX = 0;
+		ship.accelerationY = 0;
+		//if()
+	},
+	shipSidewaysStabilizers:function(ship){
+
+	},
+	drawAsteroids: function(ctx,asteroids,camera, debug){
 		asteroids.forEach(function(asteroid){
 			//ship at center
 			if(!debug){
 			ctx.save();
-				var shipToAsteroidVector = [asteroid.x-ship.x,asteroid.y-ship.y];	
-				var rotatedVector = rotate(0,0,shipToAsteroidVector[0],shipToAsteroidVector[1],ship.rotation);
-				var finalPosition = [screenWidth/2+rotatedVector[0],screenHeight/2+rotatedVector[1]];
+				var shipToAsteroidVector = [asteroid.x-camera.x,asteroid.y-camera.y];	
+				var rotatedVector = rotate(0,0,shipToAsteroidVector[0],shipToAsteroidVector[1],camera.rotation);
+				var finalPosition = [camera.width/2+rotatedVector[0],camera.height/2+rotatedVector[1]];
 				ctx.beginPath();
 				ctx.arc(finalPosition[0],finalPosition[1],asteroid.radius,0,Math.PI*2);
 				ctx.fillStyle = asteroid.color;
@@ -170,29 +197,35 @@ app.main = {
 	 	}
 	 	
 	 	var dt = this.calculateDeltaTime();
-
+	 	this.camera.x = this.ship.x;
+	 	this.camera.y = this.ship.y;
+	 	this.camera.rotation = this.ship.rotation;
 		this.ctx.fillStyle = "black"; 
 		this.ctx.fillRect(0,0,this.WIDTH,this.HEIGHT);
-		this.drawAsteroids(this.ctx,this.asteroids,this.ship,this.WIDTH,this.HEIGHT);
+		this.drawAsteroids(this.ctx,this.asteroids,this.camera);
 		this.updateShip(dt,this.ship);
 		this.drawShip(this.ctx,this.ship,this.WIDTH,this.HEIGHT);
 
 		this.ctx2.fillStyle = "black"; 
 		this.ctx2.fillRect(0,0,this.WIDTH,this.HEIGHT);
-		this.drawAsteroids(this.ctx2,this.asteroids,this.ship,this.WIDTH,this.HEIGHT, true);
+		this.drawAsteroids(this.ctx2,this.asteroids,this.camera, true);
 		this.drawShip(this.ctx2,this.ship,this.WIDTH,this.HEIGHT, true);
 
 		if(myKeys.keydown[myKeys.KEYBOARD.KEY_W])
-			this.shipThrusters(this.ship);
+			this.shipThrusters(this.ship,this.ship.thrusterStrength);		
 		if(myKeys.keydown[myKeys.KEYBOARD.KEY_A])
-			this.shipSideThrusters(this.ship,false);
+			this.shipSideThrusters(this.ship,-this.ship.sideThrusterStrength);
 		if(myKeys.keydown[myKeys.KEYBOARD.KEY_D])
-			this.shipSideThrusters(this.ship,true);
+			this.shipSideThrusters(this.ship,this.ship.sideThrusterStrength);
+		if(myKeys.keydown[myKeys.KEYBOARD.KEY_S] && myKeys.keydown[myKeys.KEYBOARD.KEY_SHIFT])
+			this.shipRotationStabilizers(this.ship);
+		else if(myKeys.keydown[myKeys.KEYBOARD.KEY_S])
+			this.shipThrusters(this.ship,-this.ship.thrusterStrength);
 
 		if (this.debug){
 			// draw dt in bottom right corner
 		}
-		frameCount++;
+		this.frameCount++;
 	},
 	drawHUD: function(ctx){
 		ctx.save(); // NEW
