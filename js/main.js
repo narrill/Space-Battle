@@ -158,8 +158,7 @@ app.main = {
 				ctx.lineTo(-10-30*ship.activeThrusters.side,-12.5);
 				ctx.closePath();
 				ctx.fill();
-				ctx.restore();	
-				//console.log("left side thruster");
+				ctx.restore();
 			}
 			else if(ship.activeThrusters.side<0){
 				ctx.save();				
@@ -171,8 +170,31 @@ app.main = {
 				ctx.lineTo(10-30*ship.activeThrusters.side,-12.5);
 				ctx.closePath();
 				ctx.fill();
-				ctx.restore();	
-				//console.log("right side thruster");
+				ctx.restore();
+			}
+			if(ship.activeThrusters.lateral>0){
+				ctx.save();				
+				ctx.fillStyle = ship.thrusterColor;
+				ctx.beginPath();
+				ctx.moveTo(-10,0);
+				ctx.lineTo(-10,-5);
+				console.log(ship.activeThrusters.side);
+				ctx.lineTo(-20-30*ship.activeThrusters.lateral,-2.5);
+				ctx.closePath();
+				ctx.fill();
+				ctx.restore();
+			}
+			else if(ship.activeThrusters.lateral<0){
+				ctx.save();				
+				ctx.fillStyle = ship.thrusterColor;
+				ctx.beginPath();
+				ctx.moveTo(10,0);
+				ctx.lineTo(10,-5);
+				console.log(ship.activeThrusters.side);
+				ctx.lineTo(20-30*ship.activeThrusters.lateral,-2.5);
+				ctx.closePath();
+				ctx.fill();
+				ctx.restore();
 			}
 			ctx.beginPath();
 			ctx.moveTo(-20,10);
@@ -249,12 +271,18 @@ app.main = {
 		this.shipSideThrusters(ship,-ship.rotationalVelocity*ship.sideThrusterStrength);
 	},
 	shipMedialStabilizers:function(ship){
-		ship.accelerationX = 0;
-		ship.accelerationY = 0;
-		//if()
+		//ship.accelerationX = 0;
+		//ship.accelerationY = 0;
+		var rotatedForwardVector = rotate(0,0,0,1,-ship.rotation);
+		var medialVelocity = scalarComponentOf1InDirectionOf2(ship.velocityX,ship.velocityY,rotatedForwardVector[0],rotatedForwardVector[1]);
+
+		this.shipThrusters(ship,medialVelocity*ship.thrusterStrength);
 	},
 	shipLateralStabilizers:function(ship){
+		var rotatedForwardVector = rotate(0,0,0,1,-ship.rotation-90);
+		var lateralVelocity = scalarComponentOf1InDirectionOf2(ship.velocityX,ship.velocityY,rotatedForwardVector[0],rotatedForwardVector[1]);
 
+		this.shipLateralThrusters(ship,lateralVelocity*ship.lateralThrusterStrength);
 	},
 	drawAsteroids: function(ctx,asteroids,camera, debug){
 		asteroids.forEach(function(asteroid){
@@ -307,8 +335,10 @@ app.main = {
 		this.drawShip(this.ctx2,this.ship,this.camera, true);
 		//this.drawShip(this.ctx2,this.otherShip,this.camera, true);
 
-		if(myKeys.keydown[myKeys.KEYBOARD.KEY_W])
-			this.shipThrusters(this.ship,this.ship.thrusterStrength/3);		
+		if(myKeys.keydown[myKeys.KEYBOARD.KEY_W] && myKeys.keydown[myKeys.KEYBOARD.KEY_SHIFT])
+			this.shipMedialStabilizers(this.ship);
+		else if(myKeys.keydown[myKeys.KEYBOARD.KEY_W])
+			this.shipThrusters(this.ship,this.ship.thrusterStrength/3);			
 		if(myKeys.keydown[myKeys.KEYBOARD.KEY_A])
 			this.shipSideThrusters(this.ship,-this.ship.sideThrusterStrength/3);
 		if(myKeys.keydown[myKeys.KEYBOARD.KEY_D])
@@ -317,9 +347,14 @@ app.main = {
 			this.shipRotationalStabilizers(this.ship);
 		else if(myKeys.keydown[myKeys.KEYBOARD.KEY_S])
 			this.shipThrusters(this.ship,-this.ship.thrusterStrength/3);
-
-
-		
+		if((myKeys.keydown[myKeys.KEYBOARD.KEY_Q] || myKeys.keydown[myKeys.KEYBOARD.KEY_E]) && myKeys.keydown[myKeys.KEYBOARD.KEY_SHIFT])
+			this.shipLateralStabilizers(this.ship);
+		else{
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_Q])
+				this.shipLateralThrusters(this.ship,-this.ship.lateralThrusterStrength/3);
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_E])
+				this.shipLateralThrusters(this.ship,this.ship.lateralThrusterStrength/3);		
+		}
 
 		if (this.debug){
 			// draw dt in bottom right corner

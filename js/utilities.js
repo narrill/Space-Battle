@@ -126,6 +126,25 @@ function rotate(cx, cy, x, y, angle) {
     return [nx, ny];
 }
 
+function dotProduct(x1,y1,x2,y2){
+	return x1*x2+y1*y2;
+}
+
+function componentOf1InDirectionOf2(x1,y1,x2,y2){
+	if((x1==0 && y1==0) || (x2==0&&y2==0))
+		return [0,0];
+	var dot = x1*x2+y1*y2;
+	var scalar = (dot * dot)/(x2*x2+y2*y2);
+	return [scalar*x1,scalar*y1];
+}
+
+function scalarComponentOf1InDirectionOf2(x1,y1,x2,y2){
+	if((x1==0 && y1==0) || (x2==0&&y2==0))
+		return 0;
+	//var dot = x1*x2+y1*y2;
+	return (x1*x2+y1*y2)/Math.sqrt(x2*x2+y2*y2);
+}
+
 // This gives Array a randomElement() method
 Array.prototype.randomElement = function(){
 	return this[Math.floor(Math.random() * this.length)];
