@@ -35,9 +35,6 @@ app.main = {
 		velocityX:0,
 		velocityY:0,
 		rotationalVelocity:0,
-		//accelerationX:0,
-		//accelerationY:0,
-		//rotationalAcceleration:0,
 		rotation:0,
 		thrusterStrength:1500,
 		lateralThrusterStrength:1000,
@@ -56,27 +53,51 @@ app.main = {
 		rotation:0,
 		zoom:1,
 		width:0,
-		height:0
+		height:0,
+		ctx:undefined
+	},
+	worldCamera:{
+		x:0,
+		y:0,
+		rotation:0,
+		zoom:1,
+		width:0,
+		height:0,
+		ctx:undefined
 	},
 	asteroids:[],
     // methods
 	init : function() {
 		// initialize properties
-		this.canvas = document.querySelector('#canvas1');
-		this.canvas.onmousedown = this.doMousedown.bind(this);
-		this.canvas.width = this.WIDTH;
-		this.canvas.height = this.HEIGHT;
-		this.ctx = this.canvas.getContext('2d');
-		this.canvas2 = document.querySelector('#canvas2');
-		this.canvas2.onmousedown = this.doMousedown.bind(this);
-		this.canvas2.width = this.WIDTH;
-		this.canvas2.height = this.HEIGHT;
-		this.ctx2 = this.canvas2.getContext('2d');
+		var canvas = document.querySelector('#canvas1');
+		canvas.onmousedown = this.doMousedown.bind(this);
+		canvas.width = this.WIDTH;
+		canvas.height = this.HEIGHT;
+		var canvas2 = document.querySelector('#canvas2');
+		canvas2.onmousedown = this.doMousedown.bind(this);
+		canvas2.width = this.WIDTH;
+		canvas2.height = this.HEIGHT;
+		this.camera = this.initializeCamera(canvas);
+		this.worldCamera = this.initializeCamera(canvas2);
 		this.makeAsteroids.bind(this)();
-		this.camera.width = this.WIDTH;
-		this.camera.height = this.HEIGHT;
 		// start the game loop
 		this.update();
+	},
+	initializeCamera:function(camera, canvas){
+		return {
+			x:0,
+			y:0,
+			rotation:0,
+			zoom:1,
+			width:canvas.width,
+			height:canvas.height,
+			ctx:canvas.getContext('2d')
+		};
+	},
+	clearCamera:function(camera){
+		ctx = camera.ctx;
+		ctx.fillStyle = "black"; 
+		ctx.fillRect(0,0,camera.width,camera.height);
 	},
 	reset:function(){
 	},
@@ -104,123 +125,108 @@ app.main = {
 			}
 		];
 	},
-	drawShip: function(ctx, ship,camera, debug){
-		if(!debug){
-			//ship at center
-			ctx.save();
-			ctx.translate(camera.width/2,camera.height/2);
-			var dx = ship.x-camera.x;
-			var dy = ship.y-camera.y;
-			var dr = ship.rotation-camera.rotation;
-			var rotatedD = rotate(0,0,dx,dy,camera.rotation);
-			ctx.translate(rotatedD[0],rotatedD[1]);
-			ctx.rotate(dr* (Math.PI / 180));
+	drawShip: function(ship, camera, debug){
+		var ctx = camera.ctx;
+		//ship at center
+		ctx.save();
+		ctx.translate(camera.width/2,camera.height/2);
+		var dx = ship.x-camera.x;
+		var dy = ship.y-camera.y;
+		var dr = ship.rotation-camera.rotation;
+		var rotatedD = rotate(0,0,dx,dy,camera.rotation);
+		ctx.translate(rotatedD[0],rotatedD[1]);
+		ctx.rotate(dr* (Math.PI / 180));
 
-			if(ship.activeThrusters.main>0){
-				ctx.save();				
-				ctx.fillStyle = ship.thrusterColor;
-				ctx.beginPath();
-				ctx.moveTo(-15,10);
-				ctx.lineTo(-10,10);
-				ctx.lineTo(-12.5,10+30*ship.activeThrusters.main/ship.thrusterEfficiency);
-				ctx.closePath();
-				ctx.fill();
-				ctx.beginPath();
-				ctx.moveTo(15,10);
-				ctx.lineTo(10,10);
-				ctx.lineTo(12.5,10+30*ship.activeThrusters.main/ship.thrusterEfficiency);
-				ctx.closePath();
-				ctx.fill();
-				ctx.restore();
-			}
-			else if(ship.activeThrusters.main<0){
-				ctx.save();				
-				ctx.fillStyle = ship.thrusterColor;
-				ctx.beginPath();
-				ctx.moveTo(-15,0);
-				ctx.lineTo(-10,0);
-				ctx.lineTo(-12.5,-20+10*ship.activeThrusters.main/ship.thrusterEfficiency);
-				ctx.closePath();
-				ctx.fill();
-				ctx.beginPath();
-				ctx.moveTo(15,0);
-				ctx.lineTo(10,0);
-				ctx.lineTo(12.5,-20+10*ship.activeThrusters.main/ship.thrusterEfficiency);
-				ctx.closePath();
-				ctx.fill();
-				ctx.restore();
-			}
-			if(ship.activeThrusters.side>0){
-				ctx.save();				
-				ctx.fillStyle = ship.thrusterColor;
-				ctx.beginPath();
-				ctx.moveTo(-5,-10);
-				ctx.lineTo(-5,-15);
-				console.log(ship.activeThrusters.side);
-				ctx.lineTo(-20-30*ship.activeThrusters.side/ship.thrusterEfficiency,-12.5);
-				ctx.closePath();
-				ctx.fill();
-				ctx.restore();
-			}
-			else if(ship.activeThrusters.side<0){
-				ctx.save();				
-				ctx.fillStyle = ship.thrusterColor;
-				ctx.beginPath();
-				ctx.moveTo(5,-10);
-				ctx.lineTo(5,-15);
-				console.log(ship.activeThrusters.side);
-				ctx.lineTo(20-30*ship.activeThrusters.side/ship.thrusterEfficiency,-12.5);
-				ctx.closePath();
-				ctx.fill();
-				ctx.restore();
-			}
-			if(ship.activeThrusters.lateral>0){
-				ctx.save();				
-				ctx.fillStyle = ship.thrusterColor;
-				ctx.beginPath();
-				ctx.moveTo(-10,0);
-				ctx.lineTo(-10,-5);
-				console.log(ship.activeThrusters.side);
-				ctx.lineTo(-20-30*ship.activeThrusters.lateral/ship.thrusterEfficiency,-2.5);
-				ctx.closePath();
-				ctx.fill();
-				ctx.restore();
-			}
-			else if(ship.activeThrusters.lateral<0){
-				ctx.save();				
-				ctx.fillStyle = ship.thrusterColor;
-				ctx.beginPath();
-				ctx.moveTo(10,0);
-				ctx.lineTo(10,-5);
-				console.log(ship.activeThrusters.side);
-				ctx.lineTo(20-30*ship.activeThrusters.lateral/ship.thrusterEfficiency,-2.5);
-				ctx.closePath();
-				ctx.fill();
-				ctx.restore();
-			}
+		if(ship.activeThrusters.main>0){
+			ctx.save();				
+			ctx.fillStyle = ship.thrusterColor;
 			ctx.beginPath();
-			ctx.moveTo(-20,10);
-			ctx.lineTo(20,10);
-			ctx.lineTo(0,-30);
+			ctx.moveTo(-15,10);
+			ctx.lineTo(-10,10);
+			ctx.lineTo(-12.5,10+30*ship.activeThrusters.main/ship.thrusterEfficiency);
 			ctx.closePath();
-			ctx.fillStyle = ship.color;
+			ctx.fill();
+			ctx.beginPath();
+			ctx.moveTo(15,10);
+			ctx.lineTo(10,10);
+			ctx.lineTo(12.5,10+30*ship.activeThrusters.main/ship.thrusterEfficiency);
+			ctx.closePath();
 			ctx.fill();
 			ctx.restore();
 		}
-		else{
-			//ship at world pos
-			ctx.save();
-			ctx.translate(ship.x,ship.y);
-			ctx.rotate(ship.rotation * (Math.PI / 180));
+		else if(ship.activeThrusters.main<0){
+			ctx.save();				
+			ctx.fillStyle = ship.thrusterColor;
 			ctx.beginPath();
-			ctx.moveTo(-20,10);
-			ctx.lineTo(20,10);
-			ctx.lineTo(0,-30);
+			ctx.moveTo(-15,0);
+			ctx.lineTo(-10,0);
+			ctx.lineTo(-12.5,-20+10*ship.activeThrusters.main/ship.thrusterEfficiency);
 			ctx.closePath();
-			ctx.fillStyle = ship.color;
+			ctx.fill();
+			ctx.beginPath();
+			ctx.moveTo(15,0);
+			ctx.lineTo(10,0);
+			ctx.lineTo(12.5,-20+10*ship.activeThrusters.main/ship.thrusterEfficiency);
+			ctx.closePath();
 			ctx.fill();
 			ctx.restore();
 		}
+		if(ship.activeThrusters.side>0){
+			ctx.save();				
+			ctx.fillStyle = ship.thrusterColor;
+			ctx.beginPath();
+			ctx.moveTo(-5,-10);
+			ctx.lineTo(-5,-15);
+			console.log(ship.activeThrusters.side);
+			ctx.lineTo(-20-30*ship.activeThrusters.side/ship.thrusterEfficiency,-12.5);
+			ctx.closePath();
+			ctx.fill();
+			ctx.restore();
+		}
+		else if(ship.activeThrusters.side<0){
+			ctx.save();				
+			ctx.fillStyle = ship.thrusterColor;
+			ctx.beginPath();
+			ctx.moveTo(5,-10);
+			ctx.lineTo(5,-15);
+			console.log(ship.activeThrusters.side);
+			ctx.lineTo(20-30*ship.activeThrusters.side/ship.thrusterEfficiency,-12.5);
+			ctx.closePath();
+			ctx.fill();
+			ctx.restore();
+		}
+		if(ship.activeThrusters.lateral>0){
+			ctx.save();				
+			ctx.fillStyle = ship.thrusterColor;
+			ctx.beginPath();
+			ctx.moveTo(-10,0);
+			ctx.lineTo(-10,-5);
+			console.log(ship.activeThrusters.side);
+			ctx.lineTo(-20-30*ship.activeThrusters.lateral/ship.thrusterEfficiency,-2.5);
+			ctx.closePath();
+			ctx.fill();
+			ctx.restore();
+		}
+		else if(ship.activeThrusters.lateral<0){
+			ctx.save();				
+			ctx.fillStyle = ship.thrusterColor;
+			ctx.beginPath();
+			ctx.moveTo(10,0);
+			ctx.lineTo(10,-5);
+			console.log(ship.activeThrusters.side);
+			ctx.lineTo(20-30*ship.activeThrusters.lateral/ship.thrusterEfficiency,-2.5);
+			ctx.closePath();
+			ctx.fill();
+			ctx.restore();
+		}
+		ctx.beginPath();
+		ctx.moveTo(-20,10);
+		ctx.lineTo(20,10);
+		ctx.lineTo(0,-30);
+		ctx.closePath();
+		ctx.fillStyle = ship.color;
+		ctx.fill();
+		ctx.restore();
 	},
 	updateShip: function(ship,dt){
 		var accelerationX = 0;
@@ -302,29 +308,19 @@ app.main = {
 
 		this.shipLateralThrusters(ship,lateralVelocity*ship.stabilizerStrength);
 	},
-	drawAsteroids: function(ctx,asteroids,camera, debug){
+	drawAsteroids: function(asteroids,camera, debug){
+		var ctx = camera.ctx;
 		asteroids.forEach(function(asteroid){
 			//ship at center
-			if(!debug){
 			ctx.save();
-				var shipToAsteroidVector = [asteroid.x-camera.x,asteroid.y-camera.y];	
-				var rotatedVector = rotate(0,0,shipToAsteroidVector[0],shipToAsteroidVector[1],camera.rotation);
-				var finalPosition = [camera.width/2+rotatedVector[0],camera.height/2+rotatedVector[1]];
-				ctx.beginPath();
-				ctx.arc(finalPosition[0],finalPosition[1],asteroid.radius,0,Math.PI*2);
-				ctx.fillStyle = asteroid.color;
-				ctx.fill();
-				ctx.restore();
-			}
-			else{
-				//world pos
-				ctx.save();
-				ctx.beginPath();
-				ctx.arc(asteroid.x,asteroid.y,asteroid.radius,0,Math.PI*2);
-				ctx.fillStyle = asteroid.color;
-				ctx.fill();
-				ctx.restore();
-			}
+			var shipToAsteroidVector = [asteroid.x-camera.x,asteroid.y-camera.y];	
+			var rotatedVector = rotate(0,0,shipToAsteroidVector[0],shipToAsteroidVector[1],camera.rotation);
+			var finalPosition = [camera.width/2+rotatedVector[0],camera.height/2+rotatedVector[1]];
+			ctx.beginPath();
+			ctx.arc(finalPosition[0],finalPosition[1],asteroid.radius,0,Math.PI*2);
+			ctx.fillStyle = asteroid.color;
+			ctx.fill();
+			ctx.restore();
 		});
 	},
 	update: function(){
@@ -337,20 +333,15 @@ app.main = {
 	 	
 	 	var dt = this.calculateDeltaTime();
 	 	
-		this.ctx.fillStyle = "black"; 
-		this.ctx.fillRect(0,0,this.WIDTH,this.HEIGHT);
-		this.drawAsteroids(this.ctx,this.asteroids,this.camera);
+		this.clearCamera(this.camera);
+		this.clearCamera(this.worldCamera);
+		this.drawAsteroids(this.asteroids,this.camera);
 		//this.drawShip(this.ctx,this.otherShip,this.camera);
 		this.updateShip(this.ship,dt);
 		this.camera.x = this.ship.x;
 	 	this.camera.y = this.ship.y;
 	 	this.camera.rotation = this.ship.rotation;
-		this.drawShip(this.ctx,this.ship,this.camera);
-
-		this.ctx2.fillStyle = "black"; 
-		this.ctx2.fillRect(0,0,this.WIDTH,this.HEIGHT);
-		this.drawAsteroids(this.ctx2,this.asteroids,this.camera, true);
-		this.drawShip(this.ctx2,this.ship,this.camera, true);
+		this.drawShip(this.ship,this.camera);
 		//this.drawShip(this.ctx2,this.otherShip,this.camera, true);
 		this.shipClearThrusters(this.ship);
 		if(myKeys.keydown[myKeys.KEYBOARD.KEY_W] && myKeys.keydown[myKeys.KEYBOARD.KEY_SHIFT])
