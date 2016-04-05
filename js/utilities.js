@@ -145,6 +145,12 @@ function scalarComponentOf1InDirectionOf2(x1,y1,x2,y2){
 	return (x1*x2+y1*y2)/Math.sqrt(x2*x2+y2*y2);
 }
 
+function worldPointToCameraSpace (xw,yw, camera){
+	var cameraToPointVector = [xw-camera.x,yw-camera.y];
+	var rotatedVector = rotate(0,0,cameraToPointVector[0],cameraToPointVector[1],camera.rotation);
+	return [camera.width/2+rotatedVector[0],camera.height/2+rotatedVector[1]];
+}
+
 // This gives Array a randomElement() method
 Array.prototype.randomElement = function(){
 	return this[Math.floor(Math.random() * this.length)];

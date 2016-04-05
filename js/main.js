@@ -16,13 +16,6 @@ var app = app || {};
  
  */
 app.main = {
-	//  properties
-    WIDTH : 640, 
-    HEIGHT: 480,
-    canvas: undefined,
-    canvas2:undefined,
-    ctx: undefined,
-    ctx2:undefined,
    	lastTime: 0, // used by calculateDeltaTime() 
     debug: true,
 	paused:false,
@@ -38,9 +31,9 @@ app.main = {
 		rotation:0,
 		thrusterStrength:1500,
 		lateralThrusterStrength:1000,
-		sideThrusterStrength:150,
+		sideThrusterStrength:500,
 		color:'red',
-		thrusterColor:'blue',
+		thrusterColor:'green',
 		thrusterEfficiency:1000,
 		stabilizerStrength:60,
 		lastLaserTime:0,
@@ -65,37 +58,42 @@ app.main = {
 		height:0,
 		ctx:undefined
 	},
+	grid:{
+		gridLines: 50,
+		gridSpacing: 100,
+		gridStart: [-1000,-1000]
+	},
 	asteroids:[],
     // methods
 	init : function() {
 		// initialize properties
 		var canvas = document.querySelector('#canvas1');
 		canvas.onmousedown = this.doMousedown.bind(this);
-		canvas.width = this.WIDTH;
-		canvas.height = this.HEIGHT;
+		//canvas.width = this.WIDTH;
+		//canvas.height = this.HEIGHT;
 		var canvas2 = document.querySelector('#canvas2');
 		canvas2.onmousedown = this.doMousedown.bind(this);
-		canvas2.width = this.WIDTH;
-		canvas2.height = this.HEIGHT;
+		//canvas2.width = this.WIDTH;
+		//canvas2.height = this.HEIGHT;
 		this.camera = this.initializeCamera(canvas);
-		this.worldCamera = this.initializeCamera(canvas2);
+		this.worldCamera = this.initializeCamera(canvas2, 200, 200);
 		this.makeAsteroids.bind(this)();
 		// start the game loop
 		this.update();
 	},
-	initializeCamera:function(camera, canvas){
+	initializeCamera:function(canvas,x,y,rotation,zoom){
 		return {
-			x:0,
-			y:0,
-			rotation:0,
-			zoom:1,
+			x:(x) ? x : 0,
+			y:(y) ? y : 0,
+			rotation:(rotation) ? rotation : 0,
+			zoom: (zoom) ? zoom : 1,
 			width:canvas.width,
 			height:canvas.height,
 			ctx:canvas.getContext('2d')
 		};
 	},
 	clearCamera:function(camera){
-		ctx = camera.ctx;
+		var ctx = camera.ctx;
 		ctx.fillStyle = "black"; 
 		ctx.fillRect(0,0,camera.width,camera.height);
 	},
@@ -103,25 +101,59 @@ app.main = {
 	},
 	doMousedown: function(e){
 	},
+	drawGrid:function(camera){
+		var ctx = camera.ctx;
+		var gridLines = this.grid.gridLines;
+		var gridSpacing = this.grid.gridSpacing;
+		var gridStart = this.grid.gridStart;
+		for(var x = 0;x<=gridLines;x++){
+			var start = [gridStart[0]+x*gridSpacing,gridStart[1]];
+			var end = [start[0],gridStart[1]+gridLines*gridSpacing];
+			start = worldPointToCameraSpace(start[0],start[1],camera);
+			end = worldPointToCameraSpace(end[0],end[1],camera);
+			ctx.save();
+			ctx.beginPath();
+			ctx.moveTo(start[0],start[1]);
+			ctx.lineTo(end[0],end[1]);
+			ctx.strokeWidth = 5;
+			ctx.strokeStyle = 'blue';
+			ctx.stroke();
+			ctx.restore();
+		}
+		for(var y = 0;y<=gridLines;y++){
+			var start = [gridStart[0],gridStart[0]+y*gridSpacing];
+			var end = [gridStart[0]+gridLines*gridSpacing,start[1]];
+			start = worldPointToCameraSpace(start[0],start[1],camera);
+			end = worldPointToCameraSpace(end[0],end[1],camera);
+			ctx.save();
+			ctx.beginPath();
+			ctx.moveTo(start[0],start[1]);
+			ctx.lineTo(end[0],end[1]);
+			ctx.strokeWidth = 5;
+			ctx.strokeStyle = 'blue';
+			ctx.stroke();
+			ctx.restore();
+		}
+	},
 	makeAsteroids:function(){
 		this.asteroids = [
 			{
 				x:50,
 				y:50,
 				radius:50,
-				color:'brown'
+				color:'saddlebrown'
 			},
 			{
 				x:400,
 				y:100,
 				radius:50,
-				color:'brown'
+				color:'saddlebrown'
 			},
 			{
 				x:350,
 				y:400,
 				radius:50,
-				color:'brown'
+				color:'saddlebrown'
 			}
 		];
 	},
@@ -177,7 +209,7 @@ app.main = {
 			ctx.beginPath();
 			ctx.moveTo(-5,-10);
 			ctx.lineTo(-5,-15);
-			console.log(ship.activeThrusters.side);
+			//console.log(ship.activeThrusters.side);
 			ctx.lineTo(-20-30*ship.activeThrusters.side/ship.thrusterEfficiency,-12.5);
 			ctx.closePath();
 			ctx.fill();
@@ -189,7 +221,7 @@ app.main = {
 			ctx.beginPath();
 			ctx.moveTo(5,-10);
 			ctx.lineTo(5,-15);
-			console.log(ship.activeThrusters.side);
+			//console.log(ship.activeThrusters.side);
 			ctx.lineTo(20-30*ship.activeThrusters.side/ship.thrusterEfficiency,-12.5);
 			ctx.closePath();
 			ctx.fill();
@@ -201,7 +233,7 @@ app.main = {
 			ctx.beginPath();
 			ctx.moveTo(-10,0);
 			ctx.lineTo(-10,-5);
-			console.log(ship.activeThrusters.side);
+			//console.log(ship.activeThrusters.side);
 			ctx.lineTo(-20-30*ship.activeThrusters.lateral/ship.thrusterEfficiency,-2.5);
 			ctx.closePath();
 			ctx.fill();
@@ -213,7 +245,7 @@ app.main = {
 			ctx.beginPath();
 			ctx.moveTo(10,0);
 			ctx.lineTo(10,-5);
-			console.log(ship.activeThrusters.side);
+			//console.log(ship.activeThrusters.side);
 			ctx.lineTo(20-30*ship.activeThrusters.lateral/ship.thrusterEfficiency,-2.5);
 			ctx.closePath();
 			ctx.fill();
@@ -313,9 +345,7 @@ app.main = {
 		asteroids.forEach(function(asteroid){
 			//ship at center
 			ctx.save();
-			var shipToAsteroidVector = [asteroid.x-camera.x,asteroid.y-camera.y];	
-			var rotatedVector = rotate(0,0,shipToAsteroidVector[0],shipToAsteroidVector[1],camera.rotation);
-			var finalPosition = [camera.width/2+rotatedVector[0],camera.height/2+rotatedVector[1]];
+			var finalPosition = worldPointToCameraSpace(asteroid.x,asteroid.y,camera);
 			ctx.beginPath();
 			ctx.arc(finalPosition[0],finalPosition[1],asteroid.radius,0,Math.PI*2);
 			ctx.fillStyle = asteroid.color;
@@ -327,7 +357,8 @@ app.main = {
 	 	this.animationID = requestAnimationFrame(this.update.bind(this));
 	 	
 	 	if(this.paused){
-	 		this.drawPauseScreen(this.ctx);
+	 		this.drawPauseScreen(this.camera);
+	 		this.drawPauseScreen(this.worldCamera);
 	 		return;
 	 	}
 	 	
@@ -335,15 +366,21 @@ app.main = {
 	 	
 		this.clearCamera(this.camera);
 		this.clearCamera(this.worldCamera);
+		this.drawGrid(this.camera);
+		this.drawGrid(this.worldCamera);
 		this.drawAsteroids(this.asteroids,this.camera);
+		this.drawAsteroids(this.asteroids,this.worldCamera);
 		//this.drawShip(this.ctx,this.otherShip,this.camera);
 		this.updateShip(this.ship,dt);
 		this.camera.x = this.ship.x;
 	 	this.camera.y = this.ship.y;
 	 	this.camera.rotation = this.ship.rotation;
 		this.drawShip(this.ship,this.camera);
+		this.drawShip(this.ship,this.worldCamera);
 		//this.drawShip(this.ctx2,this.otherShip,this.camera, true);
 		this.shipClearThrusters(this.ship);
+		/*
+		//manual controls
 		if(myKeys.keydown[myKeys.KEYBOARD.KEY_W] && myKeys.keydown[myKeys.KEYBOARD.KEY_SHIFT])
 			this.shipMedialStabilizers(this.ship);
 		else if(myKeys.keydown[myKeys.KEYBOARD.KEY_W])
@@ -363,7 +400,30 @@ app.main = {
 				this.shipLateralThrusters(this.ship,-this.ship.lateralThrusterStrength/3);
 			if(myKeys.keydown[myKeys.KEYBOARD.KEY_E])
 				this.shipLateralThrusters(this.ship,this.ship.lateralThrusterStrength/3);		
-		}
+		}*/
+
+		//assisted controls
+		//medial motion
+		if(myKeys.keydown[myKeys.KEYBOARD.KEY_W])
+			this.shipThrusters(this.ship,this.ship.thrusterStrength/3);
+		if(myKeys.keydown[myKeys.KEYBOARD.KEY_S])
+			this.shipThrusters(this.ship,-this.ship.thrusterStrength/3);
+		if(!(myKeys.keydown[myKeys.KEYBOARD.KEY_W] || myKeys.keydown[myKeys.KEYBOARD.KEY_S]))
+			this.shipMedialStabilizers(this.ship);
+		//lateral motion
+		if(myKeys.keydown[myKeys.KEYBOARD.KEY_Q])
+			this.shipLateralThrusters(this.ship,-this.ship.lateralThrusterStrength/3);
+		if(myKeys.keydown[myKeys.KEYBOARD.KEY_E])
+			this.shipLateralThrusters(this.ship,this.ship.lateralThrusterStrength/3);
+		if(!(myKeys.keydown[myKeys.KEYBOARD.KEY_Q] || myKeys.keydown[myKeys.KEYBOARD.KEY_E]))
+			this.shipLateralStabilizers(this.ship);
+		//rotational motion
+		if(myKeys.keydown[myKeys.KEYBOARD.KEY_A])
+			this.shipSideThrusters(this.ship,-this.ship.sideThrusterStrength/3);
+		if(myKeys.keydown[myKeys.KEYBOARD.KEY_D])
+			this.shipSideThrusters(this.ship,this.ship.sideThrusterStrength/3);
+		if(!(myKeys.keydown[myKeys.KEYBOARD.KEY_A] || myKeys.keydown[myKeys.KEYBOARD.KEY_D]))
+			this.shipRotationalStabilizers(this.ship);
 
 		if (this.debug){
 			// draw dt in bottom right corner
@@ -375,13 +435,14 @@ app.main = {
 		
 		ctx.restore(); // NEW
 	},
-	drawPauseScreen:function(ctx){
+	drawPauseScreen:function(camera){
+		var ctx = camera.ctx;
 		ctx.save();
 		ctx.fillStyle = "black",
-		ctx.fillRect(0,0,this.WIDTH,this.HEIGHT);
+		ctx.fillRect(0,0,camera.width,camera.height);
 		ctx.textAlign = 'center';
 		ctx.textBaseline = 'middle';
-		this.fillText(this.ctx,"...paused...",this.WIDTH/2,this.HEIGHT/2,"5pt courier",'white');
+		this.fillText(ctx,"...paused...",camera.width/2,camera.height/2,"5pt courier",'white');
 		ctx.restore();
 	},
 	pauseGame:function(){
