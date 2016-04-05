@@ -35,15 +35,17 @@ app.main = {
 		velocityX:0,
 		velocityY:0,
 		rotationalVelocity:0,
-		accelerationX:0,
-		accelerationY:0,
-		rotationalAcceleration:0,
+		//accelerationX:0,
+		//accelerationY:0,
+		//rotationalAcceleration:0,
 		rotation:0,
 		thrusterStrength:1500,
 		lateralThrusterStrength:1000,
 		sideThrusterStrength:150,
 		color:'red',
 		thrusterColor:'blue',
+		thrusterEfficiency:1000,
+		stabilizerStrength:60,
 		lastLaserTime:0,
 		laserCD: 1,
 		activeThrusters:{}//leave this empty - it gets filled by the thruster methods
@@ -120,13 +122,13 @@ app.main = {
 				ctx.beginPath();
 				ctx.moveTo(-15,10);
 				ctx.lineTo(-10,10);
-				ctx.lineTo(-12.5,10+30*ship.activeThrusters.main);
+				ctx.lineTo(-12.5,10+30*ship.activeThrusters.main/ship.thrusterEfficiency);
 				ctx.closePath();
 				ctx.fill();
 				ctx.beginPath();
 				ctx.moveTo(15,10);
 				ctx.lineTo(10,10);
-				ctx.lineTo(12.5,10+30*ship.activeThrusters.main);
+				ctx.lineTo(12.5,10+30*ship.activeThrusters.main/ship.thrusterEfficiency);
 				ctx.closePath();
 				ctx.fill();
 				ctx.restore();
@@ -137,13 +139,13 @@ app.main = {
 				ctx.beginPath();
 				ctx.moveTo(-15,0);
 				ctx.lineTo(-10,0);
-				ctx.lineTo(-12.5,-20+10*ship.activeThrusters.main);
+				ctx.lineTo(-12.5,-20+10*ship.activeThrusters.main/ship.thrusterEfficiency);
 				ctx.closePath();
 				ctx.fill();
 				ctx.beginPath();
 				ctx.moveTo(15,0);
 				ctx.lineTo(10,0);
-				ctx.lineTo(12.5,-20+10*ship.activeThrusters.main);
+				ctx.lineTo(12.5,-20+10*ship.activeThrusters.main/ship.thrusterEfficiency);
 				ctx.closePath();
 				ctx.fill();
 				ctx.restore();
@@ -155,7 +157,7 @@ app.main = {
 				ctx.moveTo(-5,-10);
 				ctx.lineTo(-5,-15);
 				console.log(ship.activeThrusters.side);
-				ctx.lineTo(-10-30*ship.activeThrusters.side,-12.5);
+				ctx.lineTo(-20-30*ship.activeThrusters.side/ship.thrusterEfficiency,-12.5);
 				ctx.closePath();
 				ctx.fill();
 				ctx.restore();
@@ -167,7 +169,7 @@ app.main = {
 				ctx.moveTo(5,-10);
 				ctx.lineTo(5,-15);
 				console.log(ship.activeThrusters.side);
-				ctx.lineTo(10-30*ship.activeThrusters.side,-12.5);
+				ctx.lineTo(20-30*ship.activeThrusters.side/ship.thrusterEfficiency,-12.5);
 				ctx.closePath();
 				ctx.fill();
 				ctx.restore();
@@ -179,7 +181,7 @@ app.main = {
 				ctx.moveTo(-10,0);
 				ctx.lineTo(-10,-5);
 				console.log(ship.activeThrusters.side);
-				ctx.lineTo(-20-30*ship.activeThrusters.lateral,-2.5);
+				ctx.lineTo(-20-30*ship.activeThrusters.lateral/ship.thrusterEfficiency,-2.5);
 				ctx.closePath();
 				ctx.fill();
 				ctx.restore();
@@ -191,7 +193,7 @@ app.main = {
 				ctx.moveTo(10,0);
 				ctx.lineTo(10,-5);
 				console.log(ship.activeThrusters.side);
-				ctx.lineTo(20-30*ship.activeThrusters.lateral,-2.5);
+				ctx.lineTo(20-30*ship.activeThrusters.lateral/ship.thrusterEfficiency,-2.5);
 				ctx.closePath();
 				ctx.fill();
 				ctx.restore();
@@ -204,7 +206,6 @@ app.main = {
 			ctx.fillStyle = ship.color;
 			ctx.fill();
 			ctx.restore();
-			ship.activeThrusters = {};
 		}
 		else{
 			//ship at world pos
@@ -222,67 +223,84 @@ app.main = {
 		}
 	},
 	updateShip: function(ship,dt){
+		var accelerationX = 0;
+		var accelerationY = 0;
+		var rotationalAcceleration = 0;
+		var mainThrust = ship.activeThrusters.main;
+		if(mainThrust){
+			var strength = mainThrust;
+			var maxStrength = ship.thrusterStrength;
+			strength = Math.max(-maxStrength, Math.min(strength, maxStrength));
+			ship.activeThrusters.main = strength;
+			var baseAccel = [0,-strength];
+			var rotatedAccel = rotate(0,0,baseAccel[0],baseAccel[1],-ship.rotation);
+			accelerationX += rotatedAccel[0];
+			accelerationY += rotatedAccel[1];
+		}
+		var latThrust = ship.activeThrusters.lateral;
+		if(latThrust){
+			var strength = latThrust;
+			var maxStrength = ship.lateralThrusterStrength;
+			strength = Math.max(-maxStrength, Math.min(strength, maxStrength));
+			ship.activeThrusters.lateral = strength;
+			var baseAccel = [0,-strength];
+			var rotatedAccel = rotate(0,0,baseAccel[0],baseAccel[1],-ship.rotation-90);
+			accelerationX += rotatedAccel[0];
+			accelerationY += rotatedAccel[1];
+		}
+		var rotThrust = ship.activeThrusters.side;
+		if(rotThrust){
+			var strength = rotThrust;
+			var maxStrength = ship.sideThrusterStrength;
+			strength = Math.max(-maxStrength, Math.min(strength, maxStrength));
+			ship.activeThrusters.side = strength;
+			rotationalAcceleration = strength;
+		}
 		//accelerate
-		ship.velocityX+=ship.accelerationX*dt;
-		ship.velocityY+=ship.accelerationY*dt;
-		ship.rotationalVelocity+=ship.rotationalAcceleration*dt;
+		ship.velocityX+=accelerationX*dt;
+		ship.velocityY+=accelerationY*dt;
+		ship.rotationalVelocity+=rotationalAcceleration*dt;
 		//move
 		ship.x+=ship.velocityX*dt;
 		ship.y+=ship.velocityY*dt;
 		ship.rotation+=ship.rotationalVelocity*dt;
-		//reset accelerations
-		ship.accelerationX = 0;
-		ship.accelerationY = 0;
-		ship.rotationalAcceleration = 0;
+	},
+	shipClearThrusters:function(ship){
+		ship.activeThrusters = {};
 	},
 	shipThrusters:function(ship, strength){
-		strength = Math.max(-ship.thrusterStrength, Math.min(strength, ship.thrusterStrength));
-		var baseAccel = [0,-strength];
-		var rotatedAccel = rotate(0,0,baseAccel[0],baseAccel[1],-ship.rotation);
-		ship.accelerationX += rotatedAccel[0];
-		ship.accelerationY += rotatedAccel[1];
 		if(!ship.activeThrusters.main)
 			ship.activeThrusters.main = 0;
 
-		ship.activeThrusters.main += strength/ship.thrusterStrength;
+		ship.activeThrusters.main += strength;
 	},
 	shipSideThrusters: function(ship, strength){
-		strength = Math.max(-ship.sideThrusterStrength, Math.min(strength, ship.sideThrusterStrength))
-		ship.rotationalAcceleration = strength;
 		if(!ship.activeThrusters.side)
 			ship.activeThrusters.side = 0;
 
-		ship.activeThrusters.side += strength/ship.sideThrusterStrength;
-		//console.log(ship.activeThrusters.side);
+		ship.activeThrusters.side += strength;
 	},
 	shipLateralThrusters:function(ship, strength){
-		strength = Math.max(-ship.lateralThrusterStrength, Math.min(strength, ship.lateralThrusterStrength));
-		var baseAccel = [0,-strength];
-		var rotatedAccel = rotate(0,0,baseAccel[0],baseAccel[1],-ship.rotation-90);
-		ship.accelerationX += rotatedAccel[0];
-		ship.accelerationY += rotatedAccel[1];
 		if(!ship.activeThrusters.lateral)
 			ship.activeThrusters.lateral = 0;
 
-		ship.activeThrusters.lateral += strength/ship.lateralThrusterStrength;
+		ship.activeThrusters.lateral += strength;
 	},
 	shipRotationalStabilizers:function(ship){
 		ship.rotationalAcceleration = 0;
-		this.shipSideThrusters(ship,-ship.rotationalVelocity*ship.sideThrusterStrength);
+		this.shipSideThrusters(ship,-ship.rotationalVelocity*ship.stabilizerStrength);
 	},
 	shipMedialStabilizers:function(ship){
-		//ship.accelerationX = 0;
-		//ship.accelerationY = 0;
 		var rotatedForwardVector = rotate(0,0,0,1,-ship.rotation);
 		var medialVelocity = scalarComponentOf1InDirectionOf2(ship.velocityX,ship.velocityY,rotatedForwardVector[0],rotatedForwardVector[1]);
 
-		this.shipThrusters(ship,medialVelocity*ship.thrusterStrength);
+		this.shipThrusters(ship,medialVelocity*ship.stabilizerStrength);
 	},
 	shipLateralStabilizers:function(ship){
 		var rotatedForwardVector = rotate(0,0,0,1,-ship.rotation-90);
 		var lateralVelocity = scalarComponentOf1InDirectionOf2(ship.velocityX,ship.velocityY,rotatedForwardVector[0],rotatedForwardVector[1]);
 
-		this.shipLateralThrusters(ship,lateralVelocity*ship.lateralThrusterStrength);
+		this.shipLateralThrusters(ship,lateralVelocity*ship.stabilizerStrength);
 	},
 	drawAsteroids: function(ctx,asteroids,camera, debug){
 		asteroids.forEach(function(asteroid){
@@ -334,7 +352,7 @@ app.main = {
 		this.drawAsteroids(this.ctx2,this.asteroids,this.camera, true);
 		this.drawShip(this.ctx2,this.ship,this.camera, true);
 		//this.drawShip(this.ctx2,this.otherShip,this.camera, true);
-
+		this.shipClearThrusters(this.ship);
 		if(myKeys.keydown[myKeys.KEYBOARD.KEY_W] && myKeys.keydown[myKeys.KEYBOARD.KEY_SHIFT])
 			this.shipMedialStabilizers(this.ship);
 		else if(myKeys.keydown[myKeys.KEYBOARD.KEY_W])
