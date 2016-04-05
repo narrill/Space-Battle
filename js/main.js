@@ -28,20 +28,25 @@ app.main = {
 	paused:false,
 	animationID:0,
 	frameCount:0,
+	runningTime:0,
 	ship:{
 		x:0,
 		y:0,
 		velocityX:0,
 		velocityY:0,
+		rotationalVelocity:0,
 		accelerationX:0,
 		accelerationY:0,
-		rotationalVelocity:0,
 		rotationalAcceleration:0,
 		rotation:0,
-		thrusterStrength:500,
-		sideThrusterStrength:50,
+		thrusterStrength:1500,
+		lateralThrusterStrength:1000,
+		sideThrusterStrength:150,
 		color:'red',
-		lastLaserFrame:0
+		thrusterColor:'blue',
+		lastLaserTime:0,
+		laserCD: 1,
+		activeThrusters:{}//leave this empty - it gets filled by the thruster methods
 	},
 	camera:{
 		x:0,
@@ -97,18 +102,87 @@ app.main = {
 			}
 		];
 	},
-	drawShip: function(ctx, ship,screenWidth,screenHeight, debug){
+	drawShip: function(ctx, ship,camera, debug){
 		if(!debug){
 			//ship at center
 			ctx.save();
+			ctx.translate(camera.width/2,camera.height/2);
+			var dx = ship.x-camera.x;
+			var dy = ship.y-camera.y;
+			var dr = ship.rotation-camera.rotation;
+			var rotatedD = rotate(0,0,dx,dy,camera.rotation);
+			ctx.translate(rotatedD[0],rotatedD[1]);
+			ctx.rotate(dr* (Math.PI / 180));
+
+			if(ship.activeThrusters.main>0){
+				ctx.save();				
+				ctx.fillStyle = ship.thrusterColor;
+				ctx.beginPath();
+				ctx.moveTo(-15,10);
+				ctx.lineTo(-10,10);
+				ctx.lineTo(-12.5,10+30*ship.activeThrusters.main);
+				ctx.closePath();
+				ctx.fill();
+				ctx.beginPath();
+				ctx.moveTo(15,10);
+				ctx.lineTo(10,10);
+				ctx.lineTo(12.5,10+30*ship.activeThrusters.main);
+				ctx.closePath();
+				ctx.fill();
+				ctx.restore();
+			}
+			else if(ship.activeThrusters.main<0){
+				ctx.save();				
+				ctx.fillStyle = ship.thrusterColor;
+				ctx.beginPath();
+				ctx.moveTo(-15,0);
+				ctx.lineTo(-10,0);
+				ctx.lineTo(-12.5,-20+10*ship.activeThrusters.main);
+				ctx.closePath();
+				ctx.fill();
+				ctx.beginPath();
+				ctx.moveTo(15,0);
+				ctx.lineTo(10,0);
+				ctx.lineTo(12.5,-20+10*ship.activeThrusters.main);
+				ctx.closePath();
+				ctx.fill();
+				ctx.restore();
+			}
+			if(ship.activeThrusters.side>0){
+				ctx.save();				
+				ctx.fillStyle = ship.thrusterColor;
+				ctx.beginPath();
+				ctx.moveTo(-5,-10);
+				ctx.lineTo(-5,-15);
+				console.log(ship.activeThrusters.side);
+				ctx.lineTo(-10-30*ship.activeThrusters.side,-12.5);
+				ctx.closePath();
+				ctx.fill();
+				ctx.restore();	
+				//console.log("left side thruster");
+			}
+			else if(ship.activeThrusters.side<0){
+				ctx.save();				
+				ctx.fillStyle = ship.thrusterColor;
+				ctx.beginPath();
+				ctx.moveTo(5,-10);
+				ctx.lineTo(5,-15);
+				console.log(ship.activeThrusters.side);
+				ctx.lineTo(10-30*ship.activeThrusters.side,-12.5);
+				ctx.closePath();
+				ctx.fill();
+				ctx.restore();	
+				//console.log("right side thruster");
+			}
 			ctx.beginPath();
-			ctx.moveTo(screenWidth/2-20,screenHeight/2+20);
-			ctx.lineTo(screenWidth/2+20,screenHeight/2+20);
-			ctx.lineTo(screenWidth/2,screenHeight/2-20);
+			ctx.moveTo(-20,10);
+			ctx.lineTo(20,10);
+			ctx.lineTo(0,-30);
 			ctx.closePath();
 			ctx.fillStyle = ship.color;
 			ctx.fill();
 			ctx.restore();
+			ship.activeThrusters = {};
 		}
 		else{
 			//ship at world pos
@@ -116,16 +190,16 @@ app.main = {
 			ctx.translate(ship.x,ship.y);
 			ctx.rotate(ship.rotation * (Math.PI / 180));
 			ctx.beginPath();
-			ctx.moveTo(-20,20);
-			ctx.lineTo(20,20);
-			ctx.lineTo(0,-20);
+			ctx.moveTo(-20,10);
+			ctx.lineTo(20,10);
+			ctx.lineTo(0,-30);
 			ctx.closePath();
 			ctx.fillStyle = ship.color;
 			ctx.fill();
 			ctx.restore();
 		}
 	},
-	updateShip: function(dt,ship){
+	updateShip: function(ship,dt){
 		//accelerate
 		ship.velocityX+=ship.accelerationX*dt;
 		ship.velocityY+=ship.accelerationY*dt;
@@ -140,27 +214,46 @@ app.main = {
 		ship.rotationalAcceleration = 0;
 	},
 	shipThrusters:function(ship, strength){
+		strength = Math.max(-ship.thrusterStrength, Math.min(strength, ship.thrusterStrength));
 		var baseAccel = [0,-strength];
 		var rotatedAccel = rotate(0,0,baseAccel[0],baseAccel[1],-ship.rotation);
-		ship.accelerationX = rotatedAccel[0];
-		ship.accelerationY = rotatedAccel[1];
+		ship.accelerationX += rotatedAccel[0];
+		ship.accelerationY += rotatedAccel[1];
+		if(!ship.activeThrusters.main)
+			ship.activeThrusters.main = 0;
+
+		ship.activeThrusters.main += strength/ship.thrusterStrength;
 	},
 	shipSideThrusters: function(ship, strength){
+		strength = Math.max(-ship.sideThrusterStrength, Math.min(strength, ship.sideThrusterStrength))
 		ship.rotationalAcceleration = strength;
+		if(!ship.activeThrusters.side)
+			ship.activeThrusters.side = 0;
+
+		ship.activeThrusters.side += strength/ship.sideThrusterStrength;
+		//console.log(ship.activeThrusters.side);
 	},
-	shipRotationStabilizers:function(ship){
+	shipLateralThrusters:function(ship, strength){
+		strength = Math.max(-ship.lateralThrusterStrength, Math.min(strength, ship.lateralThrusterStrength));
+		var baseAccel = [0,-strength];
+		var rotatedAccel = rotate(0,0,baseAccel[0],baseAccel[1],-ship.rotation-90);
+		ship.accelerationX += rotatedAccel[0];
+		ship.accelerationY += rotatedAccel[1];
+		if(!ship.activeThrusters.lateral)
+			ship.activeThrusters.lateral = 0;
+
+		ship.activeThrusters.lateral += strength/ship.lateralThrusterStrength;
+	},
+	shipRotationalStabilizers:function(ship){
 		ship.rotationalAcceleration = 0;
-		if(ship.rotationalVelocity>0)
-			this.shipSideThrusters(ship,-ship.sideThrusterStrength*3);
-		else if(ship.rotationalVelocity<0)
-			this.shipSideThrusters(ship,ship.sideThrusterStrength*3);
+		this.shipSideThrusters(ship,-ship.rotationalVelocity*ship.sideThrusterStrength);
 	},
-	shipForwardStabilizers:function(ship){
+	shipMedialStabilizers:function(ship){
 		ship.accelerationX = 0;
 		ship.accelerationY = 0;
 		//if()
 	},
-	shipSidewaysStabilizers:function(ship){
+	shipLateralStabilizers:function(ship){
 
 	},
 	drawAsteroids: function(ctx,asteroids,camera, debug){
@@ -197,30 +290,36 @@ app.main = {
 	 	}
 	 	
 	 	var dt = this.calculateDeltaTime();
-	 	this.camera.x = this.ship.x;
-	 	this.camera.y = this.ship.y;
-	 	this.camera.rotation = this.ship.rotation;
+	 	
 		this.ctx.fillStyle = "black"; 
 		this.ctx.fillRect(0,0,this.WIDTH,this.HEIGHT);
 		this.drawAsteroids(this.ctx,this.asteroids,this.camera);
-		this.updateShip(dt,this.ship);
-		this.drawShip(this.ctx,this.ship,this.WIDTH,this.HEIGHT);
+		//this.drawShip(this.ctx,this.otherShip,this.camera);
+		this.updateShip(this.ship,dt);
+		this.camera.x = this.ship.x;
+	 	this.camera.y = this.ship.y;
+	 	this.camera.rotation = this.ship.rotation;
+		this.drawShip(this.ctx,this.ship,this.camera);
 
 		this.ctx2.fillStyle = "black"; 
 		this.ctx2.fillRect(0,0,this.WIDTH,this.HEIGHT);
 		this.drawAsteroids(this.ctx2,this.asteroids,this.camera, true);
-		this.drawShip(this.ctx2,this.ship,this.WIDTH,this.HEIGHT, true);
+		this.drawShip(this.ctx2,this.ship,this.camera, true);
+		//this.drawShip(this.ctx2,this.otherShip,this.camera, true);
 
 		if(myKeys.keydown[myKeys.KEYBOARD.KEY_W])
-			this.shipThrusters(this.ship,this.ship.thrusterStrength);		
+			this.shipThrusters(this.ship,this.ship.thrusterStrength/3);		
 		if(myKeys.keydown[myKeys.KEYBOARD.KEY_A])
-			this.shipSideThrusters(this.ship,-this.ship.sideThrusterStrength);
+			this.shipSideThrusters(this.ship,-this.ship.sideThrusterStrength/3);
 		if(myKeys.keydown[myKeys.KEYBOARD.KEY_D])
-			this.shipSideThrusters(this.ship,this.ship.sideThrusterStrength);
+			this.shipSideThrusters(this.ship,this.ship.sideThrusterStrength/3);
 		if(myKeys.keydown[myKeys.KEYBOARD.KEY_S] && myKeys.keydown[myKeys.KEYBOARD.KEY_SHIFT])
-			this.shipRotationStabilizers(this.ship);
+			this.shipRotationalStabilizers(this.ship);
 		else if(myKeys.keydown[myKeys.KEYBOARD.KEY_S])
-			this.shipThrusters(this.ship,-this.ship.thrusterStrength);
+			this.shipThrusters(this.ship,-this.ship.thrusterStrength/3);
+
+
+		
 
 		if (this.debug){
 			// draw dt in bottom right corner
@@ -264,7 +363,7 @@ app.main = {
 		// + calls Date.valueOf(), which converts it from an object to a 	
 		// primitive (number of milliseconds since January 1, 1970 local time)
 		var now,fps;
-		now = (+new Date); 
+		now = (Date.now().valueOf()); 
 		fps = 1000 / (now - this.lastTime);
 		fps = clamp(fps, 12, 60);
 		this.lastTime = now; 
