@@ -146,7 +146,7 @@ function scalarComponentOf1InDirectionOf2(x1,y1,x2,y2){
 }
 
 function worldPointToCameraSpace (xw,yw, camera){
-	var cameraToPointVector = [xw-camera.x,yw-camera.y];
+	var cameraToPointVector = [(xw-camera.x)*camera.zoom,(yw-camera.y)*camera.zoom];
 	var rotatedVector = rotate(0,0,cameraToPointVector[0],cameraToPointVector[1],camera.rotation);
 	return [camera.width/2+rotatedVector[0],camera.height/2+rotatedVector[1]];
 }

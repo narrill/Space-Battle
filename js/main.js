@@ -76,7 +76,7 @@ app.main = {
 		//canvas2.width = this.WIDTH;
 		//canvas2.height = this.HEIGHT;
 		this.camera = this.initializeCamera(canvas);
-		this.worldCamera = this.initializeCamera(canvas2, 200, 200);
+		this.worldCamera = this.initializeCamera(canvas2, 200, 200,0,.5);
 		this.makeAsteroids.bind(this)();
 		// start the game loop
 		this.update();
@@ -106,34 +106,29 @@ app.main = {
 		var gridLines = this.grid.gridLines;
 		var gridSpacing = this.grid.gridSpacing;
 		var gridStart = this.grid.gridStart;
+		ctx.save();
+		ctx.beginPath();
 		for(var x = 0;x<=gridLines;x++){
 			var start = [gridStart[0]+x*gridSpacing,gridStart[1]];
 			var end = [start[0],gridStart[1]+gridLines*gridSpacing];
 			start = worldPointToCameraSpace(start[0],start[1],camera);
-			end = worldPointToCameraSpace(end[0],end[1],camera);
-			ctx.save();
-			ctx.beginPath();
+			end = worldPointToCameraSpace(end[0],end[1],camera);			
 			ctx.moveTo(start[0],start[1]);
 			ctx.lineTo(end[0],end[1]);
-			ctx.strokeWidth = 5;
-			ctx.strokeStyle = 'blue';
-			ctx.stroke();
-			ctx.restore();
 		}
 		for(var y = 0;y<=gridLines;y++){
 			var start = [gridStart[0],gridStart[0]+y*gridSpacing];
 			var end = [gridStart[0]+gridLines*gridSpacing,start[1]];
 			start = worldPointToCameraSpace(start[0],start[1],camera);
 			end = worldPointToCameraSpace(end[0],end[1],camera);
-			ctx.save();
-			ctx.beginPath();
 			ctx.moveTo(start[0],start[1]);
 			ctx.lineTo(end[0],end[1]);
-			ctx.strokeWidth = 5;
-			ctx.strokeStyle = 'blue';
-			ctx.stroke();
-			ctx.restore();
 		}
+
+		ctx.strokeWidth = 5;
+		ctx.strokeStyle = 'blue';
+		ctx.stroke();
+		ctx.restore();
 	},
 	makeAsteroids:function(){
 		this.asteroids = [
@@ -161,13 +156,15 @@ app.main = {
 		var ctx = camera.ctx;
 		//ship at center
 		ctx.save();
-		ctx.translate(camera.width/2,camera.height/2);
+		//ctx.translate(camera.width/2,camera.height/2);
 		var dx = ship.x-camera.x;
 		var dy = ship.y-camera.y;
 		var dr = ship.rotation-camera.rotation;
 		var rotatedD = rotate(0,0,dx,dy,camera.rotation);
-		ctx.translate(rotatedD[0],rotatedD[1]);
+		var shipPosInCameraSpace = worldPointToCameraSpace(ship.x,ship.y,camera);
+		ctx.translate(shipPosInCameraSpace[0],shipPosInCameraSpace[1]);
 		ctx.rotate(dr* (Math.PI / 180));
+		ctx.scale(camera.zoom,camera.zoom);
 
 		if(ship.activeThrusters.main>0){
 			ctx.save();				
@@ -346,8 +343,10 @@ app.main = {
 			//ship at center
 			ctx.save();
 			var finalPosition = worldPointToCameraSpace(asteroid.x,asteroid.y,camera);
+			ctx.translate(finalPosition[0],finalPosition[1]);
+			ctx.scale(camera.zoom,camera.zoom);
 			ctx.beginPath();
-			ctx.arc(finalPosition[0],finalPosition[1],asteroid.radius,0,Math.PI*2);
+			ctx.arc(0,0,asteroid.radius,0,Math.PI*2);
 			ctx.fillStyle = asteroid.color;
 			ctx.fill();
 			ctx.restore();
@@ -424,6 +423,11 @@ app.main = {
 			this.shipSideThrusters(this.ship,this.ship.sideThrusterStrength/3);
 		if(!(myKeys.keydown[myKeys.KEYBOARD.KEY_A] || myKeys.keydown[myKeys.KEYBOARD.KEY_D]))
 			this.shipRotationalStabilizers(this.ship);
+
+		if(myKeys.keydown[myKeys.KEYBOARD.KEY_UP])
+			this.worldCamera.zoom*=.95;
+		if(myKeys.keydown[myKeys.KEYBOARD.KEY_DOWN])
+			this.worldCamera.zoom*=1.05;
 
 		if (this.debug){
 			// draw dt in bottom right corner
