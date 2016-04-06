@@ -47,6 +47,8 @@ app.main = {
 		//used for controlling laser fire rate
 		lastLaserTime:0,
 		laserCD: 1,
+		laserRange:500,
+		laserColor:'red',
 		//per-frame thruster strengths
 		activeThrusters:{
 			main:0,
@@ -61,6 +63,7 @@ app.main = {
 			side: 180
 		}
 	},
+	lasers:[],
 	camera:{
 		//position/rotation
 		x:0,
@@ -413,6 +416,30 @@ app.main = {
 		else if (Math.abs(ship.lateralVelocity)>=ship.thrusterClamps.lateral && ship.activeThrusters.lateral*ship.lateralVelocity<0)
 			ship.activeThrusters.lateral = 0;
 	},
+	shipFireLaser:function(ship){
+		//if the cool down is up
+		if(Date.now()>ship.lastLaserTime+ship.laserCD*1000){
+			var laserVector = [0,-ship.laserRange];
+			laserVector = rotate(0,0,laserVector[0],laserVector[1],-ship.rotation);
+			this.createLaser(this.lasers,ship.x,ship.y,ship.x+laserVector[0],ship.y+laserVector[1],ship.laserColor,50);
+		}
+	},
+	createLaser:function(lasers, startX,startY,endX,endY,color, power){
+		lasers.push({
+			startX:startX,
+			startY:startY,
+			endX:endX,
+			endY:endY,
+			color:color,
+			power:power
+		});
+	},
+	clearLasers:function(lasers){
+		lasers.length = 0;
+	},
+	drawLasers:function(){
+
+	},
 	//draws asteroids from the given asteroids array to the given camera
 	drawAsteroids: function(asteroids,camera, debug){
 		var ctx = camera.ctx;
@@ -491,9 +518,9 @@ app.main = {
 
 		//camera zoom controls
 		if(myKeys.keydown[myKeys.KEYBOARD.KEY_UP])
-			this.camera.zoom*=.95;
-		if(myKeys.keydown[myKeys.KEYBOARD.KEY_DOWN])
 			this.camera.zoom*=1.05;
+		if(myKeys.keydown[myKeys.KEYBOARD.KEY_DOWN])
+			this.camera.zoom*=.95;
 
 	 	//update ship, center main camera on ship
 		this.updateShip(this.ship,dt);

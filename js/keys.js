@@ -26,11 +26,22 @@ myKeys.KEYBOARD = Object.freeze({
 // this works because JS has "sparse arrays" - not every language does
 myKeys.keydown = [];
 
+/*window.addEventListener("keydown", function(e) {
+    // space and arrow keys
+    if([32, 37, 38, 39, 40].indexOf(e.keyCode) > -1) {
+        e.preventDefault();
+    }
+}, false);*/
 
 // event listeners
 window.addEventListener("keydown",function(e){
 	//console.log("keydown=" + e.keyCode);
 	myKeys.keydown[e.keyCode] = true;
+
+	// space and arrow keys
+    if([32, 37, 38, 39, 40].indexOf(e.keyCode) > -1) {
+        e.preventDefault();
+    }
 });
 	
 window.addEventListener("keyup",function(e){
