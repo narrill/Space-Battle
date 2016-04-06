@@ -46,9 +46,15 @@ app.main = {
 		stabilizerStrength:60,
 		//used for controlling laser fire rate
 		lastLaserTime:0,
-		laserCD: 1,
-		laserRange:500,
-		laserColor:'red',
+		laser:{
+			lastFireTime:0,
+			cd:.1,
+			range:5000,
+			color:'cyan',
+			currentPower:0,
+			coherence:.995,
+			maxPower:50,
+		},
 		//per-frame thruster strengths
 		activeThrusters:{
 			main:0,
@@ -365,6 +371,16 @@ app.main = {
 		ship.x+=ship.velocityX*dt;
 		ship.y+=ship.velocityY*dt;
 		ship.rotation+=ship.rotationalVelocity*dt;
+
+		//create laser objects
+		if(ship.laser.currentPower>0){
+			var laserVector = [0,-ship.laser.range];
+			laserVector = rotate(0,0,laserVector[0],laserVector[1],-ship.rotation);
+			this.createLaser(this.lasers,ship.x,ship.y,ship.x+laserVector[0],ship.y+laserVector[1],ship.laser.color,ship.laser.currentPower);
+			ship.laser.currentPower-=ship.laser.maxPower*(1-ship.laser.coherence)*dt*1000;
+		}
+		else if(ship.laser.currentPower<0)
+			ship.laser.currentPower=0;
 	},
 	//clears the active thruster values
 	shipClearThrusters:function(ship){
@@ -417,11 +433,11 @@ app.main = {
 			ship.activeThrusters.lateral = 0;
 	},
 	shipFireLaser:function(ship){
+		var now = Date.now();
 		//if the cool down is up
-		if(Date.now()>ship.lastLaserTime+ship.laserCD*1000){
-			var laserVector = [0,-ship.laserRange];
-			laserVector = rotate(0,0,laserVector[0],laserVector[1],-ship.rotation);
-			this.createLaser(this.lasers,ship.x,ship.y,ship.x+laserVector[0],ship.y+laserVector[1],ship.laserColor,50);
+		if(now>ship.laser.lastFireTime+ship.laser.cd*1000){
+			ship.laser.lastFireTime = now;
+			ship.laser.currentPower = ship.laser.maxPower;			
 		}
 	},
 	createLaser:function(lasers, startX,startY,endX,endY,color, power){
@@ -435,10 +451,25 @@ app.main = {
 		});
 	},
 	clearLasers:function(lasers){
-		lasers.length = 0;
+		lasers.length=0;
 	},
-	drawLasers:function(){
-
+	drawLasers:function(lasers,camera){
+		var ctx = camera.ctx;
+		lasers.forEach(function(laser){
+			var start = worldPointToCameraSpace(laser.startX,laser.startY,camera);
+			var end = worldPointToCameraSpace(laser.endX,laser.endY,camera);
+			ctx.save();
+			ctx.beginPath();
+			ctx.moveTo(start[0],start[1]);
+			ctx.lineTo(end[0],end[1]);
+			//ctx.closePath();
+			//ctx.globalAlpha = 
+			ctx.strokeStyle = laser.color;
+			ctx.lineCap = 'round';
+			ctx.lineWidth = laser.power/50;
+			ctx.stroke();
+			ctx.restore();
+		});
 	},
 	//draws asteroids from the given asteroids array to the given camera
 	drawAsteroids: function(asteroids,camera, debug){
@@ -468,8 +499,9 @@ app.main = {
 	 	}
 	 	
 	 	var dt = this.calculateDeltaTime(); //delta for physics
-	 	
-	 	//clear ship thruster values
+
+	 	//clear values
+		this.clearLasers(this.lasers);
 		this.shipClearThrusters(this.ship);
 
 		//set ship thruster values
@@ -492,7 +524,19 @@ app.main = {
 		if(myKeys.keydown[myKeys.KEYBOARD.KEY_D])
 			this.shipSideThrusters(this.ship,-this.ship.sideThrusterStrength/3);
 		this.shipRotationalStabilizers(this.ship);
+		//lasers
+		if(myKeys.keydown[myKeys.KEYBOARD.KEY_SPACE])
+			this.shipFireLaser(this.ship);
 
+	 	
+
+	 	//update ship, center main camera on ship
+		this.updateShip(this.ship,dt);
+		this.camera.x = this.ship.x;
+	 	this.camera.y = this.ship.y;
+	 	this.camera.rotation = this.ship.rotation;
+
+		
 		/*
 		//manual controls
 		if(myKeys.keydown[myKeys.KEYBOARD.KEY_W] && myKeys.keydown[myKeys.KEYBOARD.KEY_SHIFT])
@@ -522,11 +566,7 @@ app.main = {
 		if(myKeys.keydown[myKeys.KEYBOARD.KEY_DOWN])
 			this.camera.zoom*=.95;
 
-	 	//update ship, center main camera on ship
-		this.updateShip(this.ship,dt);
-		this.camera.x = this.ship.x;
-	 	this.camera.y = this.ship.y;
-	 	this.camera.rotation = this.ship.rotation;
+	 	
 
 	 	//clear cameras
 		this.clearCamera(this.camera);
@@ -535,6 +575,7 @@ app.main = {
 		//draw grids then asteroids then ships
 		this.drawGrid(this.camera);
 		this.drawGrid(this.worldCamera);
+		this.drawLasers(this.lasers, this.camera);
 		this.drawAsteroids(this.asteroids,this.camera);
 		this.drawAsteroids(this.asteroids,this.worldCamera);
 		this.drawShip(this.ship,this.camera);
@@ -561,7 +602,7 @@ app.main = {
 		ctx.fillRect(0,0,camera.width,camera.height);
 		ctx.textAlign = 'center';
 		ctx.textBaseline = 'middle';
-		this.fillText(ctx,"...paused...",camera.width/2,camera.height/2,"5pt courier",'white');
+		this.fillText(ctx,"Paused",camera.width/2,camera.height/2,"24pt courier",'white');
 		ctx.restore();
 	},
 	pauseGame:function(){
