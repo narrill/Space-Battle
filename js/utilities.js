@@ -117,6 +117,7 @@ function requestFullscreen(element) {
 };
 
 //http://stackoverflow.com/questions/17410809/how-to-calculate-rotation-in-2d-in-javascript
+//point to rotate around, point to rotate, angle to rotate by
 function rotate(cx, cy, x, y, angle) {
     var radians = (Math.PI / 180) * angle,
         cos = Math.cos(radians),
@@ -130,6 +131,7 @@ function dotProduct(x1,y1,x2,y2){
 	return x1*x2+y1*y2;
 }
 
+//broken
 function componentOf1InDirectionOf2(x1,y1,x2,y2){
 	if((x1==0 && y1==0) || (x2==0&&y2==0))
 		return [0,0];
@@ -138,6 +140,7 @@ function componentOf1InDirectionOf2(x1,y1,x2,y2){
 	return [scalar*x1,scalar*y1];
 }
 
+//projects vector 1 onto vector 2 and returns the magnitude of the projection
 function scalarComponentOf1InDirectionOf2(x1,y1,x2,y2){
 	if((x1==0 && y1==0) || (x2==0&&y2==0))
 		return 0;
@@ -145,6 +148,7 @@ function scalarComponentOf1InDirectionOf2(x1,y1,x2,y2){
 	return (x1*x2+y1*y2)/Math.sqrt(x2*x2+y2*y2);
 }
 
+//converts given x,y from world space to camera space using the given camera
 function worldPointToCameraSpace (xw,yw, camera){
 	var cameraToPointVector = [(xw-camera.x)*camera.zoom,(yw-camera.y)*camera.zoom];
 	var rotatedVector = rotate(0,0,cameraToPointVector[0],cameraToPointVector[1],camera.rotation);
