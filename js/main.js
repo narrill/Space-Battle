@@ -20,7 +20,8 @@ app.main = {
 	GAME_STATES:{
 		TITLE:0,
 		PLAYING:1,
-		END:2
+		WIN:2,
+		LOSE:3
 	},
    	lastTime: 0, // used by calculateDeltaTime() 
     debug: true,
@@ -33,6 +34,7 @@ app.main = {
 		x:0,
 		y:0,	
 		radius:20, //collision radius
+		hp:5000,
 		rotation:0,
 		//velocities
 		velocityX:0, //in absolute form, used for movement
@@ -91,6 +93,7 @@ app.main = {
 		rotation:0,
 		//scale value, basically
 		zoom:1,
+		minZoom:.001,
 		//screen dimensions
 		width:0,
 		height:0,
@@ -124,7 +127,7 @@ app.main = {
 		//canvas.onmousedown = this.doMousedown.bind(this);
 		//var canvas2 = document.querySelector('#canvas2');
 		//canvas2.onmousedown = this.doMousedown.bind(this);
-		this.camera = this.initializeCamera(canvas,0,0,0,.5);
+		this.camera = this.initializeCamera(canvas,0,0,0,.5,.05);
 		this.starCamera = this.initializeCamera(canvas, 0, 0,0,.0001);
 		this.makeAsteroids.bind(this, this.grid)();
 		this.generateStarField.bind(this)();
@@ -132,12 +135,13 @@ app.main = {
 		this.update();
 	},
 	//returns a camera object with the given values and the context from the given canvas
-	initializeCamera:function(canvas,x,y,rotation,zoom){
+	initializeCamera:function(canvas,x,y,rotation,zoom,minZoom){
 		return {
 			x:(x) ? x : 0,
 			y:(y) ? y : 0,
 			rotation:(rotation) ? rotation : 0,
 			zoom: (zoom) ? zoom : 1,
+			minZoom:(minZoom)?minZoom:0,
 			width:canvas.width,
 			height:canvas.height,
 			ctx:canvas.getContext('2d')
@@ -194,6 +198,7 @@ app.main = {
 		var upper = [lower[0]+grid.gridLines*grid.gridSpacing,lower[1]+grid.gridLines*grid.gridSpacing];
 		var maxRadius = 1000;
 		var minRadius = 50;
+		this.asteroids.info = [];
 		for(var c=0;c<1000;c++){
 			var radius = Math.random()*(maxRadius-minRadius)+minRadius;
 			this.asteroids.info.push({
@@ -515,7 +520,12 @@ app.main = {
 
 		for(var c = 0;c<asteroids.info.length;c++){
 			var asteroid = asteroids.info[c];
-			
+			var distance = (this.ship.x-asteroid.x)*(this.ship.x-asteroid.x) + (this.ship.y-asteroid.y)*(this.ship.y-asteroid.y);
+			var overlap = (this.ship.radius+asteroid.radius)*(this.ship.radius+asteroid.radius) - distance;
+			if(overlap>=0)
+			{
+				this.ship.hp-=100*dt;
+			}
 		}
 	},
 	drawLasers:function(lasers,camera){
@@ -597,8 +607,10 @@ app.main = {
 		this.shipClearThrusters(this.ship);
 		this.clearAsteroids(this.asteroids);
 
-		if(this.asteroids.length==0 && this.gameState==this.GAME_STATES.PLAYING)
-			this.gameState = this.GAME_STATES.END;
+		if(this.asteroids.info.length==0 && this.gameState==this.GAME_STATES.PLAYING)
+			this.gameState = this.GAME_STATES.WIN;
+		else if(this.ship.hp<=0)
+			this.gameState = this.GAME_STATES.LOSE;
 		else if(this.gameState == this.GAME_STATES.PLAYING){
 
 			//set ship thruster values
@@ -631,7 +643,7 @@ app.main = {
 		 	//camera zoom controls
 			if(myKeys.keydown[myKeys.KEYBOARD.KEY_UP])
 				this.camera.zoom*=1.05;
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_DOWN])
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_DOWN] * this.camera.zoom>=this.camera.minZoom)
 				this.camera.zoom*=.95;	 
 
 		 	//update ship, center main camera on ship
@@ -670,8 +682,11 @@ app.main = {
 		{
 			this.drawTitleScreen(this.camera);
 		}
-		else if(this.gameState == this.GAME_STATES.END){
-			this.drawEndScreen(this.camera);
+		else if(this.gameState == this.GAME_STATES.WIN){
+			this.drawWinScreen(this.camera);
+		}
+		else if(this.gameState == this.GAME_STATES.LOSE){
+			this.drawLoseScreen(this.camera);
 		}
 
 		//FPS text
@@ -687,6 +702,7 @@ app.main = {
 		ctx.save(); // NEW
 		ctx.textAlign = 'left';
 		ctx.textBaseline = 'center';
+		this.fillText(ctx, "HP: "+this.ship.hp,camera.width/15,8*camera.height/10,"12pt courier",'white')
 		this.fillText(ctx, "Control mode: "+((this.ship.stabilizersEnabled)?'assisted':'manual'),camera.width/15,9*camera.height/10,"12pt courier",'white')
 		ctx.restore(); // NEW
 	},
@@ -703,7 +719,7 @@ app.main = {
 		this.fillText(ctx,"Press W to start",camera.width/2,4*camera.height/5,"12pt courier",'white');
 		ctx.restore();
 	},
-	drawEndScreen:function(camera){
+	drawWinScreen:function(camera){
 		var ctx = camera.ctx;
 		ctx.save();
 		ctx.fillStyle = 'black';
@@ -714,6 +730,19 @@ app.main = {
 		ctx.globalAlpha = 1;
 		this.fillText(ctx,"You win!",camera.width/2,camera.height/5,"24pt courier",'white');
 		this.fillText(ctx,"Good for you",camera.width/2,4*camera.height/5,"12pt courier",'white');
+		ctx.restore();		
+	},
+	drawLoseScreen:function(camera){
+		var ctx = camera.ctx;
+		ctx.save();
+		ctx.fillStyle = 'black';
+		ctx.globalAlpha = .5;
+		ctx.fillRect(0,0,camera.width,camera.height);
+		ctx.textAlign = 'center';
+		ctx.textBaseline = 'middle';
+		ctx.globalAlpha = 1;
+		this.fillText(ctx,"You lose!",camera.width/2,camera.height/5,"24pt courier",'white');
+		this.fillText(ctx,"Sucks to be you",camera.width/2,4*camera.height/5,"12pt courier",'white');
 		ctx.restore();		
 	},
 	//draw pause screen in the given camera
