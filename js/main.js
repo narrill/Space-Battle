@@ -93,7 +93,7 @@ app.main = {
 			y:500,	
 			radius:20, //collision radius
 			hp:500,
-			rotation:0,
+			rotation:45,
 			//velocities
 			velocityX:0, //in absolute form, used for movement
 			velocityY:0,
@@ -469,6 +469,10 @@ app.main = {
 		ship.x+=ship.velocityX*dt;
 		ship.y+=ship.velocityY*dt;
 		ship.rotation+=ship.rotationalVelocity*dt;
+		if(ship.rotation>=360)
+			ship.rotation-=360;
+		else if(ship.rotation<=-360)
+			ship.rotation+=360;
 
 		//create laser objects
 		if(ship.laser.currentPower>0){
@@ -539,7 +543,36 @@ app.main = {
 		}
 	},
 	shipAI:function(ship, target){
+		var vectorToTarget = [target.x-ship.x,target.y-ship.y];
+		var relativeAngleToTarget = angleBetweenVectors(ship.forwardVectorX,ship.forwardVectorY,vectorToTarget[0],vectorToTarget[1]);
 
+		if(relativeAngleToTarget>0)
+			this.shipSideThrusters(ship,-ship.sideThrusterStrength/ship.stabilizerThrustRatio);
+		else if (relativeAngleToTarget<0)
+			this.shipSideThrusters(ship,ship.sideThrusterStrength/ship.stabilizerThrustRatio);
+
+		var distanceSqr = vectorMagnitudeSqr(vectorToTarget[0],vectorToTarget[1]);
+
+		if(relativeAngleToTarget<10 && relativeAngleToTarget>-10  && distanceSqr<(ship.laser.range*ship.laser.range))
+			this.shipFireLaser(ship);
+
+		if(distanceSqr > 2000*2000)
+			this.shipThrusters(ship,ship.thrusterStrength/ship.stabilizerThrustRatio);
+		else if(distanceSqr<1000*1000)
+			this.shipThrusters(ship,-ship.thrusterStrength/ship.stabilizerThrustRatio);
+
+		var vectorFromTarget = [-vectorToTarget[0],-vectorToTarget[1]];
+		var relativeAngleToMe = angleBetweenVectors(target.forwardVectorX,target.forwardVectorY,vectorFromTarget[0],vectorFromTarget[1]);
+		console.log(Math.floor(relativeAngleToMe));
+
+		if(relativeAngleToMe<180 && relativeAngleToMe>0)
+			this.shipLateralThrusters(ship, -ship.lateralThrusterStrength/ship.stabilizerThrustRatio);
+		else if(relativeAngleToMe>-180 &&relativeAngleToMe<0)
+			this.shipLateralThrusters(ship, ship.lateralThrusterStrength/ship.stabilizerThrustRatio);
+
+		this.shipMedialStabilizers(ship);
+		this.shipLateralStabilizers(ship);
+		this.shipRotationalStabilizers(ship);
 	},
 	createLaser:function(lasers, startX,startY,endX,endY,color, power,efficiency){
 		lasers.push({
@@ -687,7 +720,7 @@ app.main = {
 	update: function(){
 		//queue our next frame
 	 	this.animationID = requestAnimationFrame(this.update.bind(this));
-	 	
+	 	var dt = this.calculateDeltaTime(); //delta for physics
 	 	//pause screen
 	 	if(this.gameState == this.GAME_STATES.PLAYING && this.paused){
 	 		this.drawPauseScreen(this.camera);
@@ -695,7 +728,7 @@ app.main = {
 	 		return;
 	 	}
 	 	
-	 	var dt = this.calculateDeltaTime(); //delta for physics
+	 	
 
 	 	//clear values
 		this.clearLasers(this.lasers);

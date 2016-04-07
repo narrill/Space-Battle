@@ -131,6 +131,15 @@ function dotProduct(x1,y1,x2,y2){
 	return x1*x2+y1*y2;
 }
 
+function normalizeVector(x,y){
+	var magnitude = Math.sqrt(x*x+y*y);
+	return [x/magnitude,y/magnitude];
+}
+
+function vectorMagnitudeSqr(x,y){
+	return x*x+y*y;
+}
+
 //broken
 function componentOf1InDirectionOf2(x1,y1,x2,y2){
 	if((x1==0 && y1==0) || (x2==0&&y2==0))
@@ -158,35 +167,63 @@ function worldPointToCameraSpace (xw,yw, camera){
 //http://stackoverflow.com/questions/849211/shortest-distance-between-a-point-and-a-line-segment
 function distanceFromPointToLine(x, y, x1, y1, x2, y2) {
 
-  var A = x - x1;
-  var B = y - y1;
-  var C = x2 - x1;
-  var D = y2 - y1;
+	var A = x - x1;
+	var B = y - y1;
+	var C = x2 - x1;
+	var D = y2 - y1;
 
-  var dot = A * C + B * D;
-  var len_sq = C * C + D * D;
-  var param = -1;
-  if (len_sq != 0) //in case of 0 length line
-      param = dot / len_sq;
+	var dot = A * C + B * D;
+	var len_sq = C * C + D * D;
+	var param = -1;
+	if (len_sq != 0) //in case of 0 length line
+	  param = dot / len_sq;
 
-  var xx, yy;
+	var xx, yy;
 
-  if (param < 0) {
-    xx = x1;
-    yy = y1;
-  }
-  else if (param > 1) {
-    xx = x2;
-    yy = y2;
-  }
-  else {
-    xx = x1 + param * C;
-    yy = y1 + param * D;
-  }
+	if (param < 0) {
+	xx = x1;
+	yy = y1;
+	}
+	else if (param > 1) {
+	xx = x2;
+	yy = y2;
+	}
+	else {
+	xx = x1 + param * C;
+	yy = y1 + param * D;
+	}
 
-  var dx = x - xx;
-  var dy = y - yy;
-  return [Math.sqrt(dx * dx + dy * dy),param];
+	var dx = x - xx;
+	var dy = y - yy;
+	return [Math.sqrt(dx * dx + dy * dy),param];
+}
+
+//http://stackoverflow.com/questions/9614109/how-to-calculate-an-angle-from-points
+function angle(cx, cy, ex, ey) {
+	var dy = ey - cy;
+	var dx = ex - cx;
+	var theta = Math.atan2(dy, dx); // range (-PI, PI]
+	theta *= (180 / Math.PI); // rads to degs, range (-180, 180]
+	theta+=180;
+	return theta;
+}
+
+//http://blog.lexique-du-net.com/index.php?post/Calculate-the-real-difference-between-two-angles-keeping-the-sign
+function differenceBetweenAngles(firstAngle, secondAngle){
+	var difference = secondAngle - firstAngle;
+	while (difference < -180) difference += 180;
+	while (difference > 180) difference -= 180;
+	return difference;
+}
+
+function angleBetweenVectors(x1,y1,x2,y2){
+	var angle = (Math.atan2(y2, x2) - Math.atan2(y1, x1))*(180 / Math.PI);
+
+	if(angle>180)
+		angle-=360;
+	else if(angle<-180)
+		angle+=360;
+	return angle;
 }
 
 // This gives Array a randomElement() method
