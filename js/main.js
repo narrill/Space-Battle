@@ -16,6 +16,7 @@ var app = app || {};
  
  */
 app.main = {
+	drawStarField:true,
 	gameState:0,
 	GAME_STATES:{
 		TITLE:0,
@@ -669,7 +670,8 @@ app.main = {
 		this.clearCamera(this.camera);
 		this.clearCamera(this.starCamera);
 		//draw grids then asteroids then ships
-		this.drawStars(this.stars,this.starCamera);
+		if(this.drawStarField)
+			this.drawStars(this.stars,this.starCamera);
 		this.drawGrid(this.camera);
 		this.drawLasers(this.lasers, this.camera);
 		this.drawAsteroids(this.asteroids,this.camera);
