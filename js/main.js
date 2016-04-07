@@ -312,6 +312,9 @@ app.main = {
 		var accelerationY = 0;
 		var rotationalAcceleration = 0;
 
+		var normalizedForwardVector = rotate(0,0,0,-1,-ship.rotation);
+		var normalizedRightVector = rotate(0,0,0,-1,-ship.rotation-90);
+
 		//add acceleration from each thruster
 		//medial
 		var mainThrust = ship.activeThrusters.main;
@@ -323,11 +326,9 @@ app.main = {
 			strength = Math.max(-maxStrength, Math.min(strength, maxStrength));
 			ship.activeThrusters.main = strength; //this is purely for the visuals
 
-			//create forward vector with strength value, rotate to ship's orientation, add components to acceleration values
-			var baseAccel = [0,-strength];
-			var rotatedAccel = rotate(0,0,baseAccel[0],baseAccel[1],-ship.rotation);
-			accelerationX += rotatedAccel[0];
-			accelerationY += rotatedAccel[1];
+			//add forward vector times strength to acceleration
+			accelerationX += normalizedForwardVector[0]*strength;
+			accelerationY += normalizedForwardVector[1]*strength;
 		}
 
 		//lateral
@@ -340,11 +341,9 @@ app.main = {
 			strength = Math.max(-maxStrength, Math.min(strength, maxStrength));
 			ship.activeThrusters.lateral = strength; //for visuals
 
-			//create forward vector from strength, rotate to orientation plus 90, add copmponents to acceleration
-			var baseAccel = [0,-strength];
-			var rotatedAccel = rotate(0,0,baseAccel[0],baseAccel[1],-ship.rotation-90);
-			accelerationX += rotatedAccel[0];
-			accelerationY += rotatedAccel[1];
+			//add right vector times strength to acceleration
+			accelerationX += normalizedRightVector[0]*strength;
+			accelerationY += normalizedRightVector[1]*strength;
 		}
 
 		//rotational
@@ -367,10 +366,8 @@ app.main = {
 		ship.rotationalVelocity+=rotationalAcceleration*dt;
 
 		//calculate velocity components for the stabilizers
-		var rotatedForwardVector = rotate(0,0,0,1,-ship.rotation); //create forward vector, rotate to ship's orientation
-		ship.medialVelocity = scalarComponentOf1InDirectionOf2(ship.velocityX,ship.velocityY,rotatedForwardVector[0],rotatedForwardVector[1]); //get magnitude of projection of velocity onto the vector
-		rotatedForwardVector = rotate(0,0,0,1,-ship.rotation-90); //create forward vector, rotate to ship's orienation plus 90
-		ship.lateralVelocity = scalarComponentOf1InDirectionOf2(ship.velocityX,ship.velocityY,rotatedForwardVector[0],rotatedForwardVector[1]); //et magnitude of velocity's projection onto the vector
+		ship.medialVelocity = -scalarComponentOf1InDirectionOf2(ship.velocityX,ship.velocityY,normalizedForwardVector[0],normalizedForwardVector[1]); //get magnitude of projection of velocity onto the forward vector
+		ship.lateralVelocity = -scalarComponentOf1InDirectionOf2(ship.velocityX,ship.velocityY,normalizedRightVector[0],normalizedRightVector[1]); //et magnitude of velocity's projection onto the right vector
 
 		//move
 		ship.x+=ship.velocityX*dt;
@@ -381,7 +378,7 @@ app.main = {
 		if(ship.laser.currentPower>0){
 			var laserVector = [0,-ship.laser.range];
 			laserVector = rotate(0,0,laserVector[0],laserVector[1],-ship.rotation);
-			this.createLaser(this.lasers,ship.x,ship.y-10,ship.x+laserVector[0],ship.y+laserVector[1],ship.laser.color,ship.laser.currentPower);
+			this.createLaser(this.lasers,ship.x+normalizedForwardVector[0],ship.y+normalizedForwardVector[1],ship.x+laserVector[0],ship.y+laserVector[1],ship.laser.color,ship.laser.currentPower);
 			ship.laser.currentPower-=ship.laser.maxPower*(1-ship.laser.coherence)*dt*1000;
 		}
 		else if(ship.laser.currentPower<0)
