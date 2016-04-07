@@ -17,7 +17,8 @@ myKeys.KEYBOARD = Object.freeze({
 	"KEY_D":68,
 	"KEY_S":83,
 	"KEY_Q":81,
-	"KEY_E":69
+	"KEY_E":69,
+	"KEY_TAB":9
 });
 
 // myKeys.keydown array to keep track of which keys are down
@@ -37,11 +38,12 @@ myKeys.keydown = [];
 window.addEventListener("keydown",function(e){
 	//console.log("keydown=" + e.keyCode);
 	myKeys.keydown[e.keyCode] = true;
+	e.preventDefault();
 
 	// space and arrow keys
-    if([32, 37, 38, 39, 40].indexOf(e.keyCode) > -1) {
+    /*if([32, 37, 38, 39, 40].indexOf(e.keyCode) > -1) {
         e.preventDefault();
-    }
+    }*/
 });
 	
 window.addEventListener("keyup",function(e){

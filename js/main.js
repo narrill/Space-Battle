@@ -25,7 +25,8 @@ app.main = {
 	ship:{
 		//position/rotation
 		x:0,
-		y:0,		
+		y:0,	
+		radius:20,	
 		rotation:0,
 		//velocities
 		velocityX:0, //in absolute form, used for movement
@@ -53,8 +54,9 @@ app.main = {
 			color:'cyan',
 			currentPower:0,
 			coherence:.995,
-			maxPower:50,
+			maxPower:100,
 		},
+		stabilizersEnabled:true,
 		//per-frame thruster strengths
 		activeThrusters:{
 			main:0,
@@ -95,7 +97,7 @@ app.main = {
 	grid:{
 		gridLines: 500, //number of grid lines
 		gridSpacing: 500, //pixels per grid unit
-		gridStart: [-1000,-1000] //corner anchor in world coordinates
+		gridStart: [-125000,-125000] //corner anchor in world coordinates
 	},
 	asteroids:[],
     // methods
@@ -175,18 +177,21 @@ app.main = {
 				x:50,
 				y:50,
 				radius:50,
+				hp:500,
 				color:'saddlebrown'
 			},
 			{
 				x:400,
 				y:100,
 				radius:50,
+				hp:500,
 				color:'saddlebrown'
 			},
 			{
 				x:350,
 				y:400,
 				radius:50,
+				hp:500,
 				color:'saddlebrown'
 			}
 		];
@@ -376,7 +381,7 @@ app.main = {
 		if(ship.laser.currentPower>0){
 			var laserVector = [0,-ship.laser.range];
 			laserVector = rotate(0,0,laserVector[0],laserVector[1],-ship.rotation);
-			this.createLaser(this.lasers,ship.x,ship.y,ship.x+laserVector[0],ship.y+laserVector[1],ship.laser.color,ship.laser.currentPower);
+			this.createLaser(this.lasers,ship.x,ship.y-10,ship.x+laserVector[0],ship.y+laserVector[1],ship.laser.color,ship.laser.currentPower);
 			ship.laser.currentPower-=ship.laser.maxPower*(1-ship.laser.coherence)*dt*1000;
 		}
 		else if(ship.laser.currentPower<0)
@@ -453,6 +458,36 @@ app.main = {
 	clearLasers:function(lasers){
 		lasers.length=0;
 	},
+	checkCollisions:function(dt){
+		var asteroids = this.asteroids;
+		this.lasers.forEach(function(laser){
+			var obj; //the chosen object
+			var tValOfObj = Number.MAX_VALUE;
+			var xInv = laser.endX<laser.startX;
+			var yInv = laser.endY<laser.startY;
+			var start = [(xInv) ? laser.endX : laser.startX, (yInv) ? laser.endY : laser.startY];
+			var end = [(xInv) ? laser.startX : laser.endX, (yInv) ? laser.startY : laser.endY];
+			for(var c = 0;c<asteroids.length;c++){
+				var thisObj = asteroids[c];
+				if(thisObj.x + thisObj.radius<start[0] || thisObj.x-thisObj.radius>end[0] || thisObj.y + thisObj.radius<start[1] || thisObj.y-thisObj.radius>end[1])
+					continue;
+				var thisDistance = distanceFromPointToLine(thisObj.x,thisObj.y,laser.startX,laser.startY,laser.endX,laser.endY);
+				if(thisDistance[0]<thisObj.radius && thisDistance[1]<tValOfObj){
+					obj = thisObj;
+					tValOfObj = thisDistance[1];
+				}
+			}
+			if(obj)
+			{
+				obj.hp-=laser.power*dt;
+				console.log(obj+' hp: '+obj.hp);
+				var laserDir = [laser.endX-laser.startX,laser.endY-laser.startY];
+				var newEnd = [laser.startX+tValOfObj*laserDir[0],laser.startY+tValOfObj*laserDir[1]];
+				laser.endX = newEnd[0];
+				laser.endY = newEnd[1];
+			}
+		});
+	},
 	drawLasers:function(lasers,camera){
 		var ctx = camera.ctx;
 		lasers.forEach(function(laser){
@@ -466,10 +501,16 @@ app.main = {
 			//ctx.globalAlpha = 
 			ctx.strokeStyle = laser.color;
 			ctx.lineCap = 'round';
-			ctx.lineWidth = laser.power/50;
+			ctx.lineWidth = (laser.power/50)*camera.zoom;
 			ctx.stroke();
 			ctx.restore();
 		});
+	},
+	clearAsteroids:function(asteroids){
+		for(var c = 0;c<asteroids.length;c++){
+			if(asteroids[c].hp<=0)
+				asteroids.splice(c--,1);
+		}
 	},
 	//draws asteroids from the given asteroids array to the given camera
 	drawAsteroids: function(asteroids,camera, debug){
@@ -503,6 +544,7 @@ app.main = {
 	 	//clear values
 		this.clearLasers(this.lasers);
 		this.shipClearThrusters(this.ship);
+		this.clearAsteroids(this.asteroids);
 
 		//set ship thruster values
 	 	//assisted controls
@@ -511,19 +553,22 @@ app.main = {
 			this.shipThrusters(this.ship,this.ship.thrusterStrength/3);
 		if(myKeys.keydown[myKeys.KEYBOARD.KEY_S])
 			this.shipThrusters(this.ship,-this.ship.thrusterStrength/3);
-		this.shipMedialStabilizers(this.ship);
+		if(this.ship.stabilizersEnabled)
+			this.shipMedialStabilizers(this.ship);
 		//lateral motion
 		if(myKeys.keydown[myKeys.KEYBOARD.KEY_Q])
 			this.shipLateralThrusters(this.ship,-this.ship.lateralThrusterStrength/3);
 		if(myKeys.keydown[myKeys.KEYBOARD.KEY_E])
 			this.shipLateralThrusters(this.ship,this.ship.lateralThrusterStrength/3);
-		this.shipLateralStabilizers(this.ship);
+		if(this.ship.stabilizersEnabled)
+			this.shipLateralStabilizers(this.ship);
 		//rotational motion
 		if(myKeys.keydown[myKeys.KEYBOARD.KEY_A])
 			this.shipSideThrusters(this.ship,this.ship.sideThrusterStrength/3);
 		if(myKeys.keydown[myKeys.KEYBOARD.KEY_D])
 			this.shipSideThrusters(this.ship,-this.ship.sideThrusterStrength/3);
-		this.shipRotationalStabilizers(this.ship);
+		if(this.ship.stabilizersEnabled)
+			this.shipRotationalStabilizers(this.ship);
 		//lasers
 		if(myKeys.keydown[myKeys.KEYBOARD.KEY_SPACE])
 			this.shipFireLaser(this.ship);
@@ -536,7 +581,7 @@ app.main = {
 	 	this.camera.y = this.ship.y;
 	 	this.camera.rotation = this.ship.rotation;
 
-		
+		this.checkCollisions(dt);
 		/*
 		//manual controls
 		if(myKeys.keydown[myKeys.KEYBOARD.KEY_W] && myKeys.keydown[myKeys.KEYBOARD.KEY_SHIFT])
