@@ -725,7 +725,7 @@ app.main = {
 		ctx.textBaseline = 'middle';
 		ctx.globalAlpha = 1;
 		this.fillText(ctx,"Space Battle With Lasers",camera.width/2,camera.height/5,"24pt courier",'white');
-		this.fillText(ctx,"Press W to start",camera.width/2,4*camera.height/5,"12pt courier",'white');
+		this.fillText(ctx,"Press W to start. Use WASD & QE, SPACE, and TAB to control your ship",camera.width/2,4*camera.height/5,"12pt courier",'white');
 		ctx.restore();
 	},
 	drawWinScreen:function(camera){
