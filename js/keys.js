@@ -51,15 +51,6 @@ window.addEventListener("keyup",function(e){
 	myKeys.keydown[e.keyCode] = false;
 	
 	// pausing and resuming
-	var char = String.fromCharCode(e.keyCode);
-	if (char == "p" || char == "P"){
-		if (app.main.paused){
-			app.main.resumeGame();
-		} else {
-			app.main.pauseGame();
-		}
-	}
-	else if(char=="x"||char=="X"){
-		app.main.toggleDebug();
-	}
+	if(e.keyCode == myKeys.KEYBOARD.KEY_TAB)
+		app.main.ship.stabilizersEnabled = !app.main.ship.stabilizersEnabled;
 });

@@ -16,6 +16,12 @@ var app = app || {};
  
  */
 app.main = {
+	gameState:0,
+	GAME_STATES:{
+		TITLE:0,
+		PLAYING:1,
+		END:2
+	},
    	lastTime: 0, // used by calculateDeltaTime() 
     debug: true,
 	paused:false,
@@ -26,12 +32,16 @@ app.main = {
 		//position/rotation
 		x:0,
 		y:0,	
-		radius:20,	
+		radius:20, //collision radius
 		rotation:0,
 		//velocities
 		velocityX:0, //in absolute form, used for movement
 		velocityY:0,
 		rotationalVelocity:0,
+		forwardVectorX:0,
+		forwardVectorY:0,
+		rightVectorX:0,
+		rightVectorY:0,
 		medialVelocity:0, //component form, used by stabilizers
 		lateralVelocity:0,
 		//max thruster strengths in pixels/second/second
@@ -45,16 +55,18 @@ app.main = {
 		thrusterEfficiency:1000,
 		//correctional coefficient used by the stabilizers
 		stabilizerStrength:60,
+		stabilizerThrustRatio:1.5,
 		//used for controlling laser fire rate
-		lastLaserTime:0,
+		//lastLaserTime:0,
 		laser:{
 			lastFireTime:0,
 			cd:.1,
 			range:5000,
 			color:'cyan',
 			currentPower:0,
-			coherence:.995,
-			maxPower:100,
+			coherence:.9,
+			maxPower:1000,
+			efficiency:500
 		},
 		stabilizersEnabled:true,
 		//per-frame thruster strengths
@@ -66,8 +78,8 @@ app.main = {
 		//maximum velocities in each direction
 		//thrusters will not be used to accelerate past these values
 		thrusterClamps:{
-			main:1500,
-			lateral: 1000,
+			main:3000,
+			lateral: 2000,
 			side: 180
 		}
 	},
@@ -85,7 +97,7 @@ app.main = {
 		//the canvas context this camera draws to
 		ctx:undefined
 	},
-	worldCamera:{
+	starCamera:{
 		x:0,
 		y:0,
 		rotation:0,
@@ -100,16 +112,19 @@ app.main = {
 		gridStart: [-125000,-125000] //corner anchor in world coordinates
 	},
 	asteroids:[],
+	stars:[],
+	baseStarCameraZoom:.0001,
     // methods
 	init : function() {
 		// initialize properties
 		var canvas = document.querySelector('#canvas1');
-		canvas.onmousedown = this.doMousedown.bind(this);
-		var canvas2 = document.querySelector('#canvas2');
-		canvas2.onmousedown = this.doMousedown.bind(this);
+		//canvas.onmousedown = this.doMousedown.bind(this);
+		//var canvas2 = document.querySelector('#canvas2');
+		//canvas2.onmousedown = this.doMousedown.bind(this);
 		this.camera = this.initializeCamera(canvas,0,0,0,.5);
-		this.worldCamera = this.initializeCamera(canvas2, 200, 200,0,.5);
+		this.starCamera = this.initializeCamera(canvas, 0, 0,0,.0001);
 		this.makeAsteroids.bind(this)();
+		this.generateStarField.bind(this)();
 		// start the game loop
 		this.update();
 	},
@@ -164,8 +179,9 @@ app.main = {
 			ctx.lineTo(end[0],end[1]);
 		}
 		//draw all lines, stroke last
+		ctx.globalAlpha = .8;
 		ctx.strokeWidth = 5;
-		ctx.strokeStyle = 'blue';
+		ctx.strokeStyle = 'darkblue';
 		ctx.stroke();
 		ctx.restore();
 	},
@@ -195,6 +211,21 @@ app.main = {
 				color:'saddlebrown'
 			}
 		];
+	},
+	generateStarField:function(){
+		var lower = -10000000;
+		var upper = 10000000;
+		var maxRadius = 8000;
+		var minRadius = 2000;
+		for(var c=0;c<500;c++){
+			var colorValue = Math.round(Math.random()*200+55);
+			this.stars.push({
+				x: Math.random()*(upper-lower)+lower,
+				y: Math.random()*(upper-lower)+lower,
+				radius: Math.random()*(maxRadius-minRadius)+minRadius,
+				color:'rgb('+colorValue+','+colorValue+','+colorValue+')'
+			});
+		}
 	},
 	//draws the given ship in the given camera
 	drawShip: function(ship, camera){
@@ -314,6 +345,10 @@ app.main = {
 
 		var normalizedForwardVector = rotate(0,0,0,-1,-ship.rotation);
 		var normalizedRightVector = rotate(0,0,0,-1,-ship.rotation-90);
+		ship.forwardVectorX = normalizedForwardVector[0],
+		ship.forwardVectorY = normalizedForwardVector[1];
+		ship.rightVectorX = normalizedRightVector[0];
+		ship.rightVectorY = normalizedRightVector[1];
 
 		//add acceleration from each thruster
 		//medial
@@ -498,7 +533,7 @@ app.main = {
 			//ctx.globalAlpha = 
 			ctx.strokeStyle = laser.color;
 			ctx.lineCap = 'round';
-			ctx.lineWidth = (laser.power/50)*camera.zoom;
+			ctx.lineWidth = (laser.power/laser.efficiency)*camera.zoom;
 			ctx.stroke();
 			ctx.restore();
 		});
@@ -510,7 +545,7 @@ app.main = {
 		}
 	},
 	//draws asteroids from the given asteroids array to the given camera
-	drawAsteroids: function(asteroids,camera, debug){
+	drawAsteroids: function(asteroids,camera){
 		var ctx = camera.ctx;
 		asteroids.forEach(function(asteroid){
 			ctx.save();
@@ -524,15 +559,31 @@ app.main = {
 			ctx.restore();
 		});
 	},
+	//draws asteroids from the given asteroids array to the given camera
+	drawStars: function(stars,camera){
+		var ctx = camera.ctx;
+		stars.forEach(function(star){
+			ctx.save();
+			var finalPosition = worldPointToCameraSpace(star.x,star.y,camera); //get asteroid's position in camera space
+			ctx.translate(finalPosition[0],finalPosition[1]); //translate to that position
+			ctx.scale(camera.zoom,camera.zoom); //scale to zoom
+			ctx.beginPath();
+			ctx.arc(0,0,star.radius,0,Math.PI*2);
+			ctx.globalAlpha = .5;
+			ctx.fillStyle = star.color;
+			ctx.fill();
+			ctx.restore();
+		});
+	},
 	//the game loop
 	update: function(){
 		//queue our next frame
 	 	this.animationID = requestAnimationFrame(this.update.bind(this));
 	 	
 	 	//pause screen
-	 	if(this.paused){
+	 	if(this.gameState == this.GAME_STATES.PLAYING && this.paused){
 	 		this.drawPauseScreen(this.camera);
-	 		this.drawPauseScreen(this.worldCamera);
+	 		//this.drawPauseScreen(this.worldCamera);
 	 		return;
 	 	}
 	 	
@@ -543,85 +594,82 @@ app.main = {
 		this.shipClearThrusters(this.ship);
 		this.clearAsteroids(this.asteroids);
 
-		//set ship thruster values
-	 	//assisted controls
-		//medial motion
-		if(myKeys.keydown[myKeys.KEYBOARD.KEY_W])
-			this.shipThrusters(this.ship,this.ship.thrusterStrength/3);
-		if(myKeys.keydown[myKeys.KEYBOARD.KEY_S])
-			this.shipThrusters(this.ship,-this.ship.thrusterStrength/3);
-		if(this.ship.stabilizersEnabled)
-			this.shipMedialStabilizers(this.ship);
-		//lateral motion
-		if(myKeys.keydown[myKeys.KEYBOARD.KEY_Q])
-			this.shipLateralThrusters(this.ship,-this.ship.lateralThrusterStrength/3);
-		if(myKeys.keydown[myKeys.KEYBOARD.KEY_E])
-			this.shipLateralThrusters(this.ship,this.ship.lateralThrusterStrength/3);
-		if(this.ship.stabilizersEnabled)
-			this.shipLateralStabilizers(this.ship);
-		//rotational motion
-		if(myKeys.keydown[myKeys.KEYBOARD.KEY_A])
-			this.shipSideThrusters(this.ship,this.ship.sideThrusterStrength/3);
-		if(myKeys.keydown[myKeys.KEYBOARD.KEY_D])
-			this.shipSideThrusters(this.ship,-this.ship.sideThrusterStrength/3);
-		if(this.ship.stabilizersEnabled)
-			this.shipRotationalStabilizers(this.ship);
-		//lasers
-		if(myKeys.keydown[myKeys.KEYBOARD.KEY_SPACE])
-			this.shipFireLaser(this.ship);
+		if(this.asteroids.length==0 && this.gameState==this.GAME_STATES.PLAYING)
+			this.gameState = this.GAME_STATES.END;
+		else if(this.gameState == this.GAME_STATES.PLAYING){
 
-	 	
-
-	 	//update ship, center main camera on ship
-		this.updateShip(this.ship,dt);
-		this.camera.x = this.ship.x;
-	 	this.camera.y = this.ship.y;
-	 	this.camera.rotation = this.ship.rotation;
-
-		this.checkCollisions(dt);
-		/*
-		//manual controls
-		if(myKeys.keydown[myKeys.KEYBOARD.KEY_W] && myKeys.keydown[myKeys.KEYBOARD.KEY_SHIFT])
-			this.shipMedialStabilizers(this.ship);
-		else if(myKeys.keydown[myKeys.KEYBOARD.KEY_W])
-			this.shipThrusters(this.ship,this.ship.thrusterStrength/3);			
-		if(myKeys.keydown[myKeys.KEYBOARD.KEY_A])
-			this.shipSideThrusters(this.ship,-this.ship.sideThrusterStrength/3);
-		if(myKeys.keydown[myKeys.KEYBOARD.KEY_D])
-			this.shipSideThrusters(this.ship,this.ship.sideThrusterStrength/3);
-		if(myKeys.keydown[myKeys.KEYBOARD.KEY_S] && myKeys.keydown[myKeys.KEYBOARD.KEY_SHIFT])
-			this.shipRotationalStabilizers(this.ship);
-		else if(myKeys.keydown[myKeys.KEYBOARD.KEY_S])
-			this.shipThrusters(this.ship,-this.ship.thrusterStrength/3);
-		if((myKeys.keydown[myKeys.KEYBOARD.KEY_Q] || myKeys.keydown[myKeys.KEYBOARD.KEY_E]) && myKeys.keydown[myKeys.KEYBOARD.KEY_SHIFT])
-			this.shipLateralStabilizers(this.ship);
-		else{
+			//set ship thruster values
+		 	//assisted controls
+			//medial motion
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_W])
+				this.shipThrusters(this.ship,this.ship.thrusterStrength/this.ship.stabilizerThrustRatio);
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_S])
+				this.shipThrusters(this.ship,-this.ship.thrusterStrength/this.ship.stabilizerThrustRatio);
+			if(this.ship.stabilizersEnabled)
+				this.shipMedialStabilizers(this.ship);
+			//lateral motion
 			if(myKeys.keydown[myKeys.KEYBOARD.KEY_Q])
-				this.shipLateralThrusters(this.ship,-this.ship.lateralThrusterStrength/3);
+				this.shipLateralThrusters(this.ship,-this.ship.lateralThrusterStrength/this.ship.stabilizerThrustRatio);
 			if(myKeys.keydown[myKeys.KEYBOARD.KEY_E])
-				this.shipLateralThrusters(this.ship,this.ship.lateralThrusterStrength/3);		
-		}*/
+				this.shipLateralThrusters(this.ship,this.ship.lateralThrusterStrength/this.ship.stabilizerThrustRatio);
+			if(this.ship.stabilizersEnabled)
+				this.shipLateralStabilizers(this.ship);
+			//rotational motion
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_A])
+				this.shipSideThrusters(this.ship,this.ship.sideThrusterStrength/this.ship.stabilizerThrustRatio);
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_D])
+				this.shipSideThrusters(this.ship,-this.ship.sideThrusterStrength/this.ship.stabilizerThrustRatio);
+			if(this.ship.stabilizersEnabled)
+				this.shipRotationalStabilizers(this.ship);
+			//lasers
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_SPACE])
+				this.shipFireLaser(this.ship);
 
-		//camera zoom controls
-		if(myKeys.keydown[myKeys.KEYBOARD.KEY_UP])
-			this.camera.zoom*=1.05;
-		if(myKeys.keydown[myKeys.KEYBOARD.KEY_DOWN])
-			this.camera.zoom*=.95;
+		 	//camera zoom controls
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_UP])
+				this.camera.zoom*=1.05;
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_DOWN])
+				this.camera.zoom*=.95;	 
+
+		 	//update ship, center main camera on ship
+			this.updateShip(this.ship,dt);
+			
+
+			this.checkCollisions(dt);
+
+				
+		}
+		else if(this.gameState == this.GAME_STATES.TITLE && myKeys.keydown[myKeys.KEYBOARD.KEY_W])
+			this.gameState = this.GAME_STATES.PLAYING;
 
 	 	
-
-	 	//clear cameras
+		this.camera.x = this.ship.x;// this.ship.forwardVectorX*(this.camera.height/6)*(1/this.camera.zoom);
+		this.camera.y = this.ship.y;// this.ship.forwardVectorY*(this.camera.height/6)*(1/this.camera.zoom);
+		this.camera.rotation = this.ship.rotation;
+		this.starCamera.x = this.camera.x;
+	 	this.starCamera.y = this.camera.y;
+	 	this.starCamera.rotation = this.camera.rotation;
+	 	//this.starCamera.zoom = this.camera.zoom*this.baseStarCameraZoom;
+		//clear cameras
 		this.clearCamera(this.camera);
-		this.clearCamera(this.worldCamera);
-
+		this.clearCamera(this.starCamera);
 		//draw grids then asteroids then ships
+		this.drawStars(this.stars,this.starCamera);
 		this.drawGrid(this.camera);
-		this.drawGrid(this.worldCamera);
 		this.drawLasers(this.lasers, this.camera);
 		this.drawAsteroids(this.asteroids,this.camera);
-		this.drawAsteroids(this.asteroids,this.worldCamera);
-		this.drawShip(this.ship,this.camera);
-		this.drawShip(this.ship,this.worldCamera);
+		if(this.gameState == this.GAME_STATES.PLAYING)
+		{
+			this.drawShip(this.ship,this.camera);
+			this.drawHUD(this.camera);
+		}
+		else if(this.gameState == this.GAME_STATES.TITLE)
+		{
+			this.drawTitleScreen(this.camera);
+		}
+		else if(this.gameState == this.GAME_STATES.END){
+			this.drawEndScreen(this.camera);
+		}
 
 		//FPS text
 		if (this.debug){
@@ -631,20 +679,51 @@ app.main = {
 		//because we might use the frame count for something at some point
 		this.frameCount++;
 	},
-	drawHUD: function(ctx){
+	drawHUD: function(camera){
+		var ctx = camera.ctx;
 		ctx.save(); // NEW
-		
+		ctx.textAlign = 'left';
+		ctx.textBaseline = 'center';
+		this.fillText(ctx, "Control mode: "+((this.ship.stabilizersEnabled)?'assisted':'manual'),camera.width/15,9*camera.height/10,"12pt courier",'white')
 		ctx.restore(); // NEW
+	},
+	drawTitleScreen:function(camera){
+		var ctx = camera.ctx;
+		ctx.save();
+		ctx.fillStyle = 'black';
+		ctx.globalAlpha = .5;
+		ctx.fillRect(0,0,camera.width,camera.height);
+		ctx.textAlign = 'center';
+		ctx.textBaseline = 'middle';
+		ctx.globalAlpha = 1;
+		this.fillText(ctx,"Space Battle With Lasers",camera.width/2,camera.height/5,"24pt courier",'white');
+		this.fillText(ctx,"Press W to start",camera.width/2,4*camera.height/5,"12pt courier",'white');
+		ctx.restore();
+	},
+	drawEndScreen:function(camera){
+		var ctx = camera.ctx;
+		ctx.save();
+		ctx.fillStyle = 'black';
+		ctx.globalAlpha = .5;
+		ctx.fillRect(0,0,camera.width,camera.height);
+		ctx.textAlign = 'center';
+		ctx.textBaseline = 'middle';
+		ctx.globalAlpha = 1;
+		this.fillText(ctx,"You win!",camera.width/2,camera.height/5,"24pt courier",'white');
+		this.fillText(ctx,"Good for you",camera.width/2,4*camera.height/5,"12pt courier",'white');
+		ctx.restore();		
 	},
 	//draw pause screen in the given camera
 	drawPauseScreen:function(camera){
 		var ctx = camera.ctx;
 		ctx.save();
 		ctx.fillStyle = "black",
+		ctx.globalAlpha = .03;
 		ctx.fillRect(0,0,camera.width,camera.height);
 		ctx.textAlign = 'center';
 		ctx.textBaseline = 'middle';
-		this.fillText(ctx,"Paused",camera.width/2,camera.height/2,"24pt courier",'white');
+		ctx.globalAlpha = 1;
+		this.fillText(ctx,"Paused",camera.width/2,camera.height/5,"24pt courier",'white');
 		ctx.restore();
 	},
 	pauseGame:function(){
