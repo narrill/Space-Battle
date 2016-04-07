@@ -189,7 +189,7 @@ app.main = {
 		this.camera = this.initializeCamera(canvas,0,0,0,.5,.05);
 		this.starCamera = this.initializeCamera(canvas, 0, 0,0,.0001);
 		this.makeAsteroids.bind(this, this.grid)();
-		this.generateStarField.bind(this)();
+		this.generateStarField.bind(this, this.stars)();
 		// start the game loop
 		this.update();
 	},
@@ -263,7 +263,7 @@ app.main = {
 		var maxRadius = 1000;
 		var minRadius = 50;
 		this.asteroids.info = [];
-		for(var c=0;c<1000;c++){
+		for(var c=0;c<10000;c++){
 			var radius = Math.random()*(maxRadius-minRadius)+minRadius;
 			this.asteroids.info.push({
 				x: Math.random()*(upper[0]-lower[0])+lower[0],
@@ -273,14 +273,14 @@ app.main = {
 			});
 		}
 	},
-	generateStarField:function(){
+	generateStarField:function(stars){
 		var lower = -10000000;
 		var upper = 10000000;
 		var maxRadius = 8000;
 		var minRadius = 2000;
 		for(var c=0;c<500;c++){
 			var colorValue = Math.round(Math.random()*200+55);
-			this.stars.push({
+			stars.push({
 				x: Math.random()*(upper-lower)+lower,
 				y: Math.random()*(upper-lower)+lower,
 				radius: Math.random()*(maxRadius-minRadius)+minRadius,
@@ -676,30 +676,36 @@ app.main = {
 	},
 	//draws asteroids from the given asteroids array to the given camera
 	drawAsteroids: function(asteroids,camera){
+		var start = [0,0];
+		var end = [camera.width,camera.height];
 		var ctx = camera.ctx;
+		ctx.save()
 		ctx.fillStyle = asteroids.color;
+		ctx.beginPath();
 		for(var c = 0;c<asteroids.info.length;c++){
 			var asteroid = asteroids.info[c];
-			ctx.save();
 			var finalPosition = worldPointToCameraSpace(asteroid.x,asteroid.y,camera); //get asteroid's position in camera space
-			ctx.translate(finalPosition[0],finalPosition[1]); //translate to that position
-			ctx.scale(camera.zoom,camera.zoom); //scale to zoom
-			ctx.beginPath();
-			ctx.arc(0,0,asteroid.radius,0,Math.PI*2);
-			//ctx.fillStyle = asteroid.color;
-			ctx.fill();
-			//ctx.scale(-camera.zoom,-camera.zoom);
-			//ctx.translate(-finalPosition[0],-finalPosition[1]);
-			ctx.restore();
+			
+			if(finalPosition[0] + asteroid.radius*camera.zoom<start[0] || finalPosition[0]-asteroid.radius*camera.zoom>end[0] || finalPosition[1] + asteroid.radius*camera.zoom<start[1] || finalPosition[1]-asteroid.radius*camera.zoom>end[1])
+					continue;
+			ctx.moveTo(finalPosition[0],finalPosition[1]);
+			ctx.arc(finalPosition[0],finalPosition[1],asteroid.radius*camera.zoom,0,Math.PI*2);
 		};
+		ctx.closePath();
+		ctx.fill();
+		ctx.restore();
 	},
 	//draws asteroids from the given asteroids array to the given camera
 	drawStars: function(stars,camera){
+		var start = [0,0];
+		var end = [camera.width,camera.height];
 		var ctx = camera.ctx;
 		for(var c = 0;c<stars.length;c++){
 			var star = stars[c];
 			ctx.save();
 			var finalPosition = worldPointToCameraSpace(star.x,star.y,camera); //get asteroid's position in camera space
+			if(finalPosition[0] + star.radius*camera.zoom<start[0] || finalPosition[0]-star.radius*camera.zoom>end[0] || finalPosition[1] + star.radius*camera.zoom<start[1] || finalPosition[1]-star.radius*camera.zoom>end[1])
+					continue;
 			ctx.translate(finalPosition[0],finalPosition[1]); //translate to that position
 			ctx.scale(camera.zoom,camera.zoom); //scale to zoom
 			ctx.beginPath();
@@ -779,7 +785,7 @@ app.main = {
 		 	//camera zoom controls
 			if(myKeys.keydown[myKeys.KEYBOARD.KEY_UP])
 				this.camera.zoom*=1.05;
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_DOWN] * this.camera.zoom>=this.camera.minZoom)
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_DOWN] && this.camera.zoom>=this.camera.minZoom)
 				this.camera.zoom*=.95;	 
 
 		 	//update ship, center main camera on ship
@@ -813,7 +819,6 @@ app.main = {
 			this.drawStars(this.stars,this.starCamera);
 		this.drawGrid(this.camera);
 		this.drawLasers(this.lasers, this.camera);
-		this.drawAsteroids(this.asteroids,this.camera);
 		if(this.gameState == this.GAME_STATES.PLAYING)
 		{
 			this.otherShips.forEach(function(ship){
@@ -821,22 +826,27 @@ app.main = {
 			},this);
 			
 			this.drawShip(this.ship,this.camera);
+			this.drawAsteroids(this.asteroids,this.camera);
 			this.drawHUD(this.camera);
 		}
 		else if(this.gameState == this.GAME_STATES.TITLE)
 		{
+
+			this.drawAsteroids(this.asteroids,this.camera);
 			this.drawTitleScreen(this.camera);
 		}
 		else if(this.gameState == this.GAME_STATES.WIN){
+			this.drawAsteroids(this.asteroids,this.camera);
 			this.drawWinScreen(this.camera);
 		}
 		else if(this.gameState == this.GAME_STATES.LOSE){
+			this.drawAsteroids(this.asteroids,this.camera);
 			this.drawLoseScreen(this.camera);
 		}
 
 		//FPS text
 		if (this.debug){
-			this.fillText(this.camera.ctx,'fps: '+1/dt,15,15,"10pt courier",'white');
+			this.fillText(this.camera.ctx,'fps: '+Math.floor(1/dt),15,15,"10pt courier",'white');
 		}
 
 		//because we might use the frame count for something at some point
@@ -847,7 +857,7 @@ app.main = {
 		ctx.save(); // NEW
 		ctx.textAlign = 'left';
 		ctx.textBaseline = 'center';
-		this.fillText(ctx, "HP: "+this.ship.hp,camera.width/15,8*camera.height/10,"12pt courier",'white')
+		this.fillText(ctx, "HP: "+Math.floor(this.ship.hp),camera.width/15,8*camera.height/10,"12pt courier",'white')
 		this.fillText(ctx, "Control mode: "+((this.ship.stabilizersEnabled)?'assisted':'manual'),camera.width/15,9*camera.height/10,"12pt courier",'white')
 		ctx.restore(); // NEW
 	},
