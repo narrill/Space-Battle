@@ -553,10 +553,10 @@ app.main = {
 
 		var distanceSqr = vectorMagnitudeSqr(vectorToTarget[0],vectorToTarget[1]);
 
-		if(relativeAngleToTarget<10 && relativeAngleToTarget>-10  && distanceSqr<(ship.laser.range*ship.laser.range))
+		if(relativeAngleToTarget<5 && relativeAngleToTarget>-5  && distanceSqr<(ship.laser.range*ship.laser.range))
 			this.shipFireLaser(ship);
 
-		if(distanceSqr > 2000*2000)
+		if(distanceSqr > 3000*3000)
 			this.shipThrusters(ship,ship.thrusterStrength/ship.stabilizerThrustRatio);
 		else if(distanceSqr<1000*1000)
 			this.shipThrusters(ship,-ship.thrusterStrength/ship.stabilizerThrustRatio);
@@ -565,9 +565,9 @@ app.main = {
 		var relativeAngleToMe = angleBetweenVectors(target.forwardVectorX,target.forwardVectorY,vectorFromTarget[0],vectorFromTarget[1]);
 		console.log(Math.floor(relativeAngleToMe));
 
-		if(relativeAngleToMe<180 && relativeAngleToMe>0)
+		if(relativeAngleToMe<90 && relativeAngleToMe>0)
 			this.shipLateralThrusters(ship, -ship.lateralThrusterStrength/ship.stabilizerThrustRatio);
-		else if(relativeAngleToMe>-180 &&relativeAngleToMe<0)
+		else if(relativeAngleToMe>-90 &&relativeAngleToMe<0)
 			this.shipLateralThrusters(ship, ship.lateralThrusterStrength/ship.stabilizerThrustRatio);
 
 		this.shipMedialStabilizers(ship);
