@@ -111,7 +111,10 @@ app.main = {
 		gridSpacing: 500, //pixels per grid unit
 		gridStart: [-125000,-125000] //corner anchor in world coordinates
 	},
-	asteroids:[],
+	asteroids:{
+		info:[],
+		color:'saddlebrown'
+	},
 	stars:[],
 	baseStarCameraZoom:.0001,
     // methods
@@ -123,7 +126,7 @@ app.main = {
 		//canvas2.onmousedown = this.doMousedown.bind(this);
 		this.camera = this.initializeCamera(canvas,0,0,0,.5);
 		this.starCamera = this.initializeCamera(canvas, 0, 0,0,.0001);
-		this.makeAsteroids.bind(this)();
+		this.makeAsteroids.bind(this, this.grid)();
 		this.generateStarField.bind(this)();
 		// start the game loop
 		this.update();
@@ -186,31 +189,20 @@ app.main = {
 		ctx.restore();
 	},
 	//generates the field of asteroids
-	makeAsteroids:function(){
-		this.asteroids = [
-			{
-				//position, readius, color
-				x:50,
-				y:50,
-				radius:50,
-				hp:500,
-				color:'saddlebrown'
-			},
-			{
-				x:400,
-				y:100,
-				radius:50,
-				hp:500,
-				color:'saddlebrown'
-			},
-			{
-				x:350,
-				y:400,
-				radius:50,
-				hp:500,
-				color:'saddlebrown'
-			}
-		];
+	makeAsteroids:function(grid){
+		var lower = [grid.gridStart[0],grid.gridStart[1]];
+		var upper = [lower[0]+grid.gridLines*grid.gridSpacing,lower[1]+grid.gridLines*grid.gridSpacing];
+		var maxRadius = 1000;
+		var minRadius = 50;
+		for(var c=0;c<1000;c++){
+			var radius = Math.random()*(maxRadius-minRadius)+minRadius;
+			this.asteroids.info.push({
+				x: Math.random()*(upper[0]-lower[0])+lower[0],
+				y: Math.random()*(upper[1]-lower[1])+lower[1],
+				radius: radius,
+				hp: radius
+			});
+		}
 	},
 	generateStarField:function(){
 		var lower = -10000000;
@@ -413,7 +405,7 @@ app.main = {
 		if(ship.laser.currentPower>0){
 			var laserVector = [0,-ship.laser.range];
 			laserVector = rotate(0,0,laserVector[0],laserVector[1],-ship.rotation);
-			this.createLaser(this.lasers,ship.x+normalizedForwardVector[0],ship.y+normalizedForwardVector[1],ship.x+laserVector[0],ship.y+laserVector[1],ship.laser.color,ship.laser.currentPower);
+			this.createLaser(this.lasers,ship.x+normalizedForwardVector[0]*30,ship.y+normalizedForwardVector[1]*30,ship.x+laserVector[0],ship.y+laserVector[1],ship.laser.color,ship.laser.currentPower, ship.laser.efficiency);
 			ship.laser.currentPower-=ship.laser.maxPower*(1-ship.laser.coherence)*dt*1000;
 		}
 		else if(ship.laser.currentPower<0)
@@ -477,14 +469,15 @@ app.main = {
 			ship.laser.currentPower = ship.laser.maxPower;			
 		}
 	},
-	createLaser:function(lasers, startX,startY,endX,endY,color, power){
+	createLaser:function(lasers, startX,startY,endX,endY,color, power,efficiency){
 		lasers.push({
 			startX:startX,
 			startY:startY,
 			endX:endX,
 			endY:endY,
 			color:color,
-			power:power
+			power:power,
+			efficiency:efficiency
 		});
 	},
 	clearLasers:function(lasers){
@@ -499,8 +492,8 @@ app.main = {
 			var yInv = laser.endY<laser.startY;
 			var start = [(xInv) ? laser.endX : laser.startX, (yInv) ? laser.endY : laser.startY];
 			var end = [(xInv) ? laser.startX : laser.endX, (yInv) ? laser.startY : laser.endY];
-			for(var c = 0;c<asteroids.length;c++){
-				var thisObj = asteroids[c];
+			for(var c = 0;c<asteroids.info.length;c++){
+				var thisObj = asteroids.info[c];
 				if(thisObj.x + thisObj.radius<start[0] || thisObj.x-thisObj.radius>end[0] || thisObj.y + thisObj.radius<start[1] || thisObj.y-thisObj.radius>end[1])
 					continue;
 				var thisDistance = distanceFromPointToLine(thisObj.x,thisObj.y,laser.startX,laser.startY,laser.endX,laser.endY);
@@ -519,6 +512,11 @@ app.main = {
 				laser.endY = newEnd[1];
 			}
 		});
+
+		for(var c = 0;c<asteroids.info.length;c++){
+			var asteroid = asteroids.info[c];
+			
+		}
 	},
 	drawLasers:function(lasers,camera){
 		var ctx = camera.ctx;
@@ -539,30 +537,35 @@ app.main = {
 		});
 	},
 	clearAsteroids:function(asteroids){
-		for(var c = 0;c<asteroids.length;c++){
-			if(asteroids[c].hp<=0)
-				asteroids.splice(c--,1);
+		for(var c = 0;c<asteroids.info.length;c++){
+			if(asteroids.info[c].hp<=0)
+				asteroids.info.splice(c--,1);
 		}
 	},
 	//draws asteroids from the given asteroids array to the given camera
 	drawAsteroids: function(asteroids,camera){
 		var ctx = camera.ctx;
-		asteroids.forEach(function(asteroid){
+		ctx.fillStyle = asteroids.color;
+		for(var c = 0;c<asteroids.info.length;c++){
+			var asteroid = asteroids.info[c];
 			ctx.save();
 			var finalPosition = worldPointToCameraSpace(asteroid.x,asteroid.y,camera); //get asteroid's position in camera space
 			ctx.translate(finalPosition[0],finalPosition[1]); //translate to that position
 			ctx.scale(camera.zoom,camera.zoom); //scale to zoom
 			ctx.beginPath();
 			ctx.arc(0,0,asteroid.radius,0,Math.PI*2);
-			ctx.fillStyle = asteroid.color;
+			//ctx.fillStyle = asteroid.color;
 			ctx.fill();
+			//ctx.scale(-camera.zoom,-camera.zoom);
+			//ctx.translate(-finalPosition[0],-finalPosition[1]);
 			ctx.restore();
-		});
+		};
 	},
 	//draws asteroids from the given asteroids array to the given camera
 	drawStars: function(stars,camera){
 		var ctx = camera.ctx;
-		stars.forEach(function(star){
+		for(var c = 0;c<stars.length;c++){
+			var star = stars[c];
 			ctx.save();
 			var finalPosition = worldPointToCameraSpace(star.x,star.y,camera); //get asteroid's position in camera space
 			ctx.translate(finalPosition[0],finalPosition[1]); //translate to that position
@@ -573,7 +576,7 @@ app.main = {
 			ctx.fillStyle = star.color;
 			ctx.fill();
 			ctx.restore();
-		});
+		};
 	},
 	//the game loop
 	update: function(){
