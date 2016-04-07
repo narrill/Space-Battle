@@ -35,7 +35,7 @@ app.main = {
 		x:0,
 		y:0,	
 		radius:20, //collision radius
-		hp:5000,
+		hp:500,
 		rotation:0,
 		//velocities
 		velocityX:0, //in absolute form, used for movement
@@ -134,6 +134,11 @@ app.main = {
 		this.generateStarField.bind(this)();
 		// start the game loop
 		this.update();
+	},
+	resetGame:function(){
+		this.ship.hp = 500;
+		this.makeAsteroids.bind(this,this.grid)();
+		this.gameState = this.GAME_STATES.PLAYING;
 	},
 	//returns a camera object with the given values and the context from the given canvas
 	initializeCamera:function(canvas,x,y,rotation,zoom,minZoom){
@@ -610,7 +615,7 @@ app.main = {
 
 		if(this.asteroids.info.length==0 && this.gameState==this.GAME_STATES.PLAYING)
 			this.gameState = this.GAME_STATES.WIN;
-		else if(this.ship.hp<=0)
+		else if(this.gameState == this.GAME_STATES.PLAYING && this.ship.hp<=0)
 			this.gameState = this.GAME_STATES.LOSE;
 		else if(this.gameState == this.GAME_STATES.PLAYING){
 
@@ -657,6 +662,8 @@ app.main = {
 		}
 		else if(this.gameState == this.GAME_STATES.TITLE && myKeys.keydown[myKeys.KEYBOARD.KEY_W])
 			this.gameState = this.GAME_STATES.PLAYING;
+		else if((this.gameState == this.GAME_STATES.WIN || this.gameState == this.GAME_STATES.LOSE) && myKeys.keydown[myKeys.KEYBOARD.KEY_R])
+			this.resetGame();
 
 	 	
 		this.camera.x = this.ship.x;// this.ship.forwardVectorX*(this.camera.height/6)*(1/this.camera.zoom);
@@ -731,7 +738,7 @@ app.main = {
 		ctx.textBaseline = 'middle';
 		ctx.globalAlpha = 1;
 		this.fillText(ctx,"You win!",camera.width/2,camera.height/5,"24pt courier",'white');
-		this.fillText(ctx,"Good for you",camera.width/2,4*camera.height/5,"12pt courier",'white');
+		this.fillText(ctx,"Good for you. Press R to continue.",camera.width/2,4*camera.height/5,"12pt courier",'white');
 		ctx.restore();		
 	},
 	drawLoseScreen:function(camera){
@@ -744,7 +751,7 @@ app.main = {
 		ctx.textBaseline = 'middle';
 		ctx.globalAlpha = 1;
 		this.fillText(ctx,"You lose!",camera.width/2,camera.height/5,"24pt courier",'white');
-		this.fillText(ctx,"Sucks to be you",camera.width/2,4*camera.height/5,"12pt courier",'white');
+		this.fillText(ctx,"Sucks to be you. Press R to try again.",camera.width/2,4*camera.height/5,"12pt courier",'white');
 		ctx.restore();		
 	},
 	//draw pause screen in the given camera
