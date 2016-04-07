@@ -86,6 +86,64 @@ app.main = {
 			side: 180
 		}
 	},
+	otherShips:[
+		{
+			//position/rotation
+			x:500,
+			y:500,	
+			radius:20, //collision radius
+			hp:500,
+			rotation:0,
+			//velocities
+			velocityX:0, //in absolute form, used for movement
+			velocityY:0,
+			rotationalVelocity:0,
+			forwardVectorX:0,
+			forwardVectorY:0,
+			rightVectorX:0,
+			rightVectorY:0,
+			medialVelocity:0, //component form, used by stabilizers
+			lateralVelocity:0,
+			//max thruster strengths in pixels/second/second
+			thrusterStrength:3000,
+			lateralThrusterStrength:2000,
+			sideThrusterStrength:1000,
+			//colors
+			color:'red',
+			thrusterColor:'green',
+			//determines the length of the thruster trail, purely visual
+			thrusterEfficiency:1000,
+			//correctional coefficient used by the stabilizers
+			stabilizerStrength:60,
+			stabilizerThrustRatio:1.5,
+			//used for controlling laser fire rate
+			//lastLaserTime:0,
+			laser:{
+				lastFireTime:0,
+				cd:.1,
+				range:5000,
+				color:'cyan',
+				currentPower:0,
+				coherence:.9,
+				maxPower:1000,
+				efficiency:500
+			},
+			stabilizersEnabled:true,
+			//per-frame thruster strengths
+			activeThrusters:{
+				main:0,
+				lateral:0,
+				side:0
+			},
+			//maximum velocities in each direction
+			//thrusters will not be used to accelerate past these values
+			thrusterClamps:{
+				main:3000,
+				lateral: 2000,
+				side: 180
+			}
+		}
+	],
 	lasers:[],
 	camera:{
 		//position/rotation
@@ -480,6 +538,9 @@ app.main = {
 			ship.laser.currentPower = ship.laser.maxPower;			
 		}
 	},
+	shipAI:function(ship, target){
+
+	},
 	createLaser:function(lasers, startX,startY,endX,endY,color, power,efficiency){
 		lasers.push({
 			startX:startX,
@@ -496,6 +557,7 @@ app.main = {
 	},
 	checkCollisions:function(dt){
 		var asteroids = this.asteroids;
+		var otherShips = this.otherShips;
 		this.lasers.forEach(function(laser){
 			var obj; //the chosen object
 			var tValOfObj = Number.MAX_VALUE;
@@ -505,6 +567,16 @@ app.main = {
 			var end = [(xInv) ? laser.startX : laser.endX, (yInv) ? laser.startY : laser.endY];
 			for(var c = 0;c<asteroids.info.length;c++){
 				var thisObj = asteroids.info[c];
+				if(thisObj.x + thisObj.radius<start[0] || thisObj.x-thisObj.radius>end[0] || thisObj.y + thisObj.radius<start[1] || thisObj.y-thisObj.radius>end[1])
+					continue;
+				var thisDistance = distanceFromPointToLine(thisObj.x,thisObj.y,laser.startX,laser.startY,laser.endX,laser.endY);
+				if(thisDistance[0]<thisObj.radius && thisDistance[1]<tValOfObj){
+					obj = thisObj;
+					tValOfObj = thisDistance[1];
+				}
+			}
+			for(var c = 0;c<otherShips.length;c++){
+				var thisObj = otherShips[c];
 				if(thisObj.x + thisObj.radius<start[0] || thisObj.x-thisObj.radius>end[0] || thisObj.y + thisObj.radius<start[1] || thisObj.y-thisObj.radius>end[1])
 					continue;
 				var thisDistance = distanceFromPointToLine(thisObj.x,thisObj.y,laser.startX,laser.startY,laser.endX,laser.endY);
@@ -533,6 +605,17 @@ app.main = {
 				this.ship.hp-=100*dt;
 			}
 		}
+		otherShips.forEach(function(ship){
+			for(var c = 0;c<asteroids.info.length;c++){
+				var asteroid = asteroids.info[c];
+				var distance = (ship.x-asteroid.x)*(ship.x-asteroid.x) + (ship.y-asteroid.y)*(ship.y-asteroid.y);
+				var overlap = (ship.radius+asteroid.radius)*(ship.radius+asteroid.radius) - distance;
+				if(overlap>=0)
+				{
+					ship.hp-=100*dt;
+				}
+			}
+		},this);
 	},
 	drawLasers:function(lasers,camera){
 		var ctx = camera.ctx;
@@ -552,10 +635,10 @@ app.main = {
 			ctx.restore();
 		});
 	},
-	clearAsteroids:function(asteroids){
-		for(var c = 0;c<asteroids.info.length;c++){
-			if(asteroids.info[c].hp<=0)
-				asteroids.info.splice(c--,1);
+	clearDestructibles:function(destructibles){
+		for(var c = 0;c<destructibles.length;c++){
+			if(destructibles[c].hp<=0)
+				destructibles.splice(c--,1);
 		}
 	},
 	//draws asteroids from the given asteroids array to the given camera
@@ -594,6 +677,12 @@ app.main = {
 			ctx.restore();
 		};
 	},
+	clearShips:function(ships){
+		for(var c = 0;c<ships.length;c++){
+			if(ships[c].hp<=0)
+				ships.splice(c--,1);
+		}
+	},
 	//the game loop
 	update: function(){
 		//queue our next frame
@@ -611,13 +700,21 @@ app.main = {
 	 	//clear values
 		this.clearLasers(this.lasers);
 		this.shipClearThrusters(this.ship);
-		this.clearAsteroids(this.asteroids);
+		this.otherShips.forEach(function(ship){
+				this.shipClearThrusters(ship);
+			},this);
+		this.clearDestructibles(this.asteroids.info);
+		this.clearDestructibles(this.otherShips);
 
 		if(this.asteroids.info.length==0 && this.gameState==this.GAME_STATES.PLAYING)
 			this.gameState = this.GAME_STATES.WIN;
 		else if(this.gameState == this.GAME_STATES.PLAYING && this.ship.hp<=0)
 			this.gameState = this.GAME_STATES.LOSE;
 		else if(this.gameState == this.GAME_STATES.PLAYING){
+
+			this.otherShips.forEach(function(ship){
+				this.shipAI(ship,this.ship);
+			},this);
 
 			//set ship thruster values
 		 	//assisted controls
@@ -654,7 +751,9 @@ app.main = {
 
 		 	//update ship, center main camera on ship
 			this.updateShip(this.ship,dt);
-			
+			this.otherShips.forEach(function(ship){
+				this.updateShip(ship,dt);
+			},this);
 
 			this.checkCollisions(dt);
 
@@ -684,6 +783,10 @@ app.main = {
 		this.drawAsteroids(this.asteroids,this.camera);
 		if(this.gameState == this.GAME_STATES.PLAYING)
 		{
+			this.otherShips.forEach(function(ship){
+				this.drawShip(ship,this.camera);
+			},this);
+			
 			this.drawShip(this.ship,this.camera);
 			this.drawHUD(this.camera);
 		}
