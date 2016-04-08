@@ -62,25 +62,29 @@ app.main = {
 		ctx:undefined
 	},
 	grid:{
-		gridLines: 500, //number of grid lines
+		gridLines: 5000, //number of grid lines
 		gridSpacing: 500, //pixels per grid unit
 		gridStart: [-125000,-125000], //corner anchor in world coordinates
 		colors:[
 			{
+				color:'#1111FF',
+				interval:1000
+			},
+			{
 				color:'blue',
-				interval:100
+				interval:200
 			},
 			{
 				color:'mediumblue',
-				interval:25
+				interval:50
 			},
 			{
 				color:'darkblue',
-				interval:5
+				interval:10
 			},
 			{
 				color:'navyblue',
-				interval:1
+				interval:2
 			}
 		]
 	},
@@ -575,7 +579,7 @@ app.main = {
 			//add correctional strength in the opposite direction of our rotation
 			this.shipRotationalThrusters(ship,ship.rotationalVelocity*ship.stabilizer.strength); //we check the direction because the stabilizers can apply more thrust than the player
 		//or, if we've exceeded our clamp speed and are trying to keep accelerating in that direction
-		else if (Math.abs(ship.rotationalVelocity)>=ship.stabilizer.clamps.rotational && ship.thrusters.rotational.targetStrength*ship.rotationalVelocity<0)
+		else if (ship.stabilizer.clamps.enabled && Math.abs(ship.rotationalVelocity)>=ship.stabilizer.clamps.rotational && ship.thrusters.rotational.targetStrength*ship.rotationalVelocity<0)
 			//shut off the thruster
 			ship.thrusters.rotational.targetStrength = 0;
 	},
@@ -586,7 +590,7 @@ app.main = {
 			//add corrective strength
 			this.shipMedialThrusters(ship,ship.medialVelocity*ship.stabilizer.strength);
 		//or, if we're past our clamp and trying to keep going
-		else if (Math.abs(ship.medialVelocity)>=ship.stabilizer.clamps.medial && ship.thrusters.medial.targetStrength*ship.medialVelocity<0)
+		else if (ship.stabilizer.clamps.enabled && Math.abs(ship.medialVelocity)>=ship.stabilizer.clamps.medial && ship.thrusters.medial.targetStrength*ship.medialVelocity<0)
 			//shut off the thruster
 			ship.thrusters.medial.targetStrength = 0;
 	},
@@ -595,7 +599,7 @@ app.main = {
 		//see above
 		if(ship.thrusters.lateral.targetStrength*ship.lateralVelocity>=0)
 			this.shipLateralThrusters(ship,ship.lateralVelocity*ship.stabilizer.strength);
-		else if (Math.abs(ship.lateralVelocity)>=ship.stabilizer.clamps.lateral && ship.thrusters.lateral.currenttarget*ship.lateralVelocity<0)
+		else if (ship.stabilizer.clamps.enabled && Math.abs(ship.lateralVelocity)>=ship.stabilizer.clamps.lateral && ship.thrusters.lateral.currenttarget*ship.lateralVelocity<0)
 			ship.thrusters.lateral.targetStrength = 0;
 	},
 	shipFireLaser:function(ship){
@@ -855,7 +859,7 @@ app.main = {
 		 	//camera zoom controls
 			if(myKeys.keydown[myKeys.KEYBOARD.KEY_UP])
 				this.camera.zoom*=1.05;
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_DOWN] && this.camera.zoom>=this.camera.minZoom)
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_DOWN] /*&& this.camera.zoom>=this.camera.minZoom*/)
 				this.camera.zoom*=.95;	 
 
 		 	//update ship, center main camera on ship
@@ -880,6 +884,8 @@ app.main = {
 		this.starCamera.x = this.camera.x;
 	 	this.starCamera.y = this.camera.y;
 	 	this.starCamera.rotation = this.camera.rotation;
+	 	var cameraDistance = 1/this.camera.zoom;
+	 	this.starCamera.zoom = 1/(cameraDistance+10000);
 	 	//this.starCamera.zoom = this.camera.zoom*this.baseStarCameraZoom;
 		//clear cameras
 		this.clearCamera(this.camera);
@@ -930,6 +936,7 @@ app.main = {
 		ctx.textBaseline = 'center';
 		this.fillText(ctx, "HP: "+Math.floor(this.ship.destructible.hp),camera.width/15,8*camera.height/10,"12pt courier",'white')
 		this.fillText(ctx, "Control mode: "+((this.ship.stabilizer.enabled)?'assisted':'manual'),camera.width/15,9*camera.height/10,"12pt courier",'white')
+		this.fillText(ctx, "Thruster clamps: "+((this.ship.stabilizer.clamps.enabled)?'enabled':'disabled'),camera.width/15,9.5*camera.height/10,"12pt courier",'white')
 		ctx.restore(); // NEW
 	},
 	drawTitleScreen:function(camera){
