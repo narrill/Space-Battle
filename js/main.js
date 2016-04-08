@@ -24,7 +24,9 @@ app.main = {
 		TITLE:0,
 		PLAYING:1,
 		WIN:2,
-		LOSE:3
+		LOSE:3,
+		MENU:4,
+		SHIPCONFIG:5
 	},
    	lastTime: 0, // used by calculateDeltaTime() 
     debug: true,
@@ -197,8 +199,10 @@ app.main = {
 			objectParams = {};
 		return {
 			currentStrength:0,
+			targetStrength:0,
 			maxStrength: (objectParams.maxStrength)?objectParams.maxStrength:1000,
-			efficiency: (objectParams.efficiency) ? objectParams.efficiency:1000
+			efficiency: (objectParams.efficiency) ? objectParams.efficiency:1000,
+			powerRampPercentage: (objectParams.powerRampPercentage)? objectParams.powerRampPercentage: 20
 		};
 	},
 	createComponentStabilizer:function(objectParams){
@@ -206,7 +210,7 @@ app.main = {
 			objectParams = {};
 		return{
 			enabled: (objectParams.enabled)? objectParams.enabled:true,
-			strength: (objectParams.strength)? objectParams.strength:60,
+			strength: (objectParams.strength)? objectParams.strength:12,
 			thrustRatio: (objectParams.thrustRatio)?objectParams.thrustRatio:1.5,
 			clamps: this.createComponentStabilizerClamps(objectParams.clamps)
 		};
@@ -357,33 +361,33 @@ app.main = {
 		//forward thrust
 		for(var c = 0;c<=this.thrusterDetail;c++){
 			ctx.fillStyle = shadeRGBColor(ship.thrusters.color,.5*c);
-			if(ship.thrusters.medial.currentStrength>0.01){
+			if(ship.thrusters.medial.currentStrength>0){
 				ctx.save();				
 				//ctx.fillStyle = ship.thrusterColor;
 				ctx.beginPath();
 				ctx.moveTo(-15,5);
 				ctx.lineTo(-10,5);
-				ctx.lineTo(-12.5,10+30*(ship.thrusters.medial.currentStrength/ship.thrusters.medial.efficiency)*(1-(c/(this.thrusterDetail+1)))); //furthest point goes outward with thruster strength and scales inward with efficiency
+				ctx.lineTo(-12.5,5+40*(ship.thrusters.medial.currentStrength/ship.thrusters.medial.efficiency)*(1-(c/(this.thrusterDetail+1)))); //furthest point goes outward with thruster strength and scales inward with efficiency
 				ctx.lineTo(-15,5);
 				ctx.moveTo(15,5);
 				ctx.lineTo(10,5);
-				ctx.lineTo(12.5,10+30*(ship.thrusters.medial.currentStrength/ship.thrusters.medial.efficiency)*(1-(c/(this.thrusterDetail+1))));
+				ctx.lineTo(12.5,5+40*(ship.thrusters.medial.currentStrength/ship.thrusters.medial.efficiency)*(1-(c/(this.thrusterDetail+1))));
 				ctx.lineTo(15,5);
 				ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
 				ctx.fill();
 				ctx.restore();
 			}
 			//backward thrust
-			else if(ship.thrusters.medial.currentStrength<-0.01){
+			else if(ship.thrusters.medial.currentStrength<0){
 				ctx.save();				
 				ctx.beginPath();
 				ctx.moveTo(-15,0);
 				ctx.lineTo(-10,0);
-				ctx.lineTo(-12.5,-20+10*(ship.thrusters.medial.currentStrength/ship.thrusters.medial.efficiency)*(1-(c/(this.thrusterDetail+1))));
+				ctx.lineTo(-12.5,30*(ship.thrusters.medial.currentStrength/ship.thrusters.medial.efficiency)*(1-(c/(this.thrusterDetail+1))));
 				ctx.lineTo(-15,0);
 				ctx.moveTo(15,0);
 				ctx.lineTo(10,0);
-				ctx.lineTo(12.5,-20+10*(ship.thrusters.medial.currentStrength/ship.thrusters.medial.efficiency)*(1-(c/(this.thrusterDetail+1))));
+				ctx.lineTo(12.5,30*(ship.thrusters.medial.currentStrength/ship.thrusters.medial.efficiency)*(1-(c/(this.thrusterDetail+1))));
 				ctx.lineTo(15,0);
 				ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
 				ctx.fill();
@@ -392,24 +396,24 @@ app.main = {
 
 			//rotational thrusters	
 			//ccw
-			if(ship.thrusters.rotational.currentStrength>0.01){
+			if(ship.thrusters.rotational.currentStrength>0){
 				ctx.save();				
 				ctx.beginPath();
 				ctx.moveTo(5,-10);
 				ctx.lineTo(5,-15);
-				ctx.lineTo(20+30*(ship.thrusters.rotational.currentStrength/ship.thrusters.rotational.efficiency)*(1-(c/(this.thrusterDetail+1))),-12.5);
+				ctx.lineTo(5+40*(ship.thrusters.rotational.currentStrength/ship.thrusters.rotational.efficiency)*(1-(c/(this.thrusterDetail+1))),-12.5);
 				ctx.lineTo(5,-10);
 				ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
 				ctx.fill();
 				ctx.restore();
 			}
 			//cw
-			else if(ship.thrusters.rotational.currentStrength<-0.01){
+			else if(ship.thrusters.rotational.currentStrength<0){
 				ctx.save();				
 				ctx.beginPath();
 				ctx.moveTo(-5,-10);
 				ctx.lineTo(-5,-15);
-				ctx.lineTo(-20+30*(ship.thrusters.rotational.currentStrength/ship.thrusters.rotational.efficiency)*(1-(c/(this.thrusterDetail+1))),-12.5);
+				ctx.lineTo(-5+40*(ship.thrusters.rotational.currentStrength/ship.thrusters.rotational.efficiency)*(1-(c/(this.thrusterDetail+1))),-12.5);
 				ctx.lineTo(-5,-10);
 				ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
 				ctx.fill();
@@ -418,12 +422,12 @@ app.main = {
 
 			//lateral thrusters
 			//rightward
-			if(ship.thrusters.lateral.currentStrength>0.01){
+			if(ship.thrusters.lateral.currentStrength>0){
 				ctx.save();				
 				ctx.beginPath();
 				ctx.moveTo(-10,0);
 				ctx.lineTo(-10,-5);
-				ctx.lineTo(-20-30*(ship.thrusters.lateral.currentStrength/ship.thrusters.lateral.efficiency)*(1-(c/(this.thrusterDetail+1))),-2.5);
+				ctx.lineTo(-10-20*(ship.thrusters.lateral.currentStrength/ship.thrusters.lateral.efficiency)*(1-(c/(this.thrusterDetail+1))),-2.5);
 				ctx.lineTo(-10,0);
 				ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
 				ctx.fill();
@@ -435,7 +439,7 @@ app.main = {
 				ctx.beginPath();
 				ctx.moveTo(10,0);
 				ctx.lineTo(10,-5);
-				ctx.lineTo(20-30*(ship.thrusters.lateral.currentStrength/ship.thrusters.lateral.efficiency)*(1-(c/(this.thrusterDetail+1))),-2.5);
+				ctx.lineTo(10-20*(ship.thrusters.lateral.currentStrength/ship.thrusters.lateral.efficiency)*(1-(c/(this.thrusterDetail+1))),-2.5);
 				ctx.lineTo(10,0);
 				ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
 				ctx.fill();
@@ -469,14 +473,16 @@ app.main = {
 
 		//add acceleration from each thruster
 		//medial
-		var mainThrust = ship.thrusters.medial.currentStrength;
+		var mainThrust = ship.thrusters.medial.targetStrength;
 		if(mainThrust){ //efficiency check
 			var strength = mainThrust;
 
-			//clamp thruster strength to the ship's max
+			//clamp target strength to the thruster's max
 			var maxStrength = ship.thrusters.medial.maxStrength;
-			strength = Math.max(-maxStrength, Math.min(strength, maxStrength));
-			ship.thrusters.medial.currentStrength = strength; //this is purely for the visuals
+			strength = clamp(-maxStrength,strength,maxStrength);
+			//lerp current thruster strength to target strength at the power ramp rate, then set current strength and the target strength to the lerped value
+			strength = ship.thrusters.medial.currentStrength = lerp(ship.thrusters.medial.currentStrength,strength,ship.thrusters.medial.powerRampPercentage*dt); //for the lolz
+			strength = clamp(-maxStrength,strength,maxStrength);
 
 			//add forward vector times strength to acceleration
 			accelerationX += normalizedForwardVector[0]*strength;
@@ -484,14 +490,16 @@ app.main = {
 		}
 
 		//lateral
-		var latThrust = ship.thrusters.lateral.currentStrength;
+		var latThrust = ship.thrusters.lateral.targetStrength;
 		if(latThrust){ //effiency check
 			var strength = latThrust;
 
 			//clamp strength
 			var maxStrength = ship.thrusters.lateral.maxStrength;
-			strength = Math.max(-maxStrength, Math.min(strength, maxStrength));
-			ship.thrusters.lateral.currentStrength = strength; //for visuals
+			strength = clamp(-maxStrength,strength,maxStrength);
+			//lerp current thruster strength to target strength at the power ramp rate, then set current strength and the target strength to the lerped value
+			strength = ship.thrusters.lateral.currentStrength = lerp(ship.thrusters.lateral.currentStrength,strength,ship.thrusters.lateral.powerRampPercentage*dt); //for the lolz
+			strength = clamp(-maxStrength,strength,maxStrength);
 
 			//add right vector times strength to acceleration
 			accelerationX += normalizedRightVector[0]*strength;
@@ -499,14 +507,16 @@ app.main = {
 		}
 
 		//rotational
-		var rotThrust = ship.thrusters.rotational.currentStrength;
+		var rotThrust = ship.thrusters.rotational.targetStrength;
 		if(rotThrust){ //effiency check
 			var strength = rotThrust;
 
 			//clamp strength
 			var maxStrength = ship.thrusters.rotational.maxStrength;
-			strength = Math.max(-maxStrength, Math.min(strength, maxStrength));
-			ship.thrusters.rotational.currentStrength = strength; //visuals
+			strength = clamp(-maxStrength,strength,maxStrength);
+			//lerp current thruster strength to target strength at the power ramp rate, then set current strength and the target strength to the lerped value
+			strength = ship.thrusters.rotational.currentStrength = lerp(ship.thrusters.rotational.currentStrength,strength,ship.thrusters.rotational.powerRampPercentage*dt); //for the lolz
+			strength = clamp(-maxStrength,strength,maxStrength);
 
 			//this one we can set directly
 			rotationalAcceleration = -strength;
@@ -542,51 +552,51 @@ app.main = {
 	},
 	//clears the active thruster values
 	shipClearThrusters:function(ship){
-		ship.thrusters.medial.currentStrength = 0;
-		ship.thrusters.lateral.currentStrength = 0;
-		ship.thrusters.rotational.currentStrength = 0;
+		ship.thrusters.medial.targetStrength = 0;
+		ship.thrusters.lateral.targetStrength = 0;
+		ship.thrusters.rotational.targetStrength = 0;
 	},
 	//add given strength to main thruster
 	shipMedialThrusters:function(ship, strength){
-		ship.thrusters.medial.currentStrength += strength;
+		ship.thrusters.medial.targetStrength += strength;
 	},
 	//add strength to side thruster
 	shipRotationalThrusters: function(ship, strength){
-		ship.thrusters.rotational.currentStrength += strength;
+		ship.thrusters.rotational.targetStrength += strength;
 	},
 	//add strength to lateral thruster
 	shipLateralThrusters:function(ship, strength){
-		ship.thrusters.lateral.currentStrength += strength;
+		ship.thrusters.lateral.targetStrength += strength;
 	},
 	//rotational stabilizer
 	shipRotationalStabilizers:function(ship){
 		//if the side thruster isn't active, or is active in the opposite direction of our rotation
-		if(ship.thrusters.rotational.currentStrength*ship.rotationalVelocity>=0)
+		if(ship.thrusters.rotational.targetStrength*ship.rotationalVelocity>=0)
 			//add correctional strength in the opposite direction of our rotation
 			this.shipRotationalThrusters(ship,ship.rotationalVelocity*ship.stabilizer.strength); //we check the direction because the stabilizers can apply more thrust than the player
 		//or, if we've exceeded our clamp speed and are trying to keep accelerating in that direction
-		else if (Math.abs(ship.rotationalVelocity)>=ship.stabilizer.clamps.rotational && ship.thrusters.rotational.currentStrength*ship.rotationalVelocity<0)
+		else if (Math.abs(ship.rotationalVelocity)>=ship.stabilizer.clamps.rotational && ship.thrusters.rotational.targetStrength*ship.rotationalVelocity<0)
 			//shut off the thruster
-			ship.thrusters.rotational.currentStrength = 0;
+			ship.thrusters.rotational.targetStrength = 0;
 	},
 	//medial stabilizer
 	shipMedialStabilizers:function(ship){
 		//if the main thruster isn't active, or is working against our velocity
-		if(ship.thrusters.medial.currentStrength*ship.medialVelocity>=0)
+		if(ship.thrusters.medial.targetStrength*ship.medialVelocity>=0)
 			//add corrective strength
 			this.shipMedialThrusters(ship,ship.medialVelocity*ship.stabilizer.strength);
 		//or, if we're past our clamp and trying to keep going
-		else if (Math.abs(ship.medialVelocity)>=ship.stabilizer.clamps.medial && ship.thrusters.medial.currentStrength*ship.medialVelocity<0)
+		else if (Math.abs(ship.medialVelocity)>=ship.stabilizer.clamps.medial && ship.thrusters.medial.targetStrength*ship.medialVelocity<0)
 			//shut off the thruster
-			ship.thrusters.medial.currentStrength = 0;
+			ship.thrusters.medial.targetStrength = 0;
 	},
 	//lateral stabilizer
 	shipLateralStabilizers:function(ship){
 		//see above
-		if(ship.thrusters.lateral.currentStrength*ship.lateralVelocity>=0)
+		if(ship.thrusters.lateral.targetStrength*ship.lateralVelocity>=0)
 			this.shipLateralThrusters(ship,ship.lateralVelocity*ship.stabilizer.strength);
-		else if (Math.abs(ship.lateralVelocity)>=ship.stabilizer.clamps.lateral && ship.thrusters.lateral.currentStrength*ship.lateralVelocity<0)
-			ship.thrusters.lateral.currentStrength = 0;
+		else if (Math.abs(ship.lateralVelocity)>=ship.stabilizer.clamps.lateral && ship.thrusters.lateral.currenttarget*ship.lateralVelocity<0)
+			ship.thrusters.lateral.targetStrength = 0;
 	},
 	shipFireLaser:function(ship){
 		var now = Date.now();

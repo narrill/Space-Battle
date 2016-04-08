@@ -231,6 +231,14 @@ function shadeRGBColor(color, percent) {
     return "rgb("+(Math.round((t-R)*p)+R)+","+(Math.round((t-G)*p)+G)+","+(Math.round((t-B)*p)+B)+")";
 }
 
+function lerp(from,to,percent){
+	return (to-from)*percent + from;
+}
+
+function clamp(min, value, max){
+	return Math.max(min, Math.min(value, max))
+}
+
 // This gives Array a randomElement() method
 Array.prototype.randomElement = function(){
 	return this[Math.floor(Math.random() * this.length)];
