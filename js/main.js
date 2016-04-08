@@ -62,7 +62,7 @@ app.main = {
 		ctx:undefined
 	},
 	grid:{
-		gridLines: 5000, //number of grid lines
+		gridLines: 100, //number of grid lines
 		gridSpacing: 500, //pixels per grid unit
 		gridStart: [-125000,-125000], //corner anchor in world coordinates
 		colors:[
@@ -89,6 +89,7 @@ app.main = {
 		]
 	},
 	asteroids:{
+		total:3,
 		colors:[
 			'saddlebrown',
 			'chocolate'
@@ -98,8 +99,8 @@ app.main = {
 	stars:{
 		objs:[],
 		colors:[
-			'white',
-			'yellow'
+			'white'//,
+			//'yellow'
 		]
 	},
 	baseStarCameraZoom:.0001,
@@ -214,7 +215,7 @@ app.main = {
 			objectParams = {};
 		return{
 			enabled: (objectParams.enabled)? objectParams.enabled:true,
-			strength: (objectParams.strength)? objectParams.strength:12,
+			strength: (objectParams.strength)? objectParams.strength:1200,
 			thrustRatio: (objectParams.thrustRatio)?objectParams.thrustRatio:1.5,
 			clamps: this.createComponentStabilizerClamps(objectParams.clamps)
 		};
@@ -322,7 +323,7 @@ app.main = {
 		var maxRadius = 3000;
 		var minRadius = 1000;
 		//asteroids.objs = [];
-		for(var c=asteroids.objs.length;c<100;c++){
+		for(var c=asteroids.objs.length;c<asteroids.total;c++){
 			var radius = Math.random()*(maxRadius-minRadius)+minRadius;
 			var group = Math.floor(Math.random()*this.asteroids.colors.length);
 			asteroids.objs.push({
@@ -573,32 +574,32 @@ app.main = {
 		ship.thrusters.lateral.targetStrength += strength;
 	},
 	//rotational stabilizer
-	shipRotationalStabilizers:function(ship){
+	shipRotationalStabilizers:function(ship,dt){
 		//if the side thruster isn't active, or is active in the opposite direction of our rotation
 		if(ship.thrusters.rotational.targetStrength*ship.rotationalVelocity>=0)
 			//add correctional strength in the opposite direction of our rotation
-			this.shipRotationalThrusters(ship,ship.rotationalVelocity*ship.stabilizer.strength); //we check the direction because the stabilizers can apply more thrust than the player
+			this.shipRotationalThrusters(ship,ship.rotationalVelocity*ship.stabilizer.strength*dt); //we check the direction because the stabilizers can apply more thrust than the player
 		//or, if we've exceeded our clamp speed and are trying to keep accelerating in that direction
 		else if (ship.stabilizer.clamps.enabled && Math.abs(ship.rotationalVelocity)>=ship.stabilizer.clamps.rotational && ship.thrusters.rotational.targetStrength*ship.rotationalVelocity<0)
 			//shut off the thruster
 			ship.thrusters.rotational.targetStrength = 0;
 	},
 	//medial stabilizer
-	shipMedialStabilizers:function(ship){
+	shipMedialStabilizers:function(ship,dt){
 		//if the main thruster isn't active, or is working against our velocity
 		if(ship.thrusters.medial.targetStrength*ship.medialVelocity>=0)
 			//add corrective strength
-			this.shipMedialThrusters(ship,ship.medialVelocity*ship.stabilizer.strength);
+			this.shipMedialThrusters(ship,ship.medialVelocity*ship.stabilizer.strength*dt);
 		//or, if we're past our clamp and trying to keep going
 		else if (ship.stabilizer.clamps.enabled && Math.abs(ship.medialVelocity)>=ship.stabilizer.clamps.medial && ship.thrusters.medial.targetStrength*ship.medialVelocity<0)
 			//shut off the thruster
 			ship.thrusters.medial.targetStrength = 0;
 	},
 	//lateral stabilizer
-	shipLateralStabilizers:function(ship){
+	shipLateralStabilizers:function(ship,dt){
 		//see above
 		if(ship.thrusters.lateral.targetStrength*ship.lateralVelocity>=0)
-			this.shipLateralThrusters(ship,ship.lateralVelocity*ship.stabilizer.strength);
+			this.shipLateralThrusters(ship,ship.lateralVelocity*ship.stabilizer.strength*dt);
 		else if (ship.stabilizer.clamps.enabled && Math.abs(ship.lateralVelocity)>=ship.stabilizer.clamps.lateral && ship.thrusters.lateral.currenttarget*ship.lateralVelocity<0)
 			ship.thrusters.lateral.targetStrength = 0;
 	},
@@ -610,7 +611,7 @@ app.main = {
 			ship.laser.currentPower = ship.laser.maxPower;			
 		}
 	},
-	shipAI:function(ship, target){
+	shipAI:function(ship, target,dt){
 		var vectorToTarget = [target.x-ship.x,target.y-ship.y];
 		var relativeAngleToTarget = angleBetweenVectors(ship.forwardVectorX,ship.forwardVectorY,vectorToTarget[0],vectorToTarget[1]);
 
@@ -638,9 +639,9 @@ app.main = {
 		else if(distanceSqr<2*(target.laser.range*target.laser.range) && relativeAngleToMe>-90 &&relativeAngleToMe<0)
 			this.shipLateralThrusters(ship, ship.thrusters.lateral.maxStrength/ship.stabilizer.thrustRatio);
 
-		this.shipMedialStabilizers(ship);
-		this.shipLateralStabilizers(ship);
-		this.shipRotationalStabilizers(ship);
+		this.shipMedialStabilizers(ship,dt);
+		this.shipLateralStabilizers(ship,dt);
+		this.shipRotationalStabilizers(ship,dt);
 	},
 	createLaser:function(lasers, startX,startY,endX,endY,color, power,efficiency){
 		lasers.push({
@@ -826,7 +827,7 @@ app.main = {
 		else if(this.gameState == this.GAME_STATES.PLAYING){
 
 			this.otherShips.forEach(function(ship){
-				this.shipAI(ship,this.ship);
+				this.shipAI(ship,this.ship,dt);
 			},this);
 
 			//set ship thruster values
@@ -837,21 +838,21 @@ app.main = {
 			if(myKeys.keydown[myKeys.KEYBOARD.KEY_S])
 				this.shipMedialThrusters(this.ship,-this.ship.thrusters.medial.maxStrength/this.ship.stabilizer.thrustRatio);
 			if(this.ship.stabilizer.enabled)
-				this.shipMedialStabilizers(this.ship);
+				this.shipMedialStabilizers(this.ship,dt);
 			//lateral motion
 			if(myKeys.keydown[myKeys.KEYBOARD.KEY_Q])
 				this.shipLateralThrusters(this.ship,-this.ship.thrusters.lateral.maxStrength/this.ship.stabilizer.thrustRatio);
 			if(myKeys.keydown[myKeys.KEYBOARD.KEY_E])
 				this.shipLateralThrusters(this.ship,this.ship.thrusters.lateral.maxStrength/this.ship.stabilizer.thrustRatio);
 			if(this.ship.stabilizer.enabled)
-				this.shipLateralStabilizers(this.ship);
+				this.shipLateralStabilizers(this.ship,dt);
 			//rotational motion
 			if(myKeys.keydown[myKeys.KEYBOARD.KEY_A])
 				this.shipRotationalThrusters(this.ship,this.ship.thrusters.rotational.maxStrength/this.ship.stabilizer.thrustRatio);
 			if(myKeys.keydown[myKeys.KEYBOARD.KEY_D])
 				this.shipRotationalThrusters(this.ship,-this.ship.thrusters.rotational.maxStrength/this.ship.stabilizer.thrustRatio);
 			if(this.ship.stabilizer.enabled)
-				this.shipRotationalStabilizers(this.ship);
+				this.shipRotationalStabilizers(this.ship,dt);
 			//lasers
 			if(myKeys.keydown[myKeys.KEYBOARD.KEY_SPACE])
 				this.shipFireLaser(this.ship);
