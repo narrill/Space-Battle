@@ -118,7 +118,10 @@ app.main = {
 		this.generateStarField.bind(this, this.stars)();
 		this.ship = this.createShip(this.grid);
 		for(var c = 0;c<this.otherShipCount;c++)
+		{
 			this.otherShips.push(this.createShip(this.grid));
+			this.otherShips[c].ai = this.createComponentShipAI();
+		}
 
 		// start the game loop
 		this.update();
@@ -128,7 +131,10 @@ app.main = {
 		this.makeAsteroids.bind(this,this.asteroids,this.grid)();
 		this.otherShips = [];
 		for(var c = 0;c<this.otherShipCount;c++)
+		{
 			this.otherShips.push(this.createShip(this.grid));
+			this.otherShips[c].ai = this.createComponentShipAI();
+		}
 		this.gameState = this.GAME_STATES.PLAYING;
 	},
 	//returns a camera object with the given values and the context from the given canvas
@@ -251,6 +257,16 @@ app.main = {
 			hp:(objectParams.hp)?objectParams.hp:500,
 			maxHp: (objectParams.hp)?objectParams.hp:500,
 			radius:(objectParams.radius)?objectParams.radius:500
+		};
+	},
+	createComponentShipAI:function(objectParams){
+		if(!objectParams)
+			objectParams = {};
+		return{
+			followMin:(objectParams.followMin)?objectParams.followMin:2500,
+			followMax:(objectParams.followMax)?objectParams.followMax:3000,
+			accuracy:.5,
+			fireSpread:1
 		};
 	},
 	//draws the grid in the given camera
@@ -616,18 +632,18 @@ app.main = {
 		var relativeAngleToTarget = angleBetweenVectors(ship.forwardVectorX,ship.forwardVectorY,vectorToTarget[0],vectorToTarget[1]);
 
 		if(relativeAngleToTarget>0)
-			this.shipRotationalThrusters(ship,-ship.thrusters.rotational.maxStrength/ship.stabilizer.thrustRatio);
+			this.shipRotationalThrusters(ship,-relativeAngleToTarget * dt * ship.ai.accuracy * ship.thrusters.rotational.maxStrength/ship.stabilizer.thrustRatio);
 		else if (relativeAngleToTarget<0)
-			this.shipRotationalThrusters(ship,ship.thrusters.rotational.maxStrength/ship.stabilizer.thrustRatio);
+			this.shipRotationalThrusters(ship,-relativeAngleToTarget * dt * ship.ai.accuracy * ship.thrusters.rotational.maxStrength/ship.stabilizer.thrustRatio);
 
 		var distanceSqr = vectorMagnitudeSqr(vectorToTarget[0],vectorToTarget[1]);
 
-		if(relativeAngleToTarget<5 && relativeAngleToTarget>-5  && distanceSqr<(ship.laser.range*ship.laser.range))
+		if(relativeAngleToTarget<ship.ai.fireSpread/2 && relativeAngleToTarget>-ship.ai.fireSpread/2  && distanceSqr<(ship.laser.range*ship.laser.range))
 			this.shipFireLaser(ship);
 
-		if(distanceSqr > 3000*3000)
+		if(distanceSqr > ship.ai.followMax*ship.ai.followMax)
 			this.shipMedialThrusters(ship,ship.thrusters.medial.maxStrength/ship.stabilizer.thrustRatio);
-		else if(distanceSqr<1000*1000)
+		else if(distanceSqr<ship.ai.followMin*ship.ai.followMin)
 			this.shipMedialThrusters(ship,-ship.thrusters.medial.maxStrength/ship.stabilizer.thrustRatio);
 
 		var vectorFromTarget = [-vectorToTarget[0],-vectorToTarget[1]];
