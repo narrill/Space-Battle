@@ -54,7 +54,7 @@ window.addEventListener("keyup",function(e){
 	
 	// pausing and resuming
 	if(e.keyCode == myKeys.KEYBOARD.KEY_TAB)
-		app.main.ship.stabilizersEnabled = !app.main.ship.stabilizersEnabled;
+		app.main.ship.stabilizer.enabled = !app.main.ship.stabilizer.enabled;
 	else if(e.keyCode == myKeys.KEYBOARD.KEY_F)
 		app.main.drawStarField = !app.main.drawStarField;
 });

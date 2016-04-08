@@ -117,7 +117,7 @@ app.main = {
 		this.update();
 	},
 	resetGame:function(){
-		this.ship.hp = 500;
+		this.ship.destructible.hp = 500;
 		this.makeAsteroids.bind(this,this.asteroids,this.grid)();
 		this.otherShips = [];
 		for(var c = 0;c<this.otherShipCount;c++)
@@ -153,9 +153,7 @@ app.main = {
 		return {
 			//position/rotation
 			x:Math.random()*(upper[0]-lower[0])+lower[0],
-			y:Math.random()*(upper[1]-lower[1])+lower[1],	
-			radius:20, //collision radius
-			hp:500,
+			y:Math.random()*(upper[1]-lower[1])+lower[1],
 			rotation:0,
 			//velocities
 			velocityX:0, //in absolute form, used for movement
@@ -167,18 +165,41 @@ app.main = {
 			rightVectorY:0,
 			medialVelocity:0, //component form, used by stabilizers
 			lateralVelocity:0,
-			//max thruster strengths in pixels/second/second
-			thrusterStrength:3000,
-			lateralThrusterStrength:2000,
-			sideThrusterStrength:1000,
+			destructible:{
+				hp:500,
+				radius:20
+			},
+			thrusters:{
+				color:getRandomColor(),
+				medial:{
+					currentStrength:0,
+					maxStrength:2000,
+					efficiency:1000
+				},
+				lateral:{
+					currentStrength:0,
+					maxStrength:3000,
+					efficiency:1000
+				},
+				rotational:{
+					currentStrength:0,
+					maxStrength:1000,
+					efficiency:1000
+				}
+			},
+			stabilizer:{
+				enabled:true,
+				strength:60,
+				thrustRatio:1.5,
+				clamps:{
+					enabled:true,
+					medial:3000,
+					lateral:2000,
+					rotational:180
+				}
+			},
 			//colors
 			color:getRandomColor(),
-			thrusterColor:getRandomColor(),
-			//determines the length of the thruster trail, purely visual
-			thrusterEfficiency:1000,
-			//correctional coefficient used by the stabilizers
-			stabilizerStrength:60,
-			stabilizerThrustRatio:1.5,
 			//used for controlling laser fire rate
 			//lastLaserTime:0,
 			laser:{
@@ -190,20 +211,6 @@ app.main = {
 				coherence:.9,
 				maxPower:1000,
 				efficiency:200
-			},
-			stabilizersEnabled:true,
-			//per-frame thruster strengths
-			activeThrusters:{
-				main:0,
-				lateral:0,
-				side:0
-			},
-			//maximum velocities in each direction
-			//thrusters will not be used to accelerate past these values
-			thrusterClamps:{
-				main:3000,
-				lateral: 2000,
-				side: 180
 			}
 		};
 	},
@@ -283,8 +290,11 @@ app.main = {
 			asteroids.objs.push({
 				x: Math.random()*(upper[0]-lower[0])+lower[0],
 				y: Math.random()*(upper[1]-lower[1])+lower[1],
-				radius: radius,
-				hp: radius,
+				radius:radius, //graphical radius
+				destructible:{
+					hp:radius,
+					radius:radius //collider radius
+				},
 				colorIndex:group
 			});
 		}
@@ -316,34 +326,34 @@ app.main = {
 		//main thrusters
 		//forward thrust
 		for(var c = 0;c<=this.thrusterDetail;c++){
-			ctx.fillStyle = shadeRGBColor(ship.thrusterColor,.5*c);
-			if(ship.activeThrusters.main>0.01){
+			ctx.fillStyle = shadeRGBColor(ship.thrusters.color,.5*c);
+			if(ship.thrusters.medial.currentStrength>0.01){
 				ctx.save();				
 				//ctx.fillStyle = ship.thrusterColor;
 				ctx.beginPath();
 				ctx.moveTo(-15,5);
 				ctx.lineTo(-10,5);
-				ctx.lineTo(-12.5,10+30*(ship.activeThrusters.main/ship.thrusterEfficiency)*(1-(c/(this.thrusterDetail+1)))); //furthest point goes outward with thruster strength and scales inward with efficiency
+				ctx.lineTo(-12.5,10+30*(ship.thrusters.medial.currentStrength/ship.thrusters.medial.efficiency)*(1-(c/(this.thrusterDetail+1)))); //furthest point goes outward with thruster strength and scales inward with efficiency
 				ctx.lineTo(-15,5);
 				ctx.moveTo(15,5);
 				ctx.lineTo(10,5);
-				ctx.lineTo(12.5,10+30*(ship.activeThrusters.main/ship.thrusterEfficiency)*(1-(c/(this.thrusterDetail+1))));
+				ctx.lineTo(12.5,10+30*(ship.thrusters.medial.currentStrength/ship.thrusters.medial.efficiency)*(1-(c/(this.thrusterDetail+1))));
 				ctx.lineTo(15,5);
 				ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
 				ctx.fill();
 				ctx.restore();
 			}
 			//backward thrust
-			else if(ship.activeThrusters.main<-0.01){
+			else if(ship.thrusters.medial.currentStrength<-0.01){
 				ctx.save();				
 				ctx.beginPath();
 				ctx.moveTo(-15,0);
 				ctx.lineTo(-10,0);
-				ctx.lineTo(-12.5,-20+10*(ship.activeThrusters.main/ship.thrusterEfficiency)*(1-(c/(this.thrusterDetail+1))));
+				ctx.lineTo(-12.5,-20+10*(ship.thrusters.medial.currentStrength/ship.thrusters.medial.efficiency)*(1-(c/(this.thrusterDetail+1))));
 				ctx.lineTo(-15,0);
 				ctx.moveTo(15,0);
 				ctx.lineTo(10,0);
-				ctx.lineTo(12.5,-20+10*(ship.activeThrusters.main/ship.thrusterEfficiency)*(1-(c/(this.thrusterDetail+1))));
+				ctx.lineTo(12.5,-20+10*(ship.thrusters.medial.currentStrength/ship.thrusters.medial.efficiency)*(1-(c/(this.thrusterDetail+1))));
 				ctx.lineTo(15,0);
 				ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
 				ctx.fill();
@@ -352,24 +362,24 @@ app.main = {
 
 			//rotational thrusters	
 			//ccw
-			if(ship.activeThrusters.side>0.01){
+			if(ship.thrusters.rotational.currentStrength>0.01){
 				ctx.save();				
 				ctx.beginPath();
 				ctx.moveTo(5,-10);
 				ctx.lineTo(5,-15);
-				ctx.lineTo(20+30*(ship.activeThrusters.side/ship.thrusterEfficiency)*(1-(c/(this.thrusterDetail+1))),-12.5);
+				ctx.lineTo(20+30*(ship.thrusters.rotational.currentStrength/ship.thrusters.rotational.efficiency)*(1-(c/(this.thrusterDetail+1))),-12.5);
 				ctx.lineTo(5,-10);
 				ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
 				ctx.fill();
 				ctx.restore();
 			}
 			//cw
-			else if(ship.activeThrusters.side<-0.01){
+			else if(ship.thrusters.rotational.currentStrength<-0.01){
 				ctx.save();				
 				ctx.beginPath();
 				ctx.moveTo(-5,-10);
 				ctx.lineTo(-5,-15);
-				ctx.lineTo(-20+30*(ship.activeThrusters.side/ship.thrusterEfficiency)*(1-(c/(this.thrusterDetail+1))),-12.5);
+				ctx.lineTo(-20+30*(ship.thrusters.rotational.currentStrength/ship.thrusters.rotational.efficiency)*(1-(c/(this.thrusterDetail+1))),-12.5);
 				ctx.lineTo(-5,-10);
 				ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
 				ctx.fill();
@@ -378,24 +388,24 @@ app.main = {
 
 			//lateral thrusters
 			//rightward
-			if(ship.activeThrusters.lateral>0.01){
+			if(ship.thrusters.lateral.currentStrength>0.01){
 				ctx.save();				
 				ctx.beginPath();
 				ctx.moveTo(-10,0);
 				ctx.lineTo(-10,-5);
-				ctx.lineTo(-20-30*(ship.activeThrusters.lateral/ship.thrusterEfficiency)*(1-(c/(this.thrusterDetail+1))),-2.5);
+				ctx.lineTo(-20-30*(ship.thrusters.lateral.currentStrength/ship.thrusters.lateral.efficiency)*(1-(c/(this.thrusterDetail+1))),-2.5);
 				ctx.lineTo(-10,0);
 				ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
 				ctx.fill();
 				ctx.restore();
 			}
 			//leftward
-			else if(ship.activeThrusters.lateral<-0.01){
+			else if(ship.thrusters.lateral.currentStrength<-0.01){
 				ctx.save();				
 				ctx.beginPath();
 				ctx.moveTo(10,0);
 				ctx.lineTo(10,-5);
-				ctx.lineTo(20-30*(ship.activeThrusters.lateral/ship.thrusterEfficiency)*(1-(c/(this.thrusterDetail+1))),-2.5);
+				ctx.lineTo(20-30*(ship.thrusters.lateral.currentStrength/ship.thrusters.lateral.efficiency)*(1-(c/(this.thrusterDetail+1))),-2.5);
 				ctx.lineTo(10,0);
 				ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
 				ctx.fill();
@@ -429,14 +439,14 @@ app.main = {
 
 		//add acceleration from each thruster
 		//medial
-		var mainThrust = ship.activeThrusters.main;
+		var mainThrust = ship.thrusters.medial.currentStrength;
 		if(mainThrust){ //efficiency check
 			var strength = mainThrust;
 
 			//clamp thruster strength to the ship's max
-			var maxStrength = ship.thrusterStrength;
+			var maxStrength = ship.thrusters.medial.maxStrength;
 			strength = Math.max(-maxStrength, Math.min(strength, maxStrength));
-			ship.activeThrusters.main = strength; //this is purely for the visuals
+			ship.thrusters.medial.currentStrength = strength; //this is purely for the visuals
 
 			//add forward vector times strength to acceleration
 			accelerationX += normalizedForwardVector[0]*strength;
@@ -444,14 +454,14 @@ app.main = {
 		}
 
 		//lateral
-		var latThrust = ship.activeThrusters.lateral;
+		var latThrust = ship.thrusters.lateral.currentStrength;
 		if(latThrust){ //effiency check
 			var strength = latThrust;
 
 			//clamp strength
-			var maxStrength = ship.lateralThrusterStrength;
+			var maxStrength = ship.thrusters.lateral.maxStrength;
 			strength = Math.max(-maxStrength, Math.min(strength, maxStrength));
-			ship.activeThrusters.lateral = strength; //for visuals
+			ship.thrusters.lateral.currentStrength = strength; //for visuals
 
 			//add right vector times strength to acceleration
 			accelerationX += normalizedRightVector[0]*strength;
@@ -459,14 +469,14 @@ app.main = {
 		}
 
 		//rotational
-		var rotThrust = ship.activeThrusters.side;
+		var rotThrust = ship.thrusters.rotational.currentStrength;
 		if(rotThrust){ //effiency check
 			var strength = rotThrust;
 
 			//clamp strength
-			var maxStrength = ship.sideThrusterStrength;
+			var maxStrength = ship.thrusters.rotational.maxStrength;
 			strength = Math.max(-maxStrength, Math.min(strength, maxStrength));
-			ship.activeThrusters.side = strength; //visuals
+			ship.thrusters.rotational.currentStrength = strength; //visuals
 
 			//this one we can set directly
 			rotationalAcceleration = -strength;
@@ -502,53 +512,51 @@ app.main = {
 	},
 	//clears the active thruster values
 	shipClearThrusters:function(ship){
-		ship.activeThrusters = {
-			main: 0,
-			side: 0,
-			lateral: 0
-		};
+		ship.thrusters.medial.currentStrength = 0;
+		ship.thrusters.lateral.currentStrength = 0;
+		ship.thrusters.rotational.currentStrength = 0;
 	},
 	//add given strength to main thruster
-	shipThrusters:function(ship, strength){
-		ship.activeThrusters.main += strength;
+	shipMedialThrusters:function(ship, strength){
+		ship.thrusters.medial.currentStrength += strength;
 	},
 	//add strength to side thruster
-	shipSideThrusters: function(ship, strength){
-		ship.activeThrusters.side += strength;
+	shipRotationalThrusters: function(ship, strength){
+		ship.thrusters.rotational.currentStrength += strength;
 	},
 	//add strength to lateral thruster
 	shipLateralThrusters:function(ship, strength){
-		ship.activeThrusters.lateral += strength;
+		ship.thrusters.lateral.currentStrength += strength;
 	},
 	//rotational stabilizer
 	shipRotationalStabilizers:function(ship){
 		//if the side thruster isn't active, or is active in the opposite direction of our rotation
-		if(ship.activeThrusters.side*ship.rotationalVelocity>=0)
+		if(ship.thrusters.rotational.currentStrength*ship.rotationalVelocity>=0)
 			//add correctional strength in the opposite direction of our rotation
-			this.shipSideThrusters(ship,ship.rotationalVelocity*ship.stabilizerStrength); //we check the direction because the stabilizers can apply more thrust than the player
+			this.shipRotationalThrusters(ship,ship.rotationalVelocity*ship.stabilizer.strength); //we check the direction because the stabilizers can apply more thrust than the player
 		//or, if we've exceeded our clamp speed and are trying to keep accelerating in that direction
-		else if (Math.abs(ship.rotationalVelocity)>=ship.thrusterClamps.side && ship.activeThrusters.side*ship.rotationalVelocity<0)
+		else if (Math.abs(ship.rotationalVelocity)>=ship.stabilizer.clamps.rotational && ship.thrusters.rotational.currentStrength*ship.rotationalVelocity<0)
 			//shut off the thruster
-			ship.activeThrusters.side = 0;
+			ship.thrusters.rotational.currentStrength = 0;
 	},
 	//medial stabilizer
 	shipMedialStabilizers:function(ship){
 		//if the main thruster isn't active, or is working against our velocity
-		if(ship.activeThrusters.main*ship.medialVelocity>=0)
+		if(ship.thrusters.medial.currentStrength*ship.medialVelocity>=0)
 			//add corrective strength
-			this.shipThrusters(ship,ship.medialVelocity*ship.stabilizerStrength);
+			this.shipMedialThrusters(ship,ship.medialVelocity*ship.stabilizer.strength);
 		//or, if we're past our clamp and trying to keep going
-		else if (Math.abs(ship.medialVelocity)>=ship.thrusterClamps.main && ship.activeThrusters.main*ship.medialVelocity<0)
+		else if (Math.abs(ship.medialVelocity)>=ship.stabilizer.clamps.medial && ship.thrusters.medial.currentStrength*ship.medialVelocity<0)
 			//shut off the thruster
-			ship.activeThrusters.main = 0;
+			ship.thrusters.medial.currentStrength = 0;
 	},
 	//lateral stabilizer
 	shipLateralStabilizers:function(ship){
 		//see above
-		if(ship.activeThrusters.lateral*ship.lateralVelocity>=0)
-			this.shipLateralThrusters(ship,ship.lateralVelocity*ship.stabilizerStrength);
-		else if (Math.abs(ship.lateralVelocity)>=ship.thrusterClamps.lateral && ship.activeThrusters.lateral*ship.lateralVelocity<0)
-			ship.activeThrusters.lateral = 0;
+		if(ship.thrusters.lateral.currentStrength*ship.lateralVelocity>=0)
+			this.shipLateralThrusters(ship,ship.lateralVelocity*ship.stabilizer.strength);
+		else if (Math.abs(ship.lateralVelocity)>=ship.stabilizer.clamps.lateral && ship.thrusters.lateral.currentStrength*ship.lateralVelocity<0)
+			ship.thrusters.lateral.currentStrength = 0;
 	},
 	shipFireLaser:function(ship){
 		var now = Date.now();
@@ -563,9 +571,9 @@ app.main = {
 		var relativeAngleToTarget = angleBetweenVectors(ship.forwardVectorX,ship.forwardVectorY,vectorToTarget[0],vectorToTarget[1]);
 
 		if(relativeAngleToTarget>0)
-			this.shipSideThrusters(ship,-ship.sideThrusterStrength/ship.stabilizerThrustRatio);
+			this.shipRotationalThrusters(ship,-ship.thrusters.rotational.maxStrength/ship.stabilizer.thrustRatio);
 		else if (relativeAngleToTarget<0)
-			this.shipSideThrusters(ship,ship.sideThrusterStrength/ship.stabilizerThrustRatio);
+			this.shipRotationalThrusters(ship,ship.thrusters.rotational.maxStrength/ship.stabilizer.thrustRatio);
 
 		var distanceSqr = vectorMagnitudeSqr(vectorToTarget[0],vectorToTarget[1]);
 
@@ -573,18 +581,18 @@ app.main = {
 			this.shipFireLaser(ship);
 
 		if(distanceSqr > 3000*3000)
-			this.shipThrusters(ship,ship.thrusterStrength/ship.stabilizerThrustRatio);
+			this.shipMedialThrusters(ship,ship.thrusters.medial.maxStrength/ship.stabilizer.thrustRatio);
 		else if(distanceSqr<1000*1000)
-			this.shipThrusters(ship,-ship.thrusterStrength/ship.stabilizerThrustRatio);
+			this.shipMedialThrusters(ship,-ship.thrusters.medial.maxStrength/ship.stabilizer.thrustRatio);
 
 		var vectorFromTarget = [-vectorToTarget[0],-vectorToTarget[1]];
 		var relativeAngleToMe = angleBetweenVectors(target.forwardVectorX,target.forwardVectorY,vectorFromTarget[0],vectorFromTarget[1]);
 		console.log(Math.floor(relativeAngleToMe));
 
 		if(distanceSqr<2*(target.laser.range*target.laser.range) && relativeAngleToMe<90 && relativeAngleToMe>0)
-			this.shipLateralThrusters(ship, -ship.lateralThrusterStrength/ship.stabilizerThrustRatio);
+			this.shipLateralThrusters(ship, -ship.thrusters.lateral.maxStrength/ship.stabilizer.thrustRatio);
 		else if(distanceSqr<2*(target.laser.range*target.laser.range) && relativeAngleToMe>-90 &&relativeAngleToMe<0)
-			this.shipLateralThrusters(ship, ship.lateralThrusterStrength/ship.stabilizerThrustRatio);
+			this.shipLateralThrusters(ship, ship.thrusters.lateral.maxStrength/ship.stabilizer.thrustRatio);
 
 		this.shipMedialStabilizers(ship);
 		this.shipLateralStabilizers(ship);
@@ -614,27 +622,27 @@ app.main = {
 			var end = [(xInv) ? laser.startX : laser.endX, (yInv) ? laser.startY : laser.endY];
 			for(var c = 0;c<this.asteroids.objs.length;c++){
 				var thisObj = this.asteroids.objs[c];
-				if(thisObj.x + thisObj.radius<start[0] || thisObj.x-thisObj.radius>end[0] || thisObj.y + thisObj.radius<start[1] || thisObj.y-thisObj.radius>end[1])
+				if(thisObj.x + thisObj.destructible.radius<start[0] || thisObj.x-thisObj.destructible.radius>end[0] || thisObj.y + thisObj.destructible.radius<start[1] || thisObj.y-thisObj.destructible.radius>end[1])
 					continue;
 				var thisDistance = distanceFromPointToLine(thisObj.x,thisObj.y,laser.startX,laser.startY,laser.endX,laser.endY);
-				if(thisDistance[0]<thisObj.radius && thisDistance[1]<tValOfObj){
+				if(thisDistance[0]<thisObj.destructible.radius && thisDistance[1]<tValOfObj){
 					obj = thisObj;
 					tValOfObj = thisDistance[1];
 				}
 			}
 			for(var c = -1;c<this.otherShips.length;c++){
 				var thisObj = ((c==-1) ? this.ship : this.otherShips[c]); //lol
-				if(thisObj.x + thisObj.radius<start[0] || thisObj.x-thisObj.radius>end[0] || thisObj.y + thisObj.radius<start[1] || thisObj.y-thisObj.radius>end[1])
+				if(thisObj.x + thisObj.destructible.radius<start[0] || thisObj.x-thisObj.destructible.radius>end[0] || thisObj.y + thisObj.destructible.radius<start[1] || thisObj.y-thisObj.destructible.radius>end[1])
 					continue;
 				var thisDistance = distanceFromPointToLine(thisObj.x,thisObj.y,laser.startX,laser.startY,laser.endX,laser.endY);
-				if(thisDistance[0]<thisObj.radius && thisDistance[1]<tValOfObj){
+				if(thisDistance[0]<thisObj.destructible.radius && thisDistance[1]<tValOfObj){
 					obj = thisObj;
 					tValOfObj = thisDistance[1];
 				}
 			}
 			if(obj)
 			{
-				obj.hp-=laser.power*dt;
+				obj.destructible.hp-=laser.power*dt;
 				console.log(obj+' hp: '+obj.hp);
 				var laserDir = [laser.endX-laser.startX,laser.endY-laser.startY];
 				var newEnd = [laser.startX+tValOfObj*laserDir[0],laser.startY+tValOfObj*laserDir[1]];
@@ -646,20 +654,20 @@ app.main = {
 		for(var c = 0;c<this.asteroids.objs.length;c++){
 			var asteroid = this.asteroids.objs[c];
 			var distance = (this.ship.x-asteroid.x)*(this.ship.x-asteroid.x) + (this.ship.y-asteroid.y)*(this.ship.y-asteroid.y);
-			var overlap = (this.ship.radius+asteroid.radius)*(this.ship.radius+asteroid.radius) - distance;
+			var overlap = (this.ship.destructible.radius+asteroid.radius)*(this.ship.destructible.radius+asteroid.radius) - distance;
 			if(overlap>=0)
 			{
-				this.ship.hp-=100*dt;
+				this.ship.destructible.hp-=100*dt;
 			}
 		}
 		this.otherShips.forEach(function(ship){
 			for(var c = 0;c<this.asteroids.objs.length;c++){
 				var asteroid = this.asteroids.objs[c];
 				var distance = (ship.x-asteroid.x)*(ship.x-asteroid.x) + (ship.y-asteroid.y)*(ship.y-asteroid.y);
-				var overlap = (ship.radius+asteroid.radius)*(ship.radius+asteroid.radius) - distance;
+				var overlap = (ship.destructible.radius+asteroid.radius)*(ship.destructible.radius+asteroid.radius) - distance;
 				if(overlap>=0)
 				{
-					ship.hp-=100*dt;
+					ship.destructible.hp-=100*dt;
 				}
 			}
 		},this);
@@ -687,7 +695,7 @@ app.main = {
 	},
 	clearDestructibles:function(destructibles){
 		for(var c = 0;c<destructibles.length;c++){
-			if(destructibles[c].hp<=0)
+			if(destructibles[c].destructible.hp<=0)
 				destructibles.splice(c--,1);
 		}
 	},
@@ -740,7 +748,7 @@ app.main = {
 	},
 	clearShips:function(ships){
 		for(var c = 0;c<ships.length;c++){
-			if(ships[c].hp<=0)
+			if(ships[c].destructible.hp<=0)
 				ships.splice(c--,1);
 		}
 	},
@@ -769,7 +777,7 @@ app.main = {
 
 		if(this.otherShips.length==0 && this.gameState==this.GAME_STATES.PLAYING)
 			this.gameState = this.GAME_STATES.WIN;
-		else if(this.gameState == this.GAME_STATES.PLAYING && this.ship.hp<=0)
+		else if(this.gameState == this.GAME_STATES.PLAYING && this.ship.destructible.hp<=0)
 			this.gameState = this.GAME_STATES.LOSE;
 		else if(this.gameState == this.GAME_STATES.PLAYING){
 
@@ -781,24 +789,24 @@ app.main = {
 		 	//assisted controls
 			//medial motion
 			if(myKeys.keydown[myKeys.KEYBOARD.KEY_W])
-				this.shipThrusters(this.ship,this.ship.thrusterStrength/this.ship.stabilizerThrustRatio);
+				this.shipMedialThrusters(this.ship,this.ship.thrusters.medial.maxStrength/this.ship.stabilizer.thrustRatio);
 			if(myKeys.keydown[myKeys.KEYBOARD.KEY_S])
-				this.shipThrusters(this.ship,-this.ship.thrusterStrength/this.ship.stabilizerThrustRatio);
-			if(this.ship.stabilizersEnabled)
+				this.shipMedialThrusters(this.ship,-this.ship.thrusters.medial.maxStrength/this.ship.stabilizer.thrustRatio);
+			if(this.ship.stabilizer.enabled)
 				this.shipMedialStabilizers(this.ship);
 			//lateral motion
 			if(myKeys.keydown[myKeys.KEYBOARD.KEY_Q])
-				this.shipLateralThrusters(this.ship,-this.ship.lateralThrusterStrength/this.ship.stabilizerThrustRatio);
+				this.shipLateralThrusters(this.ship,-this.ship.thrusters.lateral.maxStrength/this.ship.stabilizer.thrustRatio);
 			if(myKeys.keydown[myKeys.KEYBOARD.KEY_E])
-				this.shipLateralThrusters(this.ship,this.ship.lateralThrusterStrength/this.ship.stabilizerThrustRatio);
-			if(this.ship.stabilizersEnabled)
+				this.shipLateralThrusters(this.ship,this.ship.thrusters.lateral.maxStrength/this.ship.stabilizer.thrustRatio);
+			if(this.ship.stabilizer.enabled)
 				this.shipLateralStabilizers(this.ship);
 			//rotational motion
 			if(myKeys.keydown[myKeys.KEYBOARD.KEY_A])
-				this.shipSideThrusters(this.ship,this.ship.sideThrusterStrength/this.ship.stabilizerThrustRatio);
+				this.shipRotationalThrusters(this.ship,this.ship.thrusters.rotational.maxStrength/this.ship.stabilizer.thrustRatio);
 			if(myKeys.keydown[myKeys.KEYBOARD.KEY_D])
-				this.shipSideThrusters(this.ship,-this.ship.sideThrusterStrength/this.ship.stabilizerThrustRatio);
-			if(this.ship.stabilizersEnabled)
+				this.shipRotationalThrusters(this.ship,-this.ship.thrusters.rotational.maxStrength/this.ship.stabilizer.thrustRatio);
+			if(this.ship.stabilizer.enabled)
 				this.shipRotationalStabilizers(this.ship);
 			//lasers
 			if(myKeys.keydown[myKeys.KEYBOARD.KEY_SPACE])
@@ -880,8 +888,8 @@ app.main = {
 		ctx.save(); // NEW
 		ctx.textAlign = 'left';
 		ctx.textBaseline = 'center';
-		this.fillText(ctx, "HP: "+Math.floor(this.ship.hp),camera.width/15,8*camera.height/10,"12pt courier",'white')
-		this.fillText(ctx, "Control mode: "+((this.ship.stabilizersEnabled)?'assisted':'manual'),camera.width/15,9*camera.height/10,"12pt courier",'white')
+		this.fillText(ctx, "HP: "+Math.floor(this.ship.destructible.hp),camera.width/15,8*camera.height/10,"12pt courier",'white')
+		this.fillText(ctx, "Control mode: "+((this.ship.stabilizer.enabled)?'assisted':'manual'),camera.width/15,9*camera.height/10,"12pt courier",'white')
 		ctx.restore(); // NEW
 	},
 	drawTitleScreen:function(camera){
