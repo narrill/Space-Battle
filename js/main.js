@@ -18,6 +18,7 @@ var app = app || {};
 app.main = {
 	drawStarField:true,
 	isoAngle:0,
+	thrusterDetail:2,
 	gameState:0,
 	GAME_STATES:{
 		TITLE:0,
@@ -61,7 +62,25 @@ app.main = {
 	grid:{
 		gridLines: 500, //number of grid lines
 		gridSpacing: 500, //pixels per grid unit
-		gridStart: [-125000,-125000] //corner anchor in world coordinates
+		gridStart: [-125000,-125000], //corner anchor in world coordinates
+		colors:[
+			{
+				color:'blue',
+				interval:100
+			},
+			{
+				color:'mediumblue',
+				interval:25
+			},
+			{
+				color:'darkblue',
+				interval:5
+			},
+			{
+				color:'navyblue',
+				interval:1
+			}
+		]
 	},
 	asteroids:{
 		colors:[
@@ -86,6 +105,7 @@ app.main = {
 		//var canvas2 = document.querySelector('#canvas2');
 		//canvas2.onmousedown = this.doMousedown.bind(this);
 		this.camera = this.initializeCamera(canvas,0,0,0,.5,.05);
+		this.camera.globalCompositeOperation = 'hard-light';
 		this.starCamera = this.initializeCamera(canvas, 0, 0,0,.0001);
 		this.makeAsteroids.bind(this, this.asteroids, this.grid)();
 		this.generateStarField.bind(this, this.stars)();
@@ -99,7 +119,7 @@ app.main = {
 	resetGame:function(){
 		this.ship.hp = 500;
 		this.makeAsteroids.bind(this,this.asteroids,this.grid)();
-		this.otherShip = [];
+		this.otherShips = [];
 		for(var c = 0;c<this.otherShipCount;c++)
 			this.otherShips.push(this.createShip(this.grid));
 		this.gameState = this.GAME_STATES.PLAYING;
@@ -194,33 +214,61 @@ app.main = {
 		var gridSpacing = this.grid.gridSpacing;
 		var gridStart = this.grid.gridStart;
 
-		ctx.save();
-		ctx.beginPath();
-		for(var x = 0;x<=gridLines;x++){
-			//define start and end points for current line in world space
-			var start = [gridStart[0]+x*gridSpacing,gridStart[1]];
-			var end = [start[0],gridStart[1]+gridLines*gridSpacing];
-			//convert to camera space
-			start = worldPointToCameraSpace(start[0],start[1],camera);
-			end = worldPointToCameraSpace(end[0],end[1],camera);			
-			ctx.moveTo(start[0],start[1]);
-			ctx.lineTo(end[0],end[1]);
+		for(var c = 0;c<this.grid.colors.length;c++){			
+			ctx.save();
+			ctx.beginPath();
+			for(var x = 0;x<=gridLines;x++){
+				if(x%this.grid.colors[c].interval != 0)
+						continue;
+				var correctInterval = true;
+				for(var n = 0;n<c;n++)
+				{
+					if(x%this.grid.colors[n].interval == 0)
+					{
+						correctInterval = false;
+						break;
+					}
+				}
+				if(correctInterval!=true)
+					continue;
+				//define start and end points for current line in world space
+				var start = [gridStart[0]+x*gridSpacing,gridStart[1]];
+				var end = [start[0],gridStart[1]+gridLines*gridSpacing];
+				//convert to camera space
+				start = worldPointToCameraSpace(start[0],start[1],camera);
+				end = worldPointToCameraSpace(end[0],end[1],camera);			
+				ctx.moveTo(start[0],start[1]);
+				ctx.lineTo(end[0],end[1]);
+			}
+			for(var y = 0;y<=gridLines;y++){
+				if(y%this.grid.colors[c].interval != 0)
+						continue;
+				var correctInterval = true;
+				for(var n = 0;n<c;n++)
+				{
+					if(y%this.grid.colors[n].interval == 0)
+					{
+						correctInterval = false;
+						break;
+					}
+				}
+				if(correctInterval!=true)
+					continue;
+				//same as above, but perpendicular
+				var start = [gridStart[0],gridStart[0]+y*gridSpacing];
+				var end = [gridStart[0]+gridLines*gridSpacing,start[1]];
+				start = worldPointToCameraSpace(start[0],start[1],camera);
+				end = worldPointToCameraSpace(end[0],end[1],camera);
+				ctx.moveTo(start[0],start[1]);
+				ctx.lineTo(end[0],end[1]);
+			}
+			//draw all lines, stroke last
+			ctx.globalAlpha = .3;
+			ctx.strokeWidth = 5;
+			ctx.strokeStyle = this.grid.colors[c].color;
+			ctx.stroke();
+			ctx.restore();
 		}
-		for(var y = 0;y<=gridLines;y++){
-			//same as above, but perpendicular
-			var start = [gridStart[0],gridStart[0]+y*gridSpacing];
-			var end = [gridStart[0]+gridLines*gridSpacing,start[1]];
-			start = worldPointToCameraSpace(start[0],start[1],camera);
-			end = worldPointToCameraSpace(end[0],end[1],camera);
-			ctx.moveTo(start[0],start[1]);
-			ctx.lineTo(end[0],end[1]);
-		}
-		//draw all lines, stroke last
-		ctx.globalAlpha = .8;
-		ctx.strokeWidth = 5;
-		ctx.strokeStyle = 'darkblue';
-		ctx.stroke();
-		ctx.restore();
 	},
 	//generates the field of asteroids
 	makeAsteroids:function(asteroids, grid){
@@ -267,92 +315,92 @@ app.main = {
 
 		//main thrusters
 		//forward thrust
-		if(ship.activeThrusters.main>0.01){
-			ctx.save();				
-			ctx.fillStyle = ship.thrusterColor;
-			ctx.beginPath();
-			ctx.moveTo(-15,5);
-			ctx.lineTo(-10,5);
-			ctx.lineTo(-12.5,10+30*ship.activeThrusters.main/ship.thrusterEfficiency); //furthest point goes outward with thruster strength and scales inward with efficiency
-			ctx.closePath();
-			ctx.fill();
-			ctx.beginPath();
-			ctx.moveTo(15,5);
-			ctx.lineTo(10,5);
-			ctx.lineTo(12.5,10+30*ship.activeThrusters.main/ship.thrusterEfficiency);
-			ctx.closePath();
-			ctx.fill();
-			ctx.restore();
-		}
-		//backward thrust
-		else if(ship.activeThrusters.main<-0.01){
-			ctx.save();				
-			ctx.fillStyle = ship.thrusterColor;
-			ctx.beginPath();
-			ctx.moveTo(-15,0);
-			ctx.lineTo(-10,0);
-			ctx.lineTo(-12.5,-20+10*ship.activeThrusters.main/ship.thrusterEfficiency);
-			ctx.closePath();
-			ctx.fill();
-			ctx.beginPath();
-			ctx.moveTo(15,0);
-			ctx.lineTo(10,0);
-			ctx.lineTo(12.5,-20+10*ship.activeThrusters.main/ship.thrusterEfficiency);
-			ctx.closePath();
-			ctx.fill();
-			ctx.restore();
-		}	
+		for(var c = 0;c<=this.thrusterDetail;c++){
+			ctx.fillStyle = shadeRGBColor(ship.thrusterColor,.5*c);
+			if(ship.activeThrusters.main>0.01){
+				ctx.save();				
+				//ctx.fillStyle = ship.thrusterColor;
+				ctx.beginPath();
+				ctx.moveTo(-15,5);
+				ctx.lineTo(-10,5);
+				ctx.lineTo(-12.5,10+30*(ship.activeThrusters.main/ship.thrusterEfficiency)*(1-(c/(this.thrusterDetail+1)))); //furthest point goes outward with thruster strength and scales inward with efficiency
+				ctx.lineTo(-15,5);
+				ctx.moveTo(15,5);
+				ctx.lineTo(10,5);
+				ctx.lineTo(12.5,10+30*(ship.activeThrusters.main/ship.thrusterEfficiency)*(1-(c/(this.thrusterDetail+1))));
+				ctx.lineTo(15,5);
+				ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
+				ctx.fill();
+				ctx.restore();
+			}
+			//backward thrust
+			else if(ship.activeThrusters.main<-0.01){
+				ctx.save();				
+				ctx.beginPath();
+				ctx.moveTo(-15,0);
+				ctx.lineTo(-10,0);
+				ctx.lineTo(-12.5,-20+10*(ship.activeThrusters.main/ship.thrusterEfficiency)*(1-(c/(this.thrusterDetail+1))));
+				ctx.lineTo(-15,0);
+				ctx.moveTo(15,0);
+				ctx.lineTo(10,0);
+				ctx.lineTo(12.5,-20+10*(ship.activeThrusters.main/ship.thrusterEfficiency)*(1-(c/(this.thrusterDetail+1))));
+				ctx.lineTo(15,0);
+				ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
+				ctx.fill();
+				ctx.restore();
+			}	
 
-		//rotational thrusters	
-		//ccw
-		if(ship.activeThrusters.side>0.01){
-			ctx.save();				
-			ctx.fillStyle = ship.thrusterColor;
-			ctx.beginPath();
-			ctx.moveTo(5,-10);
-			ctx.lineTo(5,-15);
-			ctx.lineTo(20+30*ship.activeThrusters.side/ship.thrusterEfficiency,-12.5);
-			ctx.closePath();
-			ctx.fill();
-			ctx.restore();
-		}
-		//cw
-		else if(ship.activeThrusters.side<-0.01){
-			ctx.save();				
-			ctx.fillStyle = ship.thrusterColor;
-			ctx.beginPath();
-			ctx.moveTo(-5,-10);
-			ctx.lineTo(-5,-15);
-			ctx.lineTo(-20+30*ship.activeThrusters.side/ship.thrusterEfficiency,-12.5);
-			ctx.closePath();
-			ctx.fill();
-			ctx.restore();
-		}
+			//rotational thrusters	
+			//ccw
+			if(ship.activeThrusters.side>0.01){
+				ctx.save();				
+				ctx.beginPath();
+				ctx.moveTo(5,-10);
+				ctx.lineTo(5,-15);
+				ctx.lineTo(20+30*(ship.activeThrusters.side/ship.thrusterEfficiency)*(1-(c/(this.thrusterDetail+1))),-12.5);
+				ctx.lineTo(5,-10);
+				ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
+				ctx.fill();
+				ctx.restore();
+			}
+			//cw
+			else if(ship.activeThrusters.side<-0.01){
+				ctx.save();				
+				ctx.beginPath();
+				ctx.moveTo(-5,-10);
+				ctx.lineTo(-5,-15);
+				ctx.lineTo(-20+30*(ship.activeThrusters.side/ship.thrusterEfficiency)*(1-(c/(this.thrusterDetail+1))),-12.5);
+				ctx.lineTo(-5,-10);
+				ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
+				ctx.fill();
+				ctx.restore();
+			}
 
-		//lateral thrusters
-		//rightward
-		if(ship.activeThrusters.lateral>0.01){
-			ctx.save();				
-			ctx.fillStyle = ship.thrusterColor;
-			ctx.beginPath();
-			ctx.moveTo(-10,0);
-			ctx.lineTo(-10,-5);
-			ctx.lineTo(-20-30*ship.activeThrusters.lateral/ship.thrusterEfficiency,-2.5);
-			ctx.closePath();
-			ctx.fill();
-			ctx.restore();
-		}
-		//leftward
-		else if(ship.activeThrusters.lateral<-0.01){
-			ctx.save();				
-			ctx.fillStyle = ship.thrusterColor;
-			ctx.beginPath();
-			ctx.moveTo(10,0);
-			ctx.lineTo(10,-5);
-			ctx.lineTo(20-30*ship.activeThrusters.lateral/ship.thrusterEfficiency,-2.5);
-			ctx.closePath();
-			ctx.fill();
-			ctx.restore();
+			//lateral thrusters
+			//rightward
+			if(ship.activeThrusters.lateral>0.01){
+				ctx.save();				
+				ctx.beginPath();
+				ctx.moveTo(-10,0);
+				ctx.lineTo(-10,-5);
+				ctx.lineTo(-20-30*(ship.activeThrusters.lateral/ship.thrusterEfficiency)*(1-(c/(this.thrusterDetail+1))),-2.5);
+				ctx.lineTo(-10,0);
+				ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
+				ctx.fill();
+				ctx.restore();
+			}
+			//leftward
+			else if(ship.activeThrusters.lateral<-0.01){
+				ctx.save();				
+				ctx.beginPath();
+				ctx.moveTo(10,0);
+				ctx.lineTo(10,-5);
+				ctx.lineTo(20-30*(ship.activeThrusters.lateral/ship.thrusterEfficiency)*(1-(c/(this.thrusterDetail+1))),-2.5);
+				ctx.lineTo(10,0);
+				ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
+				ctx.fill();
+				ctx.restore();
+			}
 		}
 
 		//the rest of the ship
@@ -437,9 +485,9 @@ app.main = {
 		ship.x+=ship.velocityX*dt;
 		ship.y+=ship.velocityY*dt;
 		ship.rotation+=ship.rotationalVelocity*dt;
-		if(ship.rotation>=360)
+		if(ship.rotation>180)
 			ship.rotation-=360;
-		else if(ship.rotation<=-360)
+		else if(ship.rotation<-180)
 			ship.rotation+=360;
 
 		//create laser objects
@@ -700,15 +748,7 @@ app.main = {
 	update: function(){
 		//queue our next frame
 	 	this.animationID = requestAnimationFrame(this.update.bind(this));
-	 	var dt = this.calculateDeltaTime(); //delta for physics
-	 	//pause screen
-	 	if(this.gameState == this.GAME_STATES.PLAYING && this.paused){
-	 		this.drawPauseScreen(this.camera);
-	 		//this.drawPauseScreen(this.worldCamera);
-	 		return;
-	 	}
-	 	
-	 	
+	 	var dt = this.calculateDeltaTime(); //delta for physics		
 
 	 	//clear values
 		this.clearLasers(this.lasers);
@@ -718,6 +758,14 @@ app.main = {
 			},this);
 		this.clearDestructibles(this.asteroids.objs);
 		this.clearDestructibles(this.otherShips);
+
+		//pause screen
+	 	if(this.gameState == this.GAME_STATES.PLAYING && this.paused){
+	 		dt = 0;
+	 		this.drawPauseScreen(this.camera);
+	 		//this.drawPauseScreen(this.worldCamera);
+	 		return;
+	 	} 
 
 		if(this.otherShips.length==0 && this.gameState==this.GAME_STATES.PLAYING)
 			this.gameState = this.GAME_STATES.WIN;
