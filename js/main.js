@@ -117,7 +117,7 @@ app.main = {
 		this.update();
 	},
 	resetGame:function(){
-		this.ship.destructible.hp = 500;
+		this.ship.destructible.hp = this.ship.destructible.maxHp;
 		this.makeAsteroids.bind(this,this.asteroids,this.grid)();
 		this.otherShips = [];
 		for(var c = 0;c<this.otherShipCount;c++)
@@ -240,6 +240,7 @@ app.main = {
 			objectParams = {};
 		return{
 			hp:(objectParams.hp)?objectParams.hp:500,
+			maxHp: (objectParams.hp)?objectParams.hp:500,
 			radius:(objectParams.radius)?objectParams.radius:500
 		};
 	},
