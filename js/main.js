@@ -165,53 +165,82 @@ app.main = {
 			rightVectorY:0,
 			medialVelocity:0, //component form, used by stabilizers
 			lateralVelocity:0,
-			destructible:{
+			destructible:this.createComponentDestructible({
 				hp:500,
 				radius:20
-			},
+			}),
 			thrusters:{
 				color:getRandomColor(),
-				medial:{
-					currentStrength:0,
+				medial:this.createComponentThruster({
 					maxStrength:2000,
 					efficiency:1000
-				},
-				lateral:{
-					currentStrength:0,
+				}),
+				lateral:this.createComponentThruster({
 					maxStrength:3000,
 					efficiency:1000
-				},
-				rotational:{
-					currentStrength:0,
+				}),
+				rotational:this.createComponentThruster({
 					maxStrength:1000,
 					efficiency:1000
-				}
+				})
 			},
-			stabilizer:{
-				enabled:true,
-				strength:60,
-				thrustRatio:1.5,
-				clamps:{
-					enabled:true,
-					medial:3000,
-					lateral:2000,
-					rotational:180
-				}
-			},
+			stabilizer:this.createComponentStabilizer(),
 			//colors
 			color:getRandomColor(),
 			//used for controlling laser fire rate
 			//lastLaserTime:0,
-			laser:{
-				lastFireTime:0,
-				cd:.1,
-				range:5000,
-				color:getRandomColor(),
-				currentPower:0,
-				coherence:.9,
-				maxPower:1000,
-				efficiency:200
-			}
+			laser:this.createComponentLaser()
+		};
+	},
+	createComponentThruster:function(objectParams){
+		if(!objectParams)
+			objectParams = {};
+		return {
+			currentStrength:0,
+			maxStrength: (objectParams.maxStrength)?objectParams.maxStrength:1000,
+			efficiency: (objectParams.efficiency) ? objectParams.efficiency:1000
+		};
+	},
+	createComponentStabilizer:function(objectParams){
+		if(!objectParams)
+			objectParams = {};
+		return{
+			enabled: (objectParams.enabled)? objectParams.enabled:true,
+			strength: (objectParams.strength)? objectParams.strength:60,
+			thrustRatio: (objectParams.thrustRatio)?objectParams.thrustRatio:1.5,
+			clamps: this.createComponentStabilizerClamps(objectParams.clamps)
+		};
+	},
+	createComponentStabilizerClamps:function(objectParams){
+		if(!objectParams)
+			objectParams = {};
+		return{
+			enabled: (objectParams.enabled)? objectParams.enabled:true,
+			medial:(objectParams.medial)?objectParams.medial:3000,
+			lateral:(objectParams.lateral)?objectParams.lateral:2000,
+			rotational:(objectParams.rotational)?objectParams.rotational:180
+		};
+	},
+	createComponentLaser:function(objectParams){
+		if(!objectParams)
+			objectParams = {};
+		return{
+			lastFireTime:0,
+			cd:(objectParams.cd)?objectParams.cd:.1,
+			range:(objectParams.range)?objectParams.range:5000,
+			color:(objectParams.color)?objectParams.color:getRandomColor(),
+			currentPower:0,
+			coherence:(objectParams.coherence)?objectParams.coherence:.9,
+			maxPower:(objectParams.maxPower)?objectParams.maxPower:1000,
+			efficiency:(objectParams.efficiency)?objectParams.efficiency:200
+		};
+	},
+	createComponentDestructible:function(objectParams){
+		if(!objectParams)
+			objectParams = {};
+		return{
+			hp:(objectParams.hp)?objectParams.hp:500,
+			radius:(objectParams.radius)?objectParams.radius:500
 		};
 	},
 	//draws the grid in the given camera
@@ -291,10 +320,10 @@ app.main = {
 				x: Math.random()*(upper[0]-lower[0])+lower[0],
 				y: Math.random()*(upper[1]-lower[1])+lower[1],
 				radius:radius, //graphical radius
-				destructible:{
+				destructible:this.createComponentDestructible({
 					hp:radius,
 					radius:radius //collider radius
-				},
+				}),
 				colorIndex:group
 			});
 		}
@@ -643,7 +672,7 @@ app.main = {
 			if(obj)
 			{
 				obj.destructible.hp-=laser.power*dt;
-				console.log(obj+' hp: '+obj.hp);
+				console.log(obj+' hp: '+obj.destructible.hp);
 				var laserDir = [laser.endX-laser.startX,laser.endY-laser.startY];
 				var newEnd = [laser.startX+tValOfObj*laserDir[0],laser.startY+tValOfObj*laserDir[1]];
 				laser.endX = newEnd[0];
