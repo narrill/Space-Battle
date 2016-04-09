@@ -22,7 +22,8 @@ myKeys.KEYBOARD = Object.freeze({
 	"KEY_TAB":9,
 	"KEY_F":70,
 	"KEY_R":82,
-	"KEY_C":67
+	"KEY_C":67,
+	"KEY_P":80
 });
 
 // myKeys.keydown array to keep track of which keys are down
@@ -61,4 +62,6 @@ window.addEventListener("keyup",function(e){
 		app.main.ship.stabilizer.clamps.enabled = !app.main.ship.stabilizer.clamps.enabled;
 	else if(e.keyCode == myKeys.KEYBOARD.KEY_F)
 		app.main.drawStarField = !app.main.drawStarField;
+	else if (e.keyCode == myKeys.KEYBOARD.KEY_P)
+		app.main.paused = !app.main.paused;
 });
