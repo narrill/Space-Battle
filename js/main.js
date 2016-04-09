@@ -29,6 +29,11 @@ app.main = {
 		MENU:4,
 		SHIPCONFIG:5
 	},
+	SHIP_COMPONENTS:{
+		THRUSTERS:0,
+		LASERS:1,
+		SHIELDS:2
+	},
    	lastTime: 0, // used by calculateDeltaTime() 
     debug: true,
 	paused:false,
@@ -207,6 +212,7 @@ app.main = {
 				})
 			},
 			stabilizer:this.createComponentStabilizer(),
+			powerSystem:this.createComponentPowerSystem(),
 			//colors
 			color:getRandomBrightColor(),
 			//used for controlling laser fire rate
@@ -223,6 +229,15 @@ app.main = {
 			maxStrength: (objectParams.maxStrength)?objectParams.maxStrength:1000,
 			efficiency: (objectParams.efficiency) ? objectParams.efficiency:1000,
 			powerRampPercentage: (objectParams.powerRampPercentage)? objectParams.powerRampPercentage: 20
+		};
+	},
+	createComponentPowerSystem:function(objectParams){
+		if(!objectParams)
+			objectParams = {};
+		return{
+			current:[0,0,0],
+			target:[0,0,0],
+			transferRate:6
 		};
 	},
 	createComponentStabilizer:function(objectParams){
@@ -288,6 +303,26 @@ app.main = {
 			accuracy:.5,
 			fireSpread:5
 		};
+	},
+	scalePowerTarget:function(ps){
+		var sum = 0;
+		for(var c = 0;c<ps.target.length;c++)
+		{
+			sum+=ps.target[c];
+		}
+		if(sum==0)
+		{
+			ps.target = [0,0,0];
+			return;
+		}
+		for(var c = 0;c<ps.target.length;c++)
+			ps.target[c] = ps.target[c]/sum;
+	},
+	getPowerForComponent:function(ps,component){
+		if(component>=ps.current.length || component<0)
+			return 0;
+		var components = ps.current.length;
+		return clamp(0,(ps.current[component]-(1/components))/(2*(1/components)),1);
 	},
 	//draws the grid in the given camera
 	drawGrid:function(camera){
@@ -665,12 +700,56 @@ app.main = {
 			if(ship.destructible.shield.current>ship.destructible.shield.max)
 				ship.destructible.shield.current = ship.destructible.shield.max;
 		}
+
+		//update power system
+		//scale all relevant values down from the augmented to their normal using the old power values
+		var thrusterPower = this.getPowerForComponent(ship.powerSystem, this.SHIP_COMPONENTS.THRUSTERS);
+		var laserPower = this.getPowerForComponent(ship.powerSystem, this.SHIP_COMPONENTS.LASERS);
+		var shieldPower = this.getPowerForComponent(ship.powerSystem, this.SHIP_COMPONENTS.SHIELDS);
+		//thrusters
+		ship.thrusters.medial.maxStrength/=(1+thrusterPower);
+		ship.thrusters.lateral.maxStrength/=(1+thrusterPower);
+		ship.thrusters.rotational.maxStrength/=(1+thrusterPower);
+		ship.stabilizer.clamps.medial/=(1+thrusterPower);
+		ship.stabilizer.clamps.lateral/=(1+thrusterPower);
+		ship.stabilizer.clamps.rotational/=(1+thrusterPower);
+		//lasers
+		ship.laser.maxPower/=(1+laserPower);
+		//shields
+		ship.destructible.shield.current/=(1+shieldPower);
+		ship.destructible.shield.max/=(1+shieldPower);
+		ship.destructible.shield.recharge/=(1+shieldPower);
+
+		//update the power values
+		this.scalePowerTarget(ship.powerSystem);
+		ship.powerSystem.current = lerp3d(ship.powerSystem.current,ship.powerSystem.target,ship.powerSystem.transferRate*dt);
+
+		//scale back up to augmented with the new power values
+		thrusterPower = this.getPowerForComponent(ship.powerSystem, this.SHIP_COMPONENTS.THRUSTERS);
+		laserPower = this.getPowerForComponent(ship.powerSystem, this.SHIP_COMPONENTS.LASERS);
+		shieldPower = this.getPowerForComponent(ship.powerSystem, this.SHIP_COMPONENTS.SHIELDS);
+		//thrusters
+		ship.thrusters.medial.maxStrength*=(1+thrusterPower);
+		ship.thrusters.lateral.maxStrength*=(1+thrusterPower);
+		ship.thrusters.rotational.maxStrength*=(1+thrusterPower);
+		ship.stabilizer.clamps.medial*=(1+thrusterPower);
+		ship.stabilizer.clamps.lateral*=(1+thrusterPower);
+		ship.stabilizer.clamps.rotational*=(1+thrusterPower);
+		//lasers
+		ship.laser.maxPower*=(1+laserPower);
+		//shields
+		ship.destructible.shield.current*=(1+shieldPower);
+		ship.destructible.shield.max*=(1+shieldPower);
+		ship.destructible.shield.recharge*=(1+shieldPower);
 	},
 	//clears the active thruster values
 	shipClearThrusters:function(ship){
 		ship.thrusters.medial.targetStrength = 0;
 		ship.thrusters.lateral.targetStrength = 0;
 		ship.thrusters.rotational.targetStrength = 0;
+	},
+	shipClearPowerTarget:function(ship){
+		ship.powerSystem.target = [0,0,0];
 	},
 	//add given strength to main thruster
 	shipMedialThrusters:function(ship, strength){
@@ -711,7 +790,7 @@ app.main = {
 		//see above
 		if(ship.thrusters.lateral.targetStrength*ship.lateralVelocity>=0)
 			this.shipLateralThrusters(ship,ship.lateralVelocity*ship.stabilizer.strength*dt);
-		else if (ship.stabilizer.clamps.enabled && Math.abs(ship.lateralVelocity)>=ship.stabilizer.clamps.lateral && ship.thrusters.lateral.currenttarget*ship.lateralVelocity<0)
+		else if (ship.stabilizer.clamps.enabled && Math.abs(ship.lateralVelocity)>=ship.stabilizer.clamps.lateral && ship.thrusters.lateral.targetStrength*ship.lateralVelocity<0)
 			ship.thrusters.lateral.targetStrength = 0;
 	},
 	shipFireLaser:function(ship){
@@ -957,10 +1036,11 @@ app.main = {
 
 	 	//clear values
 		this.clearLasers(this.lasers);
-		this.shipClearThrusters(this.ship);
-		this.otherShips.forEach(function(ship){
-				this.shipClearThrusters(ship);
-			},this);
+		for(var c =-1;c<this.otherShips.length;c++){
+			var ship = (c==-1) ? this.ship : this.otherShips[c];
+			this.shipClearThrusters(ship);
+			this.shipClearPowerTarget(ship);
+		}
 		this.clearDestructibles(this.asteroids.objs);
 		this.clearDestructibles(this.otherShips);
 
@@ -979,7 +1059,7 @@ app.main = {
 		else if(this.gameState == this.GAME_STATES.PLAYING){
 
 			this.otherShips.forEach(function(ship){
-				this.shipAI(ship,this.ship,dt);
+				//this.shipAI(ship,this.ship,dt);
 			},this);
 
 			//set ship thruster values
@@ -1008,7 +1088,12 @@ app.main = {
 			//lasers
 			if(myKeys.keydown[myKeys.KEYBOARD.KEY_SPACE])
 				this.shipFireLaser(this.ship);
-
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_SHIFT])
+				this.ship.powerSystem.target[this.SHIP_COMPONENTS.THRUSTERS] = 1;
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_CTRL])
+				this.ship.powerSystem.target[this.SHIP_COMPONENTS.LASERS] = 1;
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_ALT])
+				this.ship.powerSystem.target[this.SHIP_COMPONENTS.SHIELDS] = 1;
 		 	//camera zoom controls
 			if(myKeys.keydown[myKeys.KEYBOARD.KEY_UP])
 				this.camera.zoom*=1.05;
@@ -1093,7 +1178,7 @@ app.main = {
 		
 		//FPS text
 		if (this.debug){
-			this.fillText(this.camera.ctx,'fps: '+Math.floor(1/dt),15,15,"10pt helvetica",'white');
+			this.fillText(this.camera.ctx,'fps: '+Math.floor(1/dt),15,15,"10pt Aroma",'white');
 		}
 
 		//because we might use the frame count for something at some point
@@ -1104,10 +1189,11 @@ app.main = {
 		ctx.save(); // NEW
 		ctx.textAlign = 'left';
 		ctx.textBaseline = 'center';
-		this.fillText(ctx, "Shields: "+Math.floor(this.ship.destructible.shield.current),camera.width/15,7.5*camera.height/10,"12pt courier",'white')
-		this.fillText(ctx, "HP: "+Math.floor(this.ship.destructible.hp),camera.width/15,8*camera.height/10,"12pt courier",'white')
-		this.fillText(ctx, "Control mode: "+((this.ship.stabilizer.enabled)?'assisted':'manual'),camera.width/15,9*camera.height/10,"12pt courier",'white')
-		this.fillText(ctx, "Thruster clamps: "+((this.ship.stabilizer.clamps.enabled)?'M'+this.ship.stabilizer.clamps.medial+' L'+this.ship.stabilizer.clamps.lateral+' R'+this.ship.stabilizer.clamps.rotational:'disabled'),camera.width/15,9.5*camera.height/10,"12pt courier",'white')
+		this.fillText(ctx, "Shields: "+Math.round(this.ship.destructible.shield.current),camera.width/15,7.5*camera.height/10,"12pt Aroma",'white')
+		this.fillText(ctx, "HP: "+Math.round(this.ship.destructible.hp),camera.width/15,8*camera.height/10,"12pt Aroma",'white')
+		this.fillText(ctx, "Control mode: "+((this.ship.stabilizer.enabled)?'assisted':'manual'),camera.width/15,9*camera.height/10,"12pt Aroma",'white')
+		this.fillText(ctx, "Thruster clamps: "+((this.ship.stabilizer.clamps.enabled)?'M'+Math.round(this.ship.stabilizer.clamps.medial)+' L'+Math.round(this.ship.stabilizer.clamps.lateral)+' R'+Math.round(this.ship.stabilizer.clamps.rotational):'disabled'),camera.width/15,9.5*camera.height/10,"12pt Aroma",'white')
+		this.fillText(ctx, "Power Distribution: T "+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.THRUSTERS)*100)+'% L '+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.LASERS)*100)+'% S '+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.SHIELDS)*100)+'%',camera.width/15,9.7*camera.height/10,"12pt Aroma",'white')
 		ctx.restore(); // NEW
 	},
 	drawTitleScreen:function(camera){
@@ -1119,8 +1205,8 @@ app.main = {
 		ctx.textAlign = 'center';
 		ctx.textBaseline = 'middle';
 		ctx.globalAlpha = 1;
-		this.fillText(ctx,"Space Battle With Lasers",camera.width/2,camera.height/5,"24pt courier",'white');
-		this.fillText(ctx,"Press W to start. Use WASD, LEFT/RIGHT/UP/DOWN, SPACE, and TAB to control your ship",camera.width/2,4*camera.height/5,"12pt courier",'white');
+		this.fillText(ctx,"Space Battle With Lasers",camera.width/2,camera.height/5,"bold 24pt Aroma",'white');
+		this.fillText(ctx,"Press W to start. Use WASD, LEFT/RIGHT/UP/DOWN, SPACE, and TAB to control your ship",camera.width/2,4*camera.height/5,"12pt Aroma",'white');
 		ctx.restore();
 	},
 	drawWinScreen:function(camera){
@@ -1132,8 +1218,8 @@ app.main = {
 		ctx.textAlign = 'center';
 		ctx.textBaseline = 'middle';
 		ctx.globalAlpha = 1;
-		this.fillText(ctx,"You win!",camera.width/2,camera.height/5,"24pt courier",'white');
-		this.fillText(ctx,"Good for you. Press R to continue.",camera.width/2,4*camera.height/5,"12pt courier",'white');
+		this.fillText(ctx,"You win!",camera.width/2,camera.height/5,"24pt Aroma",'white');
+		this.fillText(ctx,"Good for you. Press R to continue.",camera.width/2,4*camera.height/5,"12pt Aroma",'white');
 		ctx.restore();		
 	},
 	drawLoseScreen:function(camera){

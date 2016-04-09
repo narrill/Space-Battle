@@ -240,7 +240,14 @@ function shadeRGBColor(color, percent) {
 }
 
 function lerp(from,to,percent){
-	return (to-from)*percent + from;
+	return (from * (1.0 - percent)) + (to * percent);
+}
+
+function lerp3d(from,to,percent){
+	var x = (from[0] * (1.0 - percent)) + (to[0] * percent);
+	var y = (from[1] * (1.0 - percent)) + (to[1] * percent);
+	var z = (from[2] * (1.0 - percent)) + (to[2] * percent);
+	return [x,y,z];
 }
 
 function clamp(min, value, max){
