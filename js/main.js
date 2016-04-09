@@ -193,7 +193,8 @@ app.main = {
 				radius:25,
 				shield:{
 					max:100,
-					recharge:3
+					recharge:3,
+					efficiency:8
 				}
 			}),
 			thrusters:{
@@ -291,6 +292,7 @@ app.main = {
 		return{
 			current:(objectParams.max)?objectParams.max:0,
 			max:(objectParams.max)?objectParams.max:0,
+			efficiency:(objectParams.efficiency)?objectParams.efficiency:0,
 			recharge:(objectParams.recharge)?objectParams.recharge:0
 		};
 	},
@@ -578,14 +580,15 @@ app.main = {
 		}
 
 		//shields
+		var shieldCoeff = (ship.destructible.shield.max/ship.destructible.shield.efficiency);
 		ctx.save();
 		ctx.fillStyle = 'dodgerblue';
 		ctx.beginPath();
 		//ctx.arc(0,-5,30,0,Math.PI*2);
-		ctx.moveTo(-30,20);
-		ctx.lineTo(0,5);
-		ctx.lineTo(30,20);
-		ctx.lineTo(0,-42);
+		ctx.moveTo(-20-1*shieldCoeff,10+1*shieldCoeff);
+		ctx.lineTo(0,0+.5*shieldCoeff);
+		ctx.lineTo(20+1*shieldCoeff,10+1*shieldCoeff);
+		ctx.lineTo(0,-30-1.2*shieldCoeff);
 		ctx.globalAlpha = ship.destructible.shield.current/ship.destructible.shield.max;
 		ctx.fill();
 		ctx.restore();

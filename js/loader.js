@@ -17,6 +17,7 @@ window.onload = function(){
 }
 
 window.onblur = function(){
+	mykeys.keydown = [];
 	app.main.pauseGame();
 };
 window.onfocus = function(){
