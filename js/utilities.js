@@ -39,6 +39,14 @@ function getRandomColor(){
 	return color;
 }
 
+function getRandomBrightColor(){
+	var h = Math.round(Math.random()*360);
+	var color='hsl('+h+',100%,75%)';
+	// OR	if you want to change alpha
+	// var color='rgba('+red+','+green+','+blue+',0.50)'; // 0.50
+	return color;
+}
+
 function pointInsideCircle(x, y, I) {
 	var dx = x - I.x;
 	var dy = y - I.y;

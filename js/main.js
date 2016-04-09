@@ -183,7 +183,7 @@ app.main = {
 				radius:20
 			}),
 			thrusters:{
-				color:getRandomColor(),
+				color:getRandomBrightColor(),
 				medial:this.createComponentThruster({
 					maxStrength:2000,
 					efficiency:1000
@@ -199,7 +199,7 @@ app.main = {
 			},
 			stabilizer:this.createComponentStabilizer(),
 			//colors
-			color:getRandomColor(),
+			color:getRandomBrightColor(),
 			//used for controlling laser fire rate
 			//lastLaserTime:0,
 			laser:this.createComponentLaser()
@@ -243,11 +243,12 @@ app.main = {
 			lastFireTime:0,
 			cd:(objectParams.cd)?objectParams.cd:.1,
 			range:(objectParams.range)?objectParams.range:5000,
-			color:(objectParams.color)?objectParams.color:getRandomColor(),
+			color:(objectParams.color)?objectParams.color:getRandomBrightColor(),
 			currentPower:0,
 			coherence:(objectParams.coherence)?objectParams.coherence:.9,
 			maxPower:(objectParams.maxPower)?objectParams.maxPower:1000,
-			efficiency:(objectParams.efficiency)?objectParams.efficiency:200
+			efficiency:(objectParams.efficiency)?objectParams.efficiency:200,
+			spread:(objectParams.spread)?objectParams.spread:2
 		};
 	},
 	createComponentDestructible:function(objectParams){
@@ -564,7 +565,7 @@ app.main = {
 		//create laser objects
 		if(ship.laser.currentPower>0){
 			var laserVector = [0,-ship.laser.range];
-			laserVector = rotate(0,0,laserVector[0],laserVector[1],-ship.rotation);
+			laserVector = rotate(0,0,laserVector[0],laserVector[1],-ship.rotation+Math.random()*ship.laser.spread-ship.laser.spread/2);
 			this.createLaser(this.lasers,ship.x+normalizedForwardVector[0]*30,ship.y+normalizedForwardVector[1]*30,ship.x+laserVector[0],ship.y+laserVector[1],ship.laser.color,ship.laser.currentPower, ship.laser.efficiency);
 			ship.laser.currentPower-=ship.laser.maxPower*(1-ship.laser.coherence)*dt*1000;
 		}
@@ -856,16 +857,16 @@ app.main = {
 			if(this.ship.stabilizer.enabled)
 				this.shipMedialStabilizers(this.ship,dt);
 			//lateral motion
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_Q])
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_A])
 				this.shipLateralThrusters(this.ship,-this.ship.thrusters.lateral.maxStrength/this.ship.stabilizer.thrustRatio);
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_E])
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_D])
 				this.shipLateralThrusters(this.ship,this.ship.thrusters.lateral.maxStrength/this.ship.stabilizer.thrustRatio);
 			if(this.ship.stabilizer.enabled)
 				this.shipLateralStabilizers(this.ship,dt);
 			//rotational motion
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_A])
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_LEFT])
 				this.shipRotationalThrusters(this.ship,this.ship.thrusters.rotational.maxStrength/this.ship.stabilizer.thrustRatio);
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_D])
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_RIGHT])
 				this.shipRotationalThrusters(this.ship,-this.ship.thrusters.rotational.maxStrength/this.ship.stabilizer.thrustRatio);
 			if(this.ship.stabilizer.enabled)
 				this.shipRotationalStabilizers(this.ship,dt);
