@@ -61,8 +61,9 @@ app.main = {
 		height:0,
 		ctx:undefined
 	},
+	gridCamera:{},
 	grid:{
-		gridLines: 100, //number of grid lines
+		gridLines: 500, //number of grid lines
 		gridSpacing: 500, //pixels per grid unit
 		gridStart: [-125000,-125000], //corner anchor in world coordinates
 		colors:[
@@ -89,10 +90,10 @@ app.main = {
 		]
 	},
 	asteroids:{
-		total:3,
+		total:30,
 		colors:[
-			'saddlebrown',
-			'chocolate'
+			'#654321',
+			'sienna'
 		],
 		objs:[]
 	},
@@ -111,12 +112,14 @@ app.main = {
 		//canvas.onmousedown = this.doMousedown.bind(this);
 		//var canvas2 = document.querySelector('#canvas2');
 		//canvas2.onmousedown = this.doMousedown.bind(this);
-		this.camera = this.initializeCamera(canvas,0,0,0,.5,.05);
-		this.camera.globalCompositeOperation = 'hard-light';
-		this.starCamera = this.initializeCamera(canvas, 0, 0,0,.0001);
+		
 		this.makeAsteroids.bind(this, this.asteroids, this.grid)();
 		this.generateStarField.bind(this, this.stars)();
 		this.ship = this.createShip(this.grid);
+		this.camera = this.initializeCamera(canvas,this.ship.x,this.ship.y,this.ship.rotation,.5,.05);
+		this.camera.globalCompositeOperation = 'hard-light';
+		this.starCamera = this.initializeCamera(canvas, 0, 0,0,.0001);
+		this.gridCamera = this.initializeCamera(canvas,0,0,0,1);
 		for(var c = 0;c<this.otherShipCount;c++)
 		{
 			this.otherShips.push(this.createShip(this.grid));
@@ -128,6 +131,7 @@ app.main = {
 	},
 	resetGame:function(){
 		this.ship.destructible.hp = this.ship.destructible.maxHp;
+		this.ship.destructible.shield.current = this.ship.destructible.shield.max;
 		this.makeAsteroids.bind(this,this.asteroids,this.grid)();
 		this.otherShips = [];
 		for(var c = 0;c<this.otherShipCount;c++)
@@ -179,17 +183,21 @@ app.main = {
 			medialVelocity:0, //component form, used by stabilizers
 			lateralVelocity:0,
 			destructible:this.createComponentDestructible({
-				hp:500,
-				radius:20
+				hp:100,
+				radius:15,
+				shield:{
+					max:100,
+					recharge:1
+				}
 			}),
 			thrusters:{
 				color:getRandomBrightColor(),
 				medial:this.createComponentThruster({
-					maxStrength:2000,
+					maxStrength:3000,
 					efficiency:1000
 				}),
 				lateral:this.createComponentThruster({
-					maxStrength:3000,
+					maxStrength:2000,
 					efficiency:1000
 				}),
 				rotational:this.createComponentThruster({
@@ -241,14 +249,14 @@ app.main = {
 			objectParams = {};
 		return{
 			lastFireTime:0,
-			cd:(objectParams.cd)?objectParams.cd:.1,
-			range:(objectParams.range)?objectParams.range:5000,
+			cd:(objectParams.cd)?objectParams.cd:.07,
+			range:(objectParams.range)?objectParams.range:10000,
 			color:(objectParams.color)?objectParams.color:getRandomBrightColor(),
 			currentPower:0,
 			coherence:(objectParams.coherence)?objectParams.coherence:.9,
 			maxPower:(objectParams.maxPower)?objectParams.maxPower:1000,
 			efficiency:(objectParams.efficiency)?objectParams.efficiency:200,
-			spread:(objectParams.spread)?objectParams.spread:2
+			spread:(objectParams.spread)?objectParams.spread:.8
 		};
 	},
 	createComponentDestructible:function(objectParams){
@@ -257,7 +265,17 @@ app.main = {
 		return{
 			hp:(objectParams.hp)?objectParams.hp:500,
 			maxHp: (objectParams.hp)?objectParams.hp:500,
-			radius:(objectParams.radius)?objectParams.radius:500
+			radius:(objectParams.radius)?objectParams.radius:500,
+			shield:this.createComponentDestructibleShield(objectParams.shield)
+		};
+	},
+	createComponentDestructibleShield:function(objectParams){
+		if(!objectParams)
+			objectParams = {};
+		return{
+			current:(objectParams.max)?objectParams.max:0,
+			max:(objectParams.max)?objectParams.max:0,
+			recharge:(objectParams.recharge)?objectParams.recharge:0
 		};
 	},
 	createComponentShipAI:function(objectParams){
@@ -267,7 +285,7 @@ app.main = {
 			followMin:(objectParams.followMin)?objectParams.followMin:2500,
 			followMax:(objectParams.followMax)?objectParams.followMax:3000,
 			accuracy:.5,
-			fireSpread:1
+			fireSpread:5
 		};
 	},
 	//draws the grid in the given camera
@@ -371,13 +389,68 @@ app.main = {
 		}
 	},
 	//draws the given ship in the given camera
-	drawShip: function(ship, camera){
+	drawShip: function(ship, camera, gridCamera){
 		var ctx = camera.ctx;
 		ctx.save();
 		var shipPosInCameraSpace = worldPointToCameraSpace(ship.x,ship.y,camera); //get ship's position in camera space
+
+		if(gridCamera){
+			var shipPosInGridCameraSpace = worldPointToCameraSpace(ship.x,ship.y,gridCamera);
+			ctx.save();
+			ctx.beginPath();
+			ctx.moveTo(shipPosInCameraSpace[0],shipPosInCameraSpace[1]);
+			ctx.lineTo(shipPosInGridCameraSpace[0],shipPosInGridCameraSpace[1]);
+			ctx.lineWidth = .5;
+			ctx.strokeStyle = 'grey';
+			ctx.globalAlpha = .3;
+			ctx.stroke();
+
+			ctx.globalAlpha = .5;
+			ctx.translate(shipPosInGridCameraSpace[0],shipPosInGridCameraSpace[1]);
+			ctx.scale(gridCamera.zoom,gridCamera.zoom);
+			ctx.beginPath();
+			ctx.arc(0,0,750,-Math.PI/2,-Math.PI*2*(ship.destructible.shield.current/ship.destructible.shield.max)-Math.PI/2,true);
+			ctx.strokeStyle = 'dodgerblue';
+			ctx.lineWidth = 100;
+			ctx.stroke();
+			ctx.beginPath();
+			ctx.arc(0,0,600,-Math.PI/2,-Math.PI*2*(ship.destructible.hp/ship.destructible.maxHp)-Math.PI/2,true);
+			ctx.strokeStyle = 'green';
+			ctx.stroke();
+			ctx.beginPath();
+			ctx.arc(0,0,300,0,Math.PI*2);
+			ctx.fillStyle = ship.color;
+			ctx.fill();
+			ctx.restore();
+		}
+
 		ctx.translate(shipPosInCameraSpace[0],shipPosInCameraSpace[1]); //translate to camera space position
 		ctx.rotate((ship.rotation-camera.rotation) * (Math.PI / 180)); //rotate by difference in rotations
+
 		ctx.scale(camera.zoom,camera.zoom); //scale by zoom value
+
+		//collider
+		/*ctx.save();
+		ctx.fillStyle = 'red';
+		ctx.beginPath();
+		ctx.arc(0,0,ship.destructible.radius,0,Math.PI*2);
+		ctx.fill();
+		ctx.restore();*/
+
+		ctx.translate(0,7);
+
+		//shields
+		ctx.save();
+		ctx.fillStyle = 'dodgerblue';
+		ctx.beginPath();
+		//ctx.arc(0,-5,30,0,Math.PI*2);
+		ctx.moveTo(-30,20);
+		ctx.lineTo(0,5);
+		ctx.lineTo(30,20);
+		ctx.lineTo(0,-42);
+		ctx.globalAlpha = ship.destructible.shield.current/ship.destructible.shield.max;
+		ctx.fill();
+		ctx.restore();
 
 		//main thrusters
 		//forward thrust
@@ -571,6 +644,14 @@ app.main = {
 		}
 		else if(ship.laser.currentPower<0)
 			ship.laser.currentPower=0;
+
+		//refresh shields
+		if(ship.destructible.shield.current<ship.destructible.shield.max)
+		{
+			ship.destructible.shield.current+=ship.destructible.shield.recharge*dt;
+			if(ship.destructible.shield.current>ship.destructible.shield.max)
+				ship.destructible.shield.current = ship.destructible.shield.max;
+		}
 	},
 	//clears the active thruster values
 	shipClearThrusters:function(ship){
@@ -704,8 +785,13 @@ app.main = {
 			}
 			if(obj)
 			{
-				obj.destructible.hp-=laser.power*dt;
-				console.log(obj+' hp: '+obj.destructible.hp);
+				obj.destructible.shield.current-=laser.power*dt;
+				if(obj.destructible.shield.current<0)
+				{
+					obj.destructible.hp+=obj.destructible.shield.current;
+					obj.destructible.shield.current = 0;
+				}
+				//console.log(obj+' hp: '+obj.destructible.hp);
 				var laserDir = [laser.endX-laser.startX,laser.endY-laser.startY];
 				var newEnd = [laser.startX+tValOfObj*laserDir[0],laser.startY+tValOfObj*laserDir[1]];
 				laser.endX = newEnd[0];
@@ -719,7 +805,12 @@ app.main = {
 			var overlap = (this.ship.destructible.radius+asteroid.radius)*(this.ship.destructible.radius+asteroid.radius) - distance;
 			if(overlap>=0)
 			{
-				this.ship.destructible.hp-=100*dt;
+				this.ship.destructible.shield.current-=100*dt;
+				if(this.ship.destructible.shield.current<0)
+				{
+					this.ship.destructible.hp+=this.ship.destructible.shield.current;
+					this.ship.destructible.shield.current = 0;
+				}
 			}
 		}
 		this.otherShips.forEach(function(ship){
@@ -729,7 +820,12 @@ app.main = {
 				var overlap = (ship.destructible.radius+asteroid.radius)*(ship.destructible.radius+asteroid.radius) - distance;
 				if(overlap>=0)
 				{
-					ship.destructible.hp-=100*dt;
+					ship.destructible.shield.current-=100*dt;
+					if(ship.destructible.shield.current<0)
+					{
+						ship.destructible.hp+=ship.destructible.shield.current;
+						ship.destructible.shield.current = 0;
+					}
 				}
 			}
 		},this);
@@ -762,10 +858,34 @@ app.main = {
 		}
 	},
 	//draws asteroids from the given asteroids array to the given camera
-	drawAsteroids: function(asteroids,camera){
+	drawAsteroids: function(asteroids,camera, gridCamera){
 		var start = [0,0];
 		var end = [camera.width,camera.height];
 		var ctx = camera.ctx;
+		var cameraPositions = [];
+		if(gridCamera)
+		{
+			ctx.save();
+			ctx.beginPath();
+			for(var c = 0; c<asteroids.objs.length;c++)
+			{
+				var asteroid = asteroids.objs[c];
+				var gridPosition = worldPointToCameraSpace(asteroid.x,asteroid.y,gridCamera);
+				if(gridPosition[0] + asteroid.destructible.radius*gridCamera.zoom<start[0] || gridPosition[0] - asteroid.destructible.radius*gridCamera.zoom>end[0] || gridPosition[1] + asteroid.destructible.radius*gridCamera.zoom<start[1] || gridPosition[1] - asteroid.destructible.radius*gridCamera.zoom>end[1])
+					continue;			
+				cameraPositions[c] =(worldPointToCameraSpace(asteroid.x,asteroid.y,camera));
+				ctx.moveTo(cameraPositions[c][0],cameraPositions[c][1]);
+				ctx.lineTo(gridPosition[0],gridPosition[1]);
+				ctx.moveTo(gridPosition[0],gridPosition[1]);
+				//ctx.beginPath();
+				ctx.arc(gridPosition[0],gridPosition[1], asteroid.destructible.radius*gridCamera.zoom,0,Math.PI*2);
+			}	
+			ctx.strokeStyle = 'grey';
+			ctx.lineWidth = .5;
+			ctx.globalAlpha = .5;
+			ctx.stroke();
+			ctx.restore();		
+		}
 		for(var group = 0;group<asteroids.colors.length;group++){
 			ctx.save()
 			ctx.fillStyle = asteroids.colors[group];
@@ -775,7 +895,7 @@ app.main = {
 				if(asteroid.colorIndex!=group)
 					continue;
 
-				var finalPosition = worldPointToCameraSpace(asteroid.x,asteroid.y,camera); //get asteroid's position in camera space
+				var finalPosition = (gridCamera && cameraPositions[c])?cameraPositions[c]: worldPointToCameraSpace(asteroid.x,asteroid.y,camera); //get asteroid's position in camera space
 				
 				if(finalPosition[0] + asteroid.radius*camera.zoom<start[0] || finalPosition[0]-asteroid.radius*camera.zoom>end[0] || finalPosition[1] + asteroid.radius*camera.zoom<start[1] || finalPosition[1]-asteroid.radius*camera.zoom>end[1])
 						continue;
@@ -886,25 +1006,36 @@ app.main = {
 				this.updateShip(ship,dt);
 			},this);
 
-			this.checkCollisions(dt);
-
-				
+			this.checkCollisions(dt);				
 		}
 		else if(this.gameState == this.GAME_STATES.TITLE && myKeys.keydown[myKeys.KEYBOARD.KEY_W])
 			this.gameState = this.GAME_STATES.PLAYING;
 		else if((this.gameState == this.GAME_STATES.WIN || this.gameState == this.GAME_STATES.LOSE) && myKeys.keydown[myKeys.KEYBOARD.KEY_R])
 			this.resetGame();
 
-	 	
-		this.camera.x = this.ship.x;// this.ship.forwardVectorX*(this.camera.height/6)*(1/this.camera.zoom);
-		this.camera.y = this.ship.y;// this.ship.forwardVectorY*(this.camera.height/6)*(1/this.camera.zoom);
-		this.camera.rotation = this.ship.rotation;
+	 	//camera shenanigans
+		this.camera.x = lerp(this.camera.x,this.ship.x+this.ship.velocityX/10,12*dt);// this.ship.forwardVectorX*(this.camera.height/6)*(1/this.camera.zoom);
+		this.camera.y = lerp(this.camera.y,this.ship.y+this.ship.velocityY/10,12*dt);// this.ship.forwardVectorY*(this.camera.height/6)*(1/this.camera.zoom);
+		var rotDiff = this.ship.rotation+this.ship.rotationalVelocity/10 - this.camera.rotation;
+		if(rotDiff>180)
+			rotDiff-=360;
+		else if(rotDiff<-180)
+			rotDiff+=360;
+		this.camera.rotation += lerp(0,rotDiff,12*dt);
+		if(this.camera.rotation>180)
+			this.camera.rotation-=360;
+		else if(this.camera.rotation<-180)
+			this.camera.rotation+=360;
 		this.starCamera.x = this.camera.x;
 	 	this.starCamera.y = this.camera.y;
 	 	this.starCamera.rotation = this.camera.rotation;
+	 	this.gridCamera.x = this.camera.x;
+	 	this.gridCamera.y = this.camera.y;
+	 	this.gridCamera.rotation = this.camera.rotation;
 	 	var cameraDistance = 1/this.camera.zoom;
 	 	this.starCamera.zoom = 1/(cameraDistance+10000);
-	 	//this.starCamera.zoom = this.camera.zoom*this.baseStarCameraZoom;
+	 	this.gridCamera.zoom = 1/(cameraDistance+5);
+
 		//clear cameras
 		this.clearCamera(this.camera);
 		this.clearCamera(this.starCamera);
@@ -912,33 +1043,33 @@ app.main = {
 		//draw grids then asteroids then ships
 		if(this.drawStarField)
 			this.drawAsteroids(this.stars,this.starCamera);
-		this.drawGrid(this.camera);
-		this.drawLasers(this.lasers, this.camera);
+		this.drawGrid(this.gridCamera);
+		
 		if(this.gameState == this.GAME_STATES.PLAYING)
 		{
 			this.otherShips.forEach(function(ship){
-				this.drawShip(ship,this.camera);
+				this.drawShip(ship,this.camera, this.gridCamera);
 			},this);
 			
-			this.drawShip(this.ship,this.camera);
-			this.drawAsteroids(this.asteroids,this.camera);
+			this.drawShip(this.ship,this.camera, this.gridCamera);
+			this.drawAsteroids(this.asteroids,this.camera, this.gridCamera);
 			this.drawHUD(this.camera);
 		}
 		else if(this.gameState == this.GAME_STATES.TITLE)
 		{
 
-			this.drawAsteroids(this.asteroids,this.camera);
+			this.drawAsteroids(this.asteroids,this.camera,this.gridCamera);
 			this.drawTitleScreen(this.camera);
 		}
 		else if(this.gameState == this.GAME_STATES.WIN){
-			this.drawAsteroids(this.asteroids,this.camera);
+			this.drawAsteroids(this.asteroids,this.camera,this.gridCamera);
 			this.drawWinScreen(this.camera);
 		}
 		else if(this.gameState == this.GAME_STATES.LOSE){
-			this.drawAsteroids(this.asteroids,this.camera);
+			this.drawAsteroids(this.asteroids,this.camera,this.gridCamera);
 			this.drawLoseScreen(this.camera);
 		}
-
+		this.drawLasers(this.lasers, this.camera);
 		//FPS text
 		if (this.debug){
 			this.fillText(this.camera.ctx,'fps: '+Math.floor(1/dt),15,15,"10pt courier",'white');
@@ -952,6 +1083,7 @@ app.main = {
 		ctx.save(); // NEW
 		ctx.textAlign = 'left';
 		ctx.textBaseline = 'center';
+		this.fillText(ctx, "Shields: "+Math.floor(this.ship.destructible.shield.current),camera.width/15,7.5*camera.height/10,"12pt courier",'white')
 		this.fillText(ctx, "HP: "+Math.floor(this.ship.destructible.hp),camera.width/15,8*camera.height/10,"12pt courier",'white')
 		this.fillText(ctx, "Control mode: "+((this.ship.stabilizer.enabled)?'assisted':'manual'),camera.width/15,9*camera.height/10,"12pt courier",'white')
 		this.fillText(ctx, "Thruster clamps: "+((this.ship.stabilizer.clamps.enabled)?'enabled':'disabled'),camera.width/15,9.5*camera.height/10,"12pt courier",'white')
@@ -967,7 +1099,7 @@ app.main = {
 		ctx.textBaseline = 'middle';
 		ctx.globalAlpha = 1;
 		this.fillText(ctx,"Space Battle With Lasers",camera.width/2,camera.height/5,"24pt courier",'white');
-		this.fillText(ctx,"Press W to start. Use WASD & QE, SPACE, and TAB to control your ship",camera.width/2,4*camera.height/5,"12pt courier",'white');
+		this.fillText(ctx,"Press W to start. Use WASD, LEFT/RIGHT/UP/DOWN, SPACE, and TAB to control your ship",camera.width/2,4*camera.height/5,"12pt courier",'white');
 		ctx.restore();
 	},
 	drawWinScreen:function(camera){
