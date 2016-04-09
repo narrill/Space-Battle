@@ -400,9 +400,14 @@ app.main = {
 			ctx.beginPath();
 			ctx.moveTo(shipPosInCameraSpace[0],shipPosInCameraSpace[1]);
 			ctx.lineTo(shipPosInGridCameraSpace[0],shipPosInGridCameraSpace[1]);
+			ctx.translate(shipPosInGridCameraSpace[0],shipPosInGridCameraSpace[1]);
+			ctx.rotate((ship.rotation-gridCamera.rotation) * (Math.PI / 180));
+			ctx.arc(0,0,ship.laser.range*gridCamera.zoom,-Math.PI/2,Math.PI*2-Math.PI/2);			
+			ctx.rotate(-(ship.rotation-gridCamera.rotation) * (Math.PI / 180));
+			ctx.translate(-shipPosInGridCameraSpace[0],-shipPosInGridCameraSpace[1]);
 			ctx.lineWidth = .5;
 			ctx.strokeStyle = 'grey';
-			ctx.globalAlpha = .3;
+			ctx.globalAlpha = .2;
 			ctx.stroke();
 
 			ctx.globalAlpha = .5;
@@ -420,6 +425,10 @@ app.main = {
 			ctx.beginPath();
 			ctx.arc(0,0,300,0,Math.PI*2);
 			ctx.fillStyle = ship.color;
+			ctx.fill();			
+			ctx.beginPath();
+			ctx.arc(0,0,ship.destructible.radius,0,Math.PI*2);
+			ctx.fillStyle = 'black';
 			ctx.fill();
 			ctx.restore();
 		}
