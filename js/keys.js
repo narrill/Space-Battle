@@ -45,6 +45,7 @@ window.addEventListener("keydown",function(e){
 	//console.log("keydown=" + e.keyCode);
 	myKeys.keydown[e.keyCode] = true;
 	e.preventDefault();
+	e.stopPropagation();
 
 	// space and arrow keys
     /*if([32, 37, 38, 39, 40].indexOf(e.keyCode) > -1) {

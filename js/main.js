@@ -52,6 +52,7 @@ app.main = {
 		//scale value, basically
 		zoom:1,
 		minZoom:.0001,
+		maxZoom:5,
 		//screen dimensions
 		width:0,
 		height:0,
@@ -96,7 +97,7 @@ app.main = {
 		]
 	},
 	asteroids:{
-		total:30,
+		total:60,
 		colors:[
 			'#654321',
 			'sienna'
@@ -122,10 +123,10 @@ app.main = {
 		this.makeAsteroids.bind(this, this.asteroids, this.grid)();
 		this.generateStarField.bind(this, this.stars)();
 		this.ship = this.createShip(this.grid);
-		this.camera = this.initializeCamera(canvas,this.ship.x,this.ship.y,this.ship.rotation,.5,.025);
+		this.camera = this.createCamera(canvas,{x:this.ship.x,y:this.ship.y,rotation:this.ship.rotation,zoom:.5,minZoom:.025,maxZoom:5});
 		this.camera.globalCompositeOperation = 'hard-light';
-		this.starCamera = this.initializeCamera(canvas, 0, 0,0,.0001);
-		this.gridCamera = this.initializeCamera(canvas,0,0,0,1);
+		this.starCamera = this.createCamera(canvas);
+		this.gridCamera = this.createCamera(canvas);
 		for(var c = 0;c<this.otherShipCount;c++)
 		{
 			this.otherShips.push(this.createShip(this.grid));
@@ -148,13 +149,16 @@ app.main = {
 		this.gameState = this.GAME_STATES.PLAYING;
 	},
 	//returns a camera object with the given values and the context from the given canvas
-	initializeCamera:function(canvas,x,y,rotation,zoom,minZoom){
+	createCamera:function(canvas, objectParams){
+		if(!objectParams)
+			objectParams = {};
 		return {
-			x:(x) ? x : 0,
-			y:(y) ? y : 0,
-			rotation:(rotation) ? rotation : 0,
-			zoom: (zoom) ? zoom : 1,
-			minZoom:(minZoom)?minZoom:0,
+			x:(objectParams.x) ? objectParams.x : 0,
+			y:(objectParams.y) ? objectParams.y : 0,
+			rotation:(objectParams.rotation) ? objectParams.rotation : 0,
+			zoom: (objectParams.zoom) ? objectParams.zoom : 1,
+			minZoom:(objectParams.minZoom)?objectParams.minZoom:0,
+			maxZoom:(objectParams.maxZoom)?objectParams.maxZoom:Number.MAX_VALUE,
 			width:canvas.width,
 			height:canvas.height,
 			ctx:canvas.getContext('2d')
@@ -1098,7 +1102,7 @@ app.main = {
 			if(myKeys.keydown[myKeys.KEYBOARD.KEY_ALT])
 				this.ship.powerSystem.target[this.SHIP_COMPONENTS.SHIELDS] = 1;
 		 	//camera zoom controls
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_UP])
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_UP] && this.camera.zoom<=this.camera.maxZoom)
 				this.camera.zoom*=1.05;
 			if(myKeys.keydown[myKeys.KEYBOARD.KEY_DOWN] && this.camera.zoom>=this.camera.minZoom)
 				this.camera.zoom*=.95;	 
@@ -1146,10 +1150,11 @@ app.main = {
 		//draw grids then asteroids then ships
 		if(this.drawStarField)
 			this.drawAsteroids(this.stars,this.starCamera);
-		this.drawGrid(this.gridCamera);
+		
 		
 		if(this.gameState == this.GAME_STATES.PLAYING)
 		{
+			this.drawGrid(this.gridCamera);
 			this.drawAsteroidsOverlay(this.asteroids,this.camera,this.gridCamera);
 			for(var n = this.otherShips.length-1;n>=-1;n--){
 				var ship = (n==-1)?this.ship:this.otherShips[n];
@@ -1166,15 +1171,16 @@ app.main = {
 		}
 		else if(this.gameState == this.GAME_STATES.TITLE)
 		{
-
 			this.drawAsteroids(this.asteroids,this.camera,this.gridCamera);
 			this.drawTitleScreen(this.camera);
 		}
 		else if(this.gameState == this.GAME_STATES.WIN){
+			this.drawGrid(this.gridCamera);
 			this.drawAsteroids(this.asteroids,this.camera,this.gridCamera);
 			this.drawWinScreen(this.camera);
 		}
 		else if(this.gameState == this.GAME_STATES.LOSE){
+			this.drawGrid(this.gridCamera);
 			this.drawAsteroids(this.asteroids,this.camera,this.gridCamera);
 			this.drawLoseScreen(this.camera);
 		}
@@ -1208,6 +1214,7 @@ app.main = {
 		ctx.textAlign = 'center';
 		ctx.textBaseline = 'middle';
 		ctx.globalAlpha = 1;
+		this.fillText(ctx,"Space Battle With Lasers",camera.width/2,camera.height/5,"bold 64pt Aroma",'blue',.5);
 		this.fillText(ctx,"Space Battle With Lasers",camera.width/2,camera.height/5,"bold 24pt Aroma",'white');
 		this.fillText(ctx,"Press W to start. Use WASD, LEFT/RIGHT/UP/DOWN, SPACE, and TAB to control your ship",camera.width/2,4*camera.height/5,"12pt Aroma",'white');
 		ctx.restore();
@@ -1261,11 +1268,13 @@ app.main = {
 		this.paused = false;
 		this.update();
 	},
-	fillText: function(ctx,string, x, y, css, color) {
+	fillText: function(ctx,string, x, y, css, color, alpha) {
 		ctx.save();
 		// https://developer.mozilla.org/en-US/docs/Web/CSS/font
 		ctx.font = css;
 		ctx.fillStyle = color;
+		if(alpha)
+			ctx.globalAlpha = alpha;
 		ctx.fillText(string, x, y);
 		ctx.restore();
 	},	
