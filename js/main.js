@@ -624,53 +624,47 @@ app.main = {
 		//add acceleration from each thruster
 		//medial
 		var mainThrust = ship.thrusters.medial.targetStrength;
-		if(mainThrust){ //efficiency check
-			var strength = mainThrust;
+		var strength = mainThrust;
 
-			//clamp target strength to the thruster's max
-			var maxStrength = ship.thrusters.medial.maxStrength;
-			strength = clamp(-maxStrength,strength,maxStrength);
-			//lerp current thruster strength to target strength at the power ramp rate, then set current strength and the target strength to the lerped value
-			strength = ship.thrusters.medial.currentStrength = lerp(ship.thrusters.medial.currentStrength,strength,ship.thrusters.medial.powerRampPercentage*dt); //for the lolz
-			strength = clamp(-maxStrength,strength,maxStrength);
+		//clamp target strength to the thruster's max
+		var maxStrength = ship.thrusters.medial.maxStrength;
+		strength = clamp(-maxStrength,strength,maxStrength);
+		//lerp current thruster strength to target strength at the power ramp rate, then set current strength and the target strength to the lerped value
+		strength = ship.thrusters.medial.currentStrength = lerp(ship.thrusters.medial.currentStrength,strength,ship.thrusters.medial.powerRampPercentage*dt); //for the lolz
+		strength = clamp(-maxStrength,strength,maxStrength);
 
-			//add forward vector times strength to acceleration
-			accelerationX += normalizedForwardVector[0]*strength;
-			accelerationY += normalizedForwardVector[1]*strength;
-		}
+		//add forward vector times strength to acceleration
+		accelerationX += normalizedForwardVector[0]*strength;
+		accelerationY += normalizedForwardVector[1]*strength;
 
 		//lateral
 		var latThrust = ship.thrusters.lateral.targetStrength;
-		if(latThrust){ //effiency check
-			var strength = latThrust;
+		var strength = latThrust;
 
-			//clamp strength
-			var maxStrength = ship.thrusters.lateral.maxStrength;
-			strength = clamp(-maxStrength,strength,maxStrength);
-			//lerp current thruster strength to target strength at the power ramp rate, then set current strength and the target strength to the lerped value
-			strength = ship.thrusters.lateral.currentStrength = lerp(ship.thrusters.lateral.currentStrength,strength,ship.thrusters.lateral.powerRampPercentage*dt); //for the lolz
-			strength = clamp(-maxStrength,strength,maxStrength);
+		//clamp strength
+		var maxStrength = ship.thrusters.lateral.maxStrength;
+		strength = clamp(-maxStrength,strength,maxStrength);
+		//lerp current thruster strength to target strength at the power ramp rate, then set current strength and the target strength to the lerped value
+		strength = ship.thrusters.lateral.currentStrength = lerp(ship.thrusters.lateral.currentStrength,strength,ship.thrusters.lateral.powerRampPercentage*dt); //for the lolz
+		strength = clamp(-maxStrength,strength,maxStrength);
 
-			//add right vector times strength to acceleration
-			accelerationX += normalizedRightVector[0]*strength;
-			accelerationY += normalizedRightVector[1]*strength;
-		}
+		//add right vector times strength to acceleration
+		accelerationX += normalizedRightVector[0]*strength;
+		accelerationY += normalizedRightVector[1]*strength;
 
 		//rotational
 		var rotThrust = ship.thrusters.rotational.targetStrength;
-		if(rotThrust){ //effiency check
-			var strength = rotThrust;
+		var strength = rotThrust;
 
-			//clamp strength
-			var maxStrength = ship.thrusters.rotational.maxStrength;
-			strength = clamp(-maxStrength,strength,maxStrength);
-			//lerp current thruster strength to target strength at the power ramp rate, then set current strength and the target strength to the lerped value
-			strength = ship.thrusters.rotational.currentStrength = lerp(ship.thrusters.rotational.currentStrength,strength,ship.thrusters.rotational.powerRampPercentage*dt); //for the lolz
-			strength = clamp(-maxStrength,strength,maxStrength);
+		//clamp strength
+		var maxStrength = ship.thrusters.rotational.maxStrength;
+		strength = clamp(-maxStrength,strength,maxStrength);
+		//lerp current thruster strength to target strength at the power ramp rate, then set current strength and the target strength to the lerped value
+		strength = ship.thrusters.rotational.currentStrength = lerp(ship.thrusters.rotational.currentStrength,strength,ship.thrusters.rotational.powerRampPercentage*dt); //for the lolz
+		strength = clamp(-maxStrength,strength,maxStrength);
 
-			//this one we can set directly
-			rotationalAcceleration = -strength;
-		}
+		//this one we can set directly
+		rotationalAcceleration = -strength;
 
 		//accelerate
 		ship.velocityX+=accelerationX*dt;
