@@ -42,7 +42,7 @@ app.main = {
 	runningTime:0,
 	ship:{},
 	otherShips:[],
-	otherShipCount:5,
+	otherShipCount:1,
 	lasers:[],
 	camera:{
 		//position/rotation
@@ -120,6 +120,8 @@ app.main = {
 		//var canvas2 = document.querySelector('#canvas2');
 		//canvas2.onmousedown = this.doMousedown.bind(this);
 		
+		
+
 		this.makeAsteroids.bind(this, this.asteroids, this.grid)();
 		this.generateStarField.bind(this, this.stars)();
 		this.ship = this.createShip(this.grid);
@@ -623,23 +625,21 @@ app.main = {
 
 		//add acceleration from each thruster
 		//medial
-		var mainThrust = ship.thrusters.medial.targetStrength;
-		var strength = mainThrust;
+		var strength = ship.thrusters.medial.targetStrength;
 
 		//clamp target strength to the thruster's max
 		var maxStrength = ship.thrusters.medial.maxStrength;
 		strength = clamp(-maxStrength,strength,maxStrength);
 		//lerp current thruster strength to target strength at the power ramp rate, then set current strength and the target strength to the lerped value
 		strength = ship.thrusters.medial.currentStrength = lerp(ship.thrusters.medial.currentStrength,strength,ship.thrusters.medial.powerRampPercentage*dt); //for the lolz
-		strength = clamp(-maxStrength,strength,maxStrength);
+		strength = clamp(-maxStrength,strength,maxStrength); //this is in case of really low dt values
 
 		//add forward vector times strength to acceleration
 		accelerationX += normalizedForwardVector[0]*strength;
 		accelerationY += normalizedForwardVector[1]*strength;
 
 		//lateral
-		var latThrust = ship.thrusters.lateral.targetStrength;
-		var strength = latThrust;
+		var strength = ship.thrusters.lateral.targetStrength;
 
 		//clamp strength
 		var maxStrength = ship.thrusters.lateral.maxStrength;
@@ -653,8 +653,7 @@ app.main = {
 		accelerationY += normalizedRightVector[1]*strength;
 
 		//rotational
-		var rotThrust = ship.thrusters.rotational.targetStrength;
-		var strength = rotThrust;
+		var strength = ship.thrusters.rotational.targetStrength;
 
 		//clamp strength
 		var maxStrength = ship.thrusters.rotational.maxStrength;
@@ -833,6 +832,37 @@ app.main = {
 		this.shipMedialStabilizers(ship,dt);
 		this.shipLateralStabilizers(ship,dt);
 		this.shipRotationalStabilizers(ship,dt);
+	},
+	shipKeyboardControl(ship, dt){
+		//set ship thruster values
+		 	//assisted controls
+			//medial motion
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_W])
+				this.shipMedialThrusters(ship,ship.thrusters.medial.maxStrength/ship.stabilizer.thrustRatio);
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_S])
+				this.shipMedialThrusters(ship,-ship.thrusters.medial.maxStrength/ship.stabilizer.thrustRatio);
+			if(ship.stabilizer.enabled)
+				this.shipMedialStabilizers(ship,dt);
+			//lateral motion
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_A])
+				this.shipLateralThrusters(ship,-ship.thrusters.lateral.maxStrength/ship.stabilizer.thrustRatio);
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_D])
+				this.shipLateralThrusters(ship,ship.thrusters.lateral.maxStrength/ship.stabilizer.thrustRatio);
+			if(ship.stabilizer.enabled)
+				this.shipLateralStabilizers(ship,dt);
+			//rotational motion - mouse			
+			this.shipRotationalThrusters(ship,-myMouse.direction*myMouse.sensitivity*ship.thrusters.rotational.maxStrength/ship.stabilizer.thrustRatio);
+			if(ship.stabilizer.enabled)
+				this.shipRotationalStabilizers(ship,dt);
+			//lasers
+			if(myMouse.mousedown[myMouse.BUTTONS.LEFT])
+				this.shipFireLaser(ship);
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_SHIFT])
+				ship.powerSystem.target[this.SHIP_COMPONENTS.THRUSTERS] = 1;
+			if(myMouse.mousedown[myMouse.BUTTONS.RIGHT])
+				ship.powerSystem.target[this.SHIP_COMPONENTS.LASERS] = 1;
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_ALT])
+				ship.powerSystem.target[this.SHIP_COMPONENTS.SHIELDS] = 1;
 	},
 	createLaser:function(lasers, startX,startY,endX,endY,color, power,efficiency){
 		lasers.push({
@@ -1060,46 +1090,18 @@ app.main = {
 		else if(this.gameState == this.GAME_STATES.PLAYING){
 
 			this.otherShips.forEach(function(ship){
-				//this.shipAI(ship,this.ship,dt);
+				this.shipAI(ship,this.ship,dt);
 			},this);
 
-			//set ship thruster values
-		 	//assisted controls
-			//medial motion
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_W])
-				this.shipMedialThrusters(this.ship,this.ship.thrusters.medial.maxStrength/this.ship.stabilizer.thrustRatio);
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_S])
-				this.shipMedialThrusters(this.ship,-this.ship.thrusters.medial.maxStrength/this.ship.stabilizer.thrustRatio);
-			if(this.ship.stabilizer.enabled)
-				this.shipMedialStabilizers(this.ship,dt);
-			//lateral motion
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_A])
-				this.shipLateralThrusters(this.ship,-this.ship.thrusters.lateral.maxStrength/this.ship.stabilizer.thrustRatio);
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_D])
-				this.shipLateralThrusters(this.ship,this.ship.thrusters.lateral.maxStrength/this.ship.stabilizer.thrustRatio);
-			if(this.ship.stabilizer.enabled)
-				this.shipLateralStabilizers(this.ship,dt);
-			//rotational motion
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_LEFT])
-				this.shipRotationalThrusters(this.ship,this.ship.thrusters.rotational.maxStrength/this.ship.stabilizer.thrustRatio);
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_RIGHT])
-				this.shipRotationalThrusters(this.ship,-this.ship.thrusters.rotational.maxStrength/this.ship.stabilizer.thrustRatio);
-			if(this.ship.stabilizer.enabled)
-				this.shipRotationalStabilizers(this.ship,dt);
-			//lasers
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_SPACE])
-				this.shipFireLaser(this.ship);
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_SHIFT])
-				this.ship.powerSystem.target[this.SHIP_COMPONENTS.THRUSTERS] = 1;
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_CTRL])
-				this.ship.powerSystem.target[this.SHIP_COMPONENTS.LASERS] = 1;
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_ALT])
-				this.ship.powerSystem.target[this.SHIP_COMPONENTS.SHIELDS] = 1;
+			this.shipKeyboardControl(this.ship,dt);
+
 		 	//camera zoom controls
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_UP] && this.camera.zoom<=this.camera.maxZoom)
-				this.camera.zoom*=1.05;
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_DOWN] && this.camera.zoom>=this.camera.minZoom)
-				this.camera.zoom*=.95;	 
+			if(myMouse.wheel)
+				this.camera.zoom*=1+(myMouse.wheel/500);
+			if(this.camera.zoom>this.camera.maxZoom)
+				this.camera.zoom = this.camera.maxZoom;
+			else if(this.camera.zoom<this.camera.minZoom)
+				this.camera.zoom = this.camera.minZoom;
 
 		 	//update ship, center main camera on ship
 			this.updateShip(this.ship,dt);
@@ -1109,7 +1111,7 @@ app.main = {
 
 			this.checkCollisions(dt);				
 		}
-		else if(this.gameState == this.GAME_STATES.TITLE && myKeys.keydown[myKeys.KEYBOARD.KEY_W])
+		else if(this.gameState == this.GAME_STATES.TITLE && myKeys.keydown[myKeys.KEYBOARD.KEY_ENTER])
 			this.gameState = this.GAME_STATES.PLAYING;
 		else if((this.gameState == this.GAME_STATES.WIN || this.gameState == this.GAME_STATES.LOSE) && myKeys.keydown[myKeys.KEYBOARD.KEY_R])
 			this.resetGame();
@@ -1184,6 +1186,9 @@ app.main = {
 			this.fillText(this.camera.ctx,'fps: '+Math.floor(1/dt),15,15,"10pt Aroma",'white');
 		}
 
+		//this needs to be done
+		resetMouse();
+
 		//because we might use the frame count for something at some point
 		this.frameCount++;
 	},
@@ -1195,8 +1200,8 @@ app.main = {
 		this.fillText(ctx, "Shields: "+Math.round(this.ship.destructible.shield.current),camera.width/15,7.5*camera.height/10,"12pt Aroma",'white')
 		this.fillText(ctx, "HP: "+Math.round(this.ship.destructible.hp),camera.width/15,8*camera.height/10,"12pt Aroma",'white')
 		this.fillText(ctx, "Control mode: "+((this.ship.stabilizer.enabled)?'assisted':'manual'),camera.width/15,9*camera.height/10,"12pt Aroma",'white')
-		this.fillText(ctx, "Thruster clamps: "+((this.ship.stabilizer.clamps.enabled)?'M'+Math.round(this.ship.stabilizer.clamps.medial)+' L'+Math.round(this.ship.stabilizer.clamps.lateral)+' R'+Math.round(this.ship.stabilizer.clamps.rotational):'disabled'),camera.width/15,9.5*camera.height/10,"12pt Aroma",'white')
-		this.fillText(ctx, "Power Distribution: T "+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.THRUSTERS)*100)+'% L '+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.LASERS)*100)+'% S '+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.SHIELDS)*100)+'%',camera.width/15,9.7*camera.height/10,"12pt Aroma",'white')
+		this.fillText(ctx, "Thruster clamps: "+((this.ship.stabilizer.clamps.enabled)?'Medial '+Math.round(this.ship.stabilizer.clamps.medial)+' Lateral '+Math.round(this.ship.stabilizer.clamps.lateral)+' Rotational '+Math.round(this.ship.stabilizer.clamps.rotational):'disabled'),camera.width/15,9.5*camera.height/10,"12pt Aroma",'white')
+		this.fillText(ctx, "Power Distribution: Thrusters "+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.THRUSTERS)*100)+'% Laser '+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.LASERS)*100)+'% Shields '+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.SHIELDS)*100)+'%',camera.width/15,9.7*camera.height/10,"12pt Aroma",'white')
 		ctx.restore(); // NEW
 	},
 	drawTitleScreen:function(camera){
@@ -1210,7 +1215,7 @@ app.main = {
 		ctx.globalAlpha = 1;
 		this.fillText(ctx,"Space Battle With Lasers",camera.width/2,camera.height/5,"bold 64pt Aroma",'blue',.5);
 		this.fillText(ctx,"Space Battle With Lasers",camera.width/2,camera.height/5,"bold 24pt Aroma",'white');
-		this.fillText(ctx,"Press W to start. Use WASD, LEFT/RIGHT/UP/DOWN, SPACE, and TAB to control your ship",camera.width/2,4*camera.height/5,"12pt Aroma",'white');
+		this.fillText(ctx,"Press ENTER to start. Use WASD, the mouse, C, and TAB to control your ship",camera.width/2,4*camera.height/5,"12pt Aroma",'white');
 		ctx.restore();
 	},
 	drawWinScreen:function(camera){
@@ -1279,5 +1284,5 @@ app.main = {
 		//fps = clamp(fps, 12, 60); //this literally makes this function useless for physics. just, why?
 		this.lastTime = now; 
 		return 1/fps;
-	}    
+	}
 }; // end app.main

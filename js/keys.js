@@ -2,6 +2,22 @@
 // really easy to reuse between projects
 
 "use strict";
+var canvas;
+function pointerInit(){
+
+	// Hook pointer lock state change events
+	document.addEventListener('pointerlockchange', changeCallback, false);
+	document.addEventListener('mozpointerlockchange', changeCallback, false);
+	document.addEventListener('webkitpointerlockchange', changeCallback, false);
+	/*var havePointerLock = 'pointerLockElement' in document ||
+		'mozPointerLockElement' in document ||
+		'webkitPointerLockElement' in document;*/
+	window.requestPointerLock = window.requestPointerLock ||
+		window.mozRequestPointerLock ||
+		window.webkitRequestPointerLock;
+	//canvas.onclick = requestLock;
+	//canvas.onmousedown = 
+}
 
 var myKeys = {};
 
@@ -24,9 +40,25 @@ myKeys.KEYBOARD = Object.freeze({
 	"KEY_R":82,
 	"KEY_C":67,
 	"KEY_P":80,
-	"KEY_CTRL":17
+	"KEY_CTRL":17,
+	KEY_J:74,
+	KEY_K:75,
+	KEY_L:76,
+	KEY_ENTER:13
 });
 
+var myMouse = {};
+
+myMouse.BUTTONS = Object.freeze({
+	LEFT:0,
+	MIDDLE:1,
+	RIGHT:2
+});
+
+myMouse.mousedown = [];
+myMouse.direction = 0;
+myMouse.wheel = 0;
+myMouse.sensitivity = .05;
 // myKeys.keydown array to keep track of which keys are down
 // this is called a "key daemon"
 // main.js will "poll" this array every frame
@@ -67,3 +99,68 @@ window.addEventListener("keyup",function(e){
 	else if (e.keyCode == myKeys.KEYBOARD.KEY_P)
 		app.main.paused = !app.main.paused;
 });
+
+window.addEventListener("mouseup",requestLock);
+
+function requestLock(){
+	console.log('request');
+	// Ask the browser to lock the pointer
+	canvas.requestPointerLock();
+}
+
+function mouseDown(e){
+	console.log(e.button);
+	myMouse.mousedown[e.button] = true;
+}
+
+function mouseUp(e){
+	console.log('up');
+	myMouse.mousedown[e.button] = false;
+}
+
+function mouseWheel(e){
+	myMouse.wheel += e.wheelDelta;
+}
+
+function changeCallback(){
+	if (document.pointerLockElement === canvas ||
+		document.mozPointerLockElement === canvas ||
+		document.webkitPointerLockElement === canvas) {
+		// Pointer was just locked
+		// Enable the mousemove listener
+		window.removeEventListener("mouseup",requestLock,false);
+		window.addEventListener("mousedown",mouseDown,false);
+		window.addEventListener("mouseup",mouseUp,false);
+		window.addEventListener("mousewheel",mouseWheel,false);
+		document.addEventListener("mousemove", moveCallback, false);
+		canvas.onclick = undefined;
+	} else {
+		// Pointer was just unlocked
+		// Disable the mousemove listener
+		window.removeEventListener("mousedown",mouseDown,false);
+		window.removeEventListener("mouseup",mouseUp,false);
+		window.removeEventListener("mousewheel",mouseWheel,false);
+		window.addEventListener("mouseup",requestLock,false);
+		document.removeEventListener("mousemove", moveCallback, false);
+		//this.unlockHook(this.canvas);
+		canvas.onclick = function(){
+			// Ask the browser to lock the pointer
+			canvas.requestPointerLock();
+		};
+	}
+}
+function moveCallback(e){
+	console.log('move');
+	var movementX = e.movementX ||
+		e.mozMovementX          ||
+		0;
+
+  	var movementY = e.movementY ||
+		e.mozMovementY      ||
+		0;
+		myMouse.direction += movementX;
+}
+function resetMouse(){
+	myMouse.direction = 0;
+	myMouse.wheel = 0;
+}

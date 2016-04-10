@@ -14,10 +14,11 @@ var app = app || {};
 window.onload = function(){
 	console.log("window.onload called");
 	app.main.init();
+	pointerInit();
 }
 
 window.onblur = function(){
-	mykeys.keydown = [];
+	myKeys.keydown = [];
 	app.main.pauseGame();
 };
 window.onfocus = function(){
