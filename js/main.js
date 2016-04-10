@@ -18,8 +18,8 @@ var app = app || {};
 app.main = {
 	drawStarField:true,
 	isoAngle:0,
-	thrusterDetail:2,
-	laserDetail:3,
+	thrusterDetail:5,
+	laserDetail:5,
 	gameState:0,
 	GAME_STATES:{
 		TITLE:0,
@@ -212,7 +212,7 @@ app.main = {
 					efficiency:1000
 				}),
 				rotational:this.createComponentThruster({
-					maxStrength:1000,
+					maxStrength:750,
 					efficiency:1000
 				})
 			},
@@ -250,7 +250,7 @@ app.main = {
 			objectParams = {};
 		return{
 			enabled: (objectParams.enabled)? objectParams.enabled:true,
-			strength: (objectParams.strength)? objectParams.strength:1200,
+			strength: (objectParams.strength)? objectParams.strength:800,
 			thrustRatio: (objectParams.thrustRatio)?objectParams.thrustRatio:1.5,
 			clamps: this.createComponentStabilizerClamps(objectParams.clamps)
 		};
@@ -262,7 +262,7 @@ app.main = {
 			enabled: (objectParams.enabled)? objectParams.enabled:true,
 			medial:(objectParams.medial)?objectParams.medial:3000,
 			lateral:(objectParams.lateral)?objectParams.lateral:2000,
-			rotational:(objectParams.rotational)?objectParams.rotational:180
+			rotational:(objectParams.rotational)?objectParams.rotational:90
 		};
 	},
 	createComponentLaser:function(objectParams){
@@ -519,11 +519,11 @@ app.main = {
 				ctx.beginPath();
 				ctx.moveTo(-15,0);
 				ctx.lineTo(-10,0);
-				ctx.lineTo(-12.5,30*(ship.thrusters.medial.currentStrength/ship.thrusters.medial.efficiency)*(1-(c/(this.thrusterDetail+1))));
+				ctx.lineTo(-12.5,40*(ship.thrusters.medial.currentStrength/ship.thrusters.medial.efficiency)*(1-(c/(this.thrusterDetail+1))));
 				ctx.lineTo(-15,0);
 				ctx.moveTo(15,0);
 				ctx.lineTo(10,0);
-				ctx.lineTo(12.5,30*(ship.thrusters.medial.currentStrength/ship.thrusters.medial.efficiency)*(1-(c/(this.thrusterDetail+1))));
+				ctx.lineTo(12.5,40*(ship.thrusters.medial.currentStrength/ship.thrusters.medial.efficiency)*(1-(c/(this.thrusterDetail+1))));
 				ctx.lineTo(15,0);
 				ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
 				ctx.fill();
@@ -563,7 +563,7 @@ app.main = {
 				ctx.beginPath();
 				ctx.moveTo(-10,0);
 				ctx.lineTo(-10,-5);
-				ctx.lineTo(-10-20*(ship.thrusters.lateral.currentStrength/ship.thrusters.lateral.efficiency)*(1-(c/(this.thrusterDetail+1))),-2.5);
+				ctx.lineTo(-10-40*(ship.thrusters.lateral.currentStrength/ship.thrusters.lateral.efficiency)*(1-(c/(this.thrusterDetail+1))),-2.5);
 				ctx.lineTo(-10,0);
 				ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
 				ctx.fill();
@@ -575,7 +575,7 @@ app.main = {
 				ctx.beginPath();
 				ctx.moveTo(10,0);
 				ctx.lineTo(10,-5);
-				ctx.lineTo(10-20*(ship.thrusters.lateral.currentStrength/ship.thrusters.lateral.efficiency)*(1-(c/(this.thrusterDetail+1))),-2.5);
+				ctx.lineTo(10-40*(ship.thrusters.lateral.currentStrength/ship.thrusters.lateral.efficiency)*(1-(c/(this.thrusterDetail+1))),-2.5);
 				ctx.lineTo(10,0);
 				ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
 				ctx.fill();
