@@ -119,7 +119,6 @@ app.main = {
 	init : function() {
 		// initialize properties
 		var canvas = this.canvas = document.querySelector('#canvas1');
-		var minimapCanvas = this.minimapCanvas = document.querySelector('#canvas2');
 		//minimapCanvas.style.visibility = 'hidden';
 		//canvas.onmousedown = this.doMousedown.bind(this);
 		//var canvas2 = document.querySelector('#canvas2');
@@ -134,7 +133,7 @@ app.main = {
 		this.camera.globalCompositeOperation = 'hard-light';
 		this.starCamera = this.createCamera(canvas);
 		this.gridCamera = this.createCamera(canvas);
-		this.minimapCamera = this.createCamera(minimapCanvas,{x:this.grid.gridStart[0]+this.grid.gridLines*this.grid.gridSpacing/2,y:this.grid.gridStart[1]+this.grid.gridLines*this.grid.gridSpacing/2,zoom:.001});
+		this.minimapCamera = this.createCamera(canvas,{x:this.grid.gridStart[0]+this.grid.gridLines*this.grid.gridSpacing/2,y:this.grid.gridStart[1]+this.grid.gridLines*this.grid.gridSpacing/2,zoom:.001,viewport:{startX:.83,startY:.7,endX:1,endY:1}});
 		for(var c = 0;c<this.otherShipCount;c++)
 		{
 			this.otherShips.push(this.createShip({},this.grid));
@@ -167,6 +166,7 @@ app.main = {
 			zoom: (objectParams.zoom) ? objectParams.zoom : 1,
 			minZoom:(objectParams.minZoom)?objectParams.minZoom:0,
 			maxZoom:(objectParams.maxZoom)?objectParams.maxZoom:Number.MAX_VALUE,
+			viewport:this.createComponentViewport(objectParams.viewport),
 			width:canvas.width,
 			height:canvas.height,
 			ctx:canvas.getContext('2d')
@@ -177,6 +177,7 @@ app.main = {
 		var ctx = camera.ctx;
 		ctx.fillStyle = "black"; 
 		ctx.fillRect(0,0,camera.width,camera.height);
+		ctx.fill();
 	},
 	reset:function(){
 	},
@@ -329,6 +330,16 @@ app.main = {
 			followMax:(objectParams.followMax)?objectParams.followMax:3000,
 			accuracy:.5,
 			fireSpread:5
+		};
+	},
+	createComponentViewport:function(objectParams){
+		if(!objectParams)
+			objectParams = {};
+		return{
+			startX:(objectParams.startX)?objectParams.startX:0,
+			startY:(objectParams.startY)?objectParams.startY:0,
+			endX:(objectParams.endX)?objectParams.endX:1,
+			endY:(objectParams.endY)?objectParams.endY:1
 		};
 	},
 	scalePowerTarget:function(ps){
@@ -500,10 +511,15 @@ app.main = {
 		ctx.translate(shipPosInCameraSpace[0],shipPosInCameraSpace[1]); //translate to camera space position
 		ctx.rotate((ship.rotation-camera.rotation) * (Math.PI / 180)); //rotate by difference in rotations
 
-		//ctx.scale(camera.zoom,camera.zoom); //scale by zoom value
+		ctx.scale(.5,.5); //scale by zoom value
 
+		ctx.translate(0,7);
 		ctx.beginPath();
-		ctx.arc(0,0,5,0,Math.PI*2);
+		ctx.moveTo(-20,10);
+		ctx.lineTo(0,0);
+		ctx.lineTo(20,10);
+		ctx.lineTo(0,-30);
+		ctx.closePath();
 		ctx.fillStyle = ship.color;
 		ctx.fill();
 		ctx.restore();
@@ -1124,7 +1140,7 @@ app.main = {
 		else if(this.gameState == this.GAME_STATES.PLAYING){
 
 			this.otherShips.forEach(function(ship){
-				this.shipAI(ship,this.ship,dt);
+				//this.shipAI(ship,this.ship,dt);
 			},this);
 
 			this.shipKeyboardControl(this.ship,dt);
@@ -1176,7 +1192,7 @@ app.main = {
 		//clear cameras
 		this.clearCamera(this.camera);
 		this.clearCamera(this.starCamera);
-		this.clearCamera(this.minimapCamera);
+		//this.clearCamera(this.minimapCamera);
 
 		//draw grids then asteroids then ships
 		if(this.drawStarField)
@@ -1199,12 +1215,7 @@ app.main = {
 			
 			this.drawAsteroids(this.asteroids,this.camera, this.gridCamera);
 			this.drawHUD(this.camera);
-			this.drawGrid(this.minimapCamera);
-			this.drawAsteroids(this.asteroids,this.minimapCamera);
-			for(var n = this.otherShips.length-1;n>=-1;n--){
-				var ship = (n==-1)?this.ship:this.otherShips[n];
-				this.drawShipMinimap(ship,this.minimapCamera);
-			}
+			this.drawMinimap(this.minimapCamera);
 		}
 		else if(this.gameState == this.GAME_STATES.TITLE)
 		{
@@ -1260,6 +1271,26 @@ app.main = {
 		ctx.textAlign = 'right';
 		this.fillText(ctx, "Overcharge: Thrusters "+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.THRUSTERS)*100)+'% Laser '+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.LASERS)*100)+'% Shields '+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.SHIELDS)*100)+'%',camera.width,camera.height-10,"12pt Prime",'white')
 		ctx.restore(); // NEW
+	},
+	drawMinimap:function(camera){
+		var ctx = camera.ctx;
+		var viewportStart = [camera.width*camera.viewport.startX,camera.height*camera.viewport.startY];
+		var viewportEnd = [camera.width*camera.viewport.endX,camera.height*camera.viewport.endY];
+		var viewportDimensions = [viewportEnd[0]-viewportStart[0],viewportEnd[1]-viewportStart[1]];
+		ctx.save();
+		ctx.translate(0,-30);
+		ctx.fillRect(viewportStart[0],viewportStart[1],viewportDimensions[0],viewportDimensions[1]);
+		ctx.fillStyle = 'black';
+		//ctx.fill();
+		ctx.translate((viewportStart[0]+viewportDimensions[0]/2-camera.width/2),(viewportStart[1]+viewportDimensions[1]/2-camera.height/2));
+		//ctx.translate(600,300);
+		this.drawGrid(this.minimapCamera);
+		this.drawAsteroids(this.asteroids,this.minimapCamera);
+		for(var n = this.otherShips.length-1;n>=-1;n--){
+			var ship = (n==-1)?this.ship:this.otherShips[n];
+			this.drawShipMinimap(ship,this.minimapCamera);
+		}
+		ctx.restore();
 	},
 	drawTitleScreen:function(camera){
 		var ctx = camera.ctx;
