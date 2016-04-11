@@ -150,7 +150,7 @@ app.main = {
 		this.otherShips = [];
 		for(var c = 0;c<this.otherShipCount;c++)
 		{
-			this.otherShips.push(this.createShip(this.grid));
+			this.otherShips.push(this.createShip({},this.grid));
 			this.otherShips[c].ai = this.createComponentShipAI();
 		}
 		this.gameState = this.GAME_STATES.PLAYING;
@@ -1269,7 +1269,7 @@ app.main = {
 		}
 		//this.fillText(ctx, "Thruster clamps: "+((this.ship.stabilizer.clamps.enabled)?'Medial '+Math.round(this.ship.stabilizer.clamps.medial)+' Lateral '+Math.round(this.ship.stabilizer.clamps.lateral)+' Rotational '+Math.round(this.ship.stabilizer.clamps.rotational):'disabled'),0,camera.height-10,"12pt Prime",'white')
 		ctx.textAlign = 'right';
-		this.fillText(ctx, "Overcharge: Thrusters "+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.THRUSTERS)*100)+'% Laser '+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.LASERS)*100)+'% Shields '+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.SHIELDS)*100)+'%',camera.width,camera.height-10,"12pt Prime",'white')
+		this.fillText(ctx, "Overcharge: Thrusters "+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.THRUSTERS)*100)+'% Laser '+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.LASERS)*100)+'% Shields '+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.SHIELDS)*100)+'%',camera.width,camera.height-10,"10pt Orbitron",'white')
 		ctx.restore(); // NEW
 	},
 	drawMinimap:function(camera){
@@ -1279,9 +1279,13 @@ app.main = {
 		var viewportDimensions = [viewportEnd[0]-viewportStart[0],viewportEnd[1]-viewportStart[1]];
 		ctx.save();
 		ctx.translate(0,-30);
-		ctx.fillRect(viewportStart[0],viewportStart[1],viewportDimensions[0],viewportDimensions[1]);
+		//ctx.rect(viewportStart[0],viewportStart[1]-30,viewportDimensions[0],viewportDimensions[1]);
+		//ctx.clip();
+		ctx.beginPath();
+		ctx.rect(viewportStart[0],viewportStart[1],viewportDimensions[0],viewportDimensions[1]);
 		ctx.fillStyle = 'black';
-		//ctx.fill();
+		ctx.fill();
+		ctx.clip();
 		ctx.translate((viewportStart[0]+viewportDimensions[0]/2-camera.width/2),(viewportStart[1]+viewportDimensions[1]/2-camera.height/2));
 		//ctx.translate(600,300);
 		this.drawGrid(this.minimapCamera);
