@@ -1140,7 +1140,7 @@ app.main = {
 		else if(this.gameState == this.GAME_STATES.PLAYING){
 
 			this.otherShips.forEach(function(ship){
-				//this.shipAI(ship,this.ship,dt);
+				this.shipAI(ship,this.ship,dt);
 			},this);
 
 			this.shipKeyboardControl(this.ship,dt);
@@ -1241,6 +1241,7 @@ app.main = {
 		//this needs to be done
 		resetMouse();
 
+		this.drawLockedGraphic(this.camera);
 		//because we might use the frame count for something at some point
 		this.frameCount++;
 	},
@@ -1347,6 +1348,16 @@ app.main = {
 		ctx.textBaseline = 'middle';
 		ctx.globalAlpha = 1;
 		this.fillText(ctx,"Paused",camera.width/2,camera.height/5,"24pt courier",'white');
+		ctx.restore();
+	},
+	drawLockedGraphic:function(camera){
+		if(locked)
+			return;
+		var ctx = camera.ctx;
+		ctx.save();
+		ctx.textAlign = 'center';
+		ctx.textBaseline = 'middle';
+		this.fillText(ctx,"Click me",camera.width/2,camera.height/2,"10pt Orbitron",'white');
 		ctx.restore();
 	},
 	pauseGame:function(){

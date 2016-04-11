@@ -3,6 +3,7 @@
 
 "use strict";
 var canvas;
+var locked = false;
 function pointerInit(){
 	canvas = app.main.canvas;
 	// Hook pointer lock state change events
@@ -134,6 +135,7 @@ function changeCallback(){
 		window.addEventListener("mousewheel",mouseWheel,false);
 		document.addEventListener("mousemove", moveCallback, false);
 		canvas.onclick = undefined;
+		locked = true;
 	} else {
 		// Pointer was just unlocked
 		// Disable the mousemove listener
@@ -147,6 +149,7 @@ function changeCallback(){
 			// Ask the browser to lock the pointer
 			canvas.requestPointerLock();
 		};
+		locked = false;
 	}
 }
 function moveCallback(e){
