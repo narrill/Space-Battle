@@ -4,7 +4,7 @@
 "use strict";
 var canvas;
 function pointerInit(){
-
+	canvas = app.main.canvas;
 	// Hook pointer lock state change events
 	document.addEventListener('pointerlockchange', changeCallback, false);
 	document.addEventListener('mozpointerlockchange', changeCallback, false);
@@ -12,9 +12,9 @@ function pointerInit(){
 	/*var havePointerLock = 'pointerLockElement' in document ||
 		'mozPointerLockElement' in document ||
 		'webkitPointerLockElement' in document;*/
-	window.requestPointerLock = window.requestPointerLock ||
-		window.mozRequestPointerLock ||
-		window.webkitRequestPointerLock;
+	canvas.requestPointerLock = canvas.requestPointerLock ||
+		canvas.mozRequestPointerLock ||
+		canvas.webkitRequestPointerLock;
 	//canvas.onclick = requestLock;
 	//canvas.onmousedown = 
 }

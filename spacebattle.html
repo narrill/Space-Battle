@@ -12,6 +12,19 @@
 			src: url(AROMA-Bold.ttf);
 			font-weight:bold;
 		}
+		@font-face{
+			font-family:Prime;
+			src: url(Prime-Regular.otf) format("opentype");
+		}
+		@font-face{
+			font-family:Orbitron;
+			src: url(Orbitron-Light.ttf);
+		}
+		@font-face{
+			font-family:Orbitron;
+			src: url(Orbitron-Black.ttf);
+			font-weight:bold;
+		}
 		canvas{border:1px solid gray;}
 		audio{display:none;}
 	</style>
@@ -21,6 +34,7 @@
 <body>
 	<canvas id="canvas1" width=1600 height=900>
 	</canvas>
+	<canvas id='canvas2' width=300 height=300></canvas>
 	<script src='js/utilities.js'></script>
 	<script src='js/loader.js'></script>
 	<script src='js/main.js'></script>

@@ -16,10 +16,12 @@ var app = app || {};
  
  */
 app.main = {
+	canvas: undefined,
+	minimapCanvas: undefined,
 	drawStarField:true,
 	isoAngle:0,
-	thrusterDetail:5,
-	laserDetail:5,
+	thrusterDetail:12,
+	laserDetail:12,
 	gameState:0,
 	GAME_STATES:{
 		TITLE:0,
@@ -69,6 +71,7 @@ app.main = {
 		ctx:undefined
 	},
 	gridCamera:{},
+	minimapCamera:{},
 	grid:{
 		gridLines: 500, //number of grid lines
 		gridSpacing: 500, //pixels per grid unit
@@ -115,7 +118,9 @@ app.main = {
     // methods
 	init : function() {
 		// initialize properties
-		var canvas = document.querySelector('#canvas1');
+		var canvas = this.canvas = document.querySelector('#canvas1');
+		var minimapCanvas = this.minimapCanvas = document.querySelector('#canvas2');
+		//minimapCanvas.style.visibility = 'hidden';
 		//canvas.onmousedown = this.doMousedown.bind(this);
 		//var canvas2 = document.querySelector('#canvas2');
 		//canvas2.onmousedown = this.doMousedown.bind(this);
@@ -124,14 +129,15 @@ app.main = {
 
 		this.makeAsteroids.bind(this, this.asteroids, this.grid)();
 		this.generateStarField.bind(this, this.stars)();
-		this.ship = this.createShip(this.grid);
+		this.ship = this.createShip({},this.grid);
 		this.camera = this.createCamera(canvas,{x:this.ship.x,y:this.ship.y,rotation:this.ship.rotation,zoom:.5,minZoom:.025,maxZoom:5});
 		this.camera.globalCompositeOperation = 'hard-light';
 		this.starCamera = this.createCamera(canvas);
 		this.gridCamera = this.createCamera(canvas);
+		this.minimapCamera = this.createCamera(minimapCanvas,{x:this.grid.gridStart[0]+this.grid.gridLines*this.grid.gridSpacing/2,y:this.grid.gridStart[1]+this.grid.gridLines*this.grid.gridSpacing/2,zoom:.001});
 		for(var c = 0;c<this.otherShipCount;c++)
 		{
-			this.otherShips.push(this.createShip(this.grid));
+			this.otherShips.push(this.createShip({},this.grid));
 			this.otherShips[c].ai = this.createComponentShipAI();
 		}
 
@@ -176,14 +182,14 @@ app.main = {
 	},
 	doMousedown: function(e){
 	},
-	createShip:function(grid){
+	createShip:function(objectParams, grid){
 		var lower = [grid.gridStart[0],grid.gridStart[1]];
 		var upper = [lower[0]+grid.gridLines*grid.gridSpacing,lower[1]+grid.gridLines*grid.gridSpacing];
 		return {
 			//position/rotation
-			x:Math.random()*(upper[0]-lower[0])+lower[0],
-			y:Math.random()*(upper[1]-lower[1])+lower[1],
-			rotation:0,
+			x:(objectParams.x)?objectParams.x : Math.random()*(upper[0]-lower[0])+lower[0],
+			y:(objectParams.x)?objectParams.y : Math.random()*(upper[1]-lower[1])+lower[1],
+			rotation:(objectParams.rotation)?objectParams.rotation : 0,
 			//velocities
 			velocityX:0, //in absolute form, used for movement
 			velocityY:0,
@@ -194,7 +200,7 @@ app.main = {
 			rightVectorY:0,
 			medialVelocity:0, //component form, used by stabilizers
 			lateralVelocity:0,
-			destructible:this.createComponentDestructible({
+			destructible:this.createComponentDestructible((objectParams.destructible)?objectParams.destructible : {
 				hp:100,
 				radius:25,
 				shield:{
@@ -203,28 +209,40 @@ app.main = {
 					efficiency:8
 				}
 			}),
-			thrusters:{
-				color:getRandomBrightColor(),
-				medial:this.createComponentThruster({
-					maxStrength:3000,
-					efficiency:1000
-				}),
-				lateral:this.createComponentThruster({
-					maxStrength:2000,
-					efficiency:1000
-				}),
-				rotational:this.createComponentThruster({
-					maxStrength:750,
-					efficiency:1000
-				})
-			},
-			stabilizer:this.createComponentStabilizer(),
-			powerSystem:this.createComponentPowerSystem(),
+			thrusters:this.createComponentThrusterSystem(objectParams.thrusters),
+			stabilizer:this.createComponentStabilizer(objectParams.stabilizer),
+			powerSystem:this.createComponentPowerSystem(objectParams.powerSystem),
 			//colors
-			color:getRandomBrightColor(),
+			color:(objectParams.color)?objectParams.color : getRandomBrightColor(),
 			//used for controlling laser fire rate
 			//lastLaserTime:0,
-			laser:this.createComponentLaser()
+			laser:this.createComponentLaser((objectParams.laser))
+		};
+	},
+	createComponentPoints:function(objectParams){
+		if(!objectParams)
+			objectParams = {};
+		return {
+			points:(objectParams.points)?objectParams.points:0
+		};
+	},
+	createComponentThrusterSystem:function(objectParams){
+		if(!objectParams)
+			objectParams = {};
+		return {
+			color:(objectParams.color)? objectParams.color: getRandomBrightColor(),
+			medial:this.createComponentThruster((objectParams.medial)?objectParams.medial:{
+				maxStrength:3000,
+				efficiency:1000
+			}),
+			lateral:this.createComponentThruster((objectParams.lateral)?objectParams.lateral:{
+				maxStrength:2000,
+				efficiency:1000
+			}),
+			rotational:this.createComponentThruster((objectParams.rotational)?objectParams.rotational:{
+				maxStrength:750,
+				efficiency:1000
+			})
 		};
 	},
 	createComponentThruster:function(objectParams){
@@ -289,7 +307,8 @@ app.main = {
 			hp:(objectParams.hp)?objectParams.hp:500,
 			maxHp: (objectParams.hp)?objectParams.hp:500,
 			radius:(objectParams.radius)?objectParams.radius:500,
-			shield:this.createComponentDestructibleShield(objectParams.shield)
+			shield:this.createComponentDestructibleShield(objectParams.shield),
+			points:(objectParams.points)?objectParams.points:0
 		};
 	},
 	createComponentDestructibleShield:function(objectParams){
@@ -471,6 +490,21 @@ app.main = {
 		ctx.arc(0,0,ship.destructible.radius,0,Math.PI*2);
 		ctx.fillStyle = 'black';
 		ctx.globalAlpha = 1;
+		ctx.fill();
+		ctx.restore();
+	},
+	drawShipMinimap:function(ship,camera){
+		var ctx = camera.ctx;
+		ctx.save();
+		var shipPosInCameraSpace = worldPointToCameraSpace(ship.x,ship.y,camera); //get ship's position in camera space
+		ctx.translate(shipPosInCameraSpace[0],shipPosInCameraSpace[1]); //translate to camera space position
+		ctx.rotate((ship.rotation-camera.rotation) * (Math.PI / 180)); //rotate by difference in rotations
+
+		//ctx.scale(camera.zoom,camera.zoom); //scale by zoom value
+
+		ctx.beginPath();
+		ctx.arc(0,0,5,0,Math.PI*2);
+		ctx.fillStyle = ship.color;
 		ctx.fill();
 		ctx.restore();
 	},
@@ -1142,6 +1176,7 @@ app.main = {
 		//clear cameras
 		this.clearCamera(this.camera);
 		this.clearCamera(this.starCamera);
+		this.clearCamera(this.minimapCamera);
 
 		//draw grids then asteroids then ships
 		if(this.drawStarField)
@@ -1164,6 +1199,12 @@ app.main = {
 			
 			this.drawAsteroids(this.asteroids,this.camera, this.gridCamera);
 			this.drawHUD(this.camera);
+			this.drawGrid(this.minimapCamera);
+			this.drawAsteroids(this.asteroids,this.minimapCamera);
+			for(var n = this.otherShips.length-1;n>=-1;n--){
+				var ship = (n==-1)?this.ship:this.otherShips[n];
+				this.drawShipMinimap(ship,this.minimapCamera);
+			}
 		}
 		else if(this.gameState == this.GAME_STATES.TITLE)
 		{
@@ -1195,13 +1236,29 @@ app.main = {
 	drawHUD: function(camera){
 		var ctx = camera.ctx;
 		ctx.save(); // NEW
-		ctx.textAlign = 'left';
+		ctx.textAlign = 'center';
 		ctx.textBaseline = 'center';
-		this.fillText(ctx, "Shields: "+Math.round(this.ship.destructible.shield.current),camera.width/15,7.5*camera.height/10,"12pt Aroma",'white')
-		this.fillText(ctx, "HP: "+Math.round(this.ship.destructible.hp),camera.width/15,8*camera.height/10,"12pt Aroma",'white')
-		this.fillText(ctx, "Control mode: "+((this.ship.stabilizer.enabled)?'assisted':'manual'),camera.width/15,9*camera.height/10,"12pt Aroma",'white')
-		this.fillText(ctx, "Thruster clamps: "+((this.ship.stabilizer.clamps.enabled)?'Medial '+Math.round(this.ship.stabilizer.clamps.medial)+' Lateral '+Math.round(this.ship.stabilizer.clamps.lateral)+' Rotational '+Math.round(this.ship.stabilizer.clamps.rotational):'disabled'),camera.width/15,9.5*camera.height/10,"12pt Aroma",'white')
-		this.fillText(ctx, "Power Distribution: Thrusters "+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.THRUSTERS)*100)+'% Laser '+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.LASERS)*100)+'% Shields '+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.SHIELDS)*100)+'%',camera.width/15,9.7*camera.height/10,"12pt Aroma",'white')
+		//this.fillText(ctx, "Shields: "+Math.round(this.ship.destructible.shield.current),camera.width/15,7.5*camera.height/10,"12pt Prime",'white')
+		//this.fillText(ctx, "HP: "+Math.round(this.ship.destructible.hp),camera.width/15,8*camera.height/10,"12pt Prime",'white')
+		ctx.fillRect(0,camera.height,camera.width,-30);
+		this.fillText(ctx, ((this.ship.stabilizer.enabled)?'assisted':'manual'),camera.width/2,camera.height-10,"bold 12pt Orbitron",(this.ship.stabilizer.enabled)?'green':'red');
+		ctx.textAlign = 'left';
+		this.fillText(ctx,'clamps',10,camera.height-10,"8pt Orbitron",'white');
+		if(this.ship.stabilizer.clamps.enabled)
+		{
+			ctx.textAlign = 'right';
+			this.fillText(ctx,Math.round(this.ship.stabilizer.clamps.medial),110,camera.height-10,"10pt Orbitron",'green');
+			this.fillText(ctx,Math.round(this.ship.stabilizer.clamps.lateral),160,camera.height-10,"10pt Orbitron",'cyan');
+			this.fillText(ctx,Math.round(this.ship.stabilizer.clamps.rotational),195,camera.height-10,"10pt Orbitron",'yellow');
+		}
+		else
+		{
+			ctx.textAlign = 'left';
+			this.fillText(ctx,'disabled',110,camera.height-10,"10pt Orbitron",'red');
+		}
+		//this.fillText(ctx, "Thruster clamps: "+((this.ship.stabilizer.clamps.enabled)?'Medial '+Math.round(this.ship.stabilizer.clamps.medial)+' Lateral '+Math.round(this.ship.stabilizer.clamps.lateral)+' Rotational '+Math.round(this.ship.stabilizer.clamps.rotational):'disabled'),0,camera.height-10,"12pt Prime",'white')
+		ctx.textAlign = 'right';
+		this.fillText(ctx, "Overcharge: Thrusters "+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.THRUSTERS)*100)+'% Laser '+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.LASERS)*100)+'% Shields '+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.SHIELDS)*100)+'%',camera.width,camera.height-10,"12pt Prime",'white')
 		ctx.restore(); // NEW
 	},
 	drawTitleScreen:function(camera){
@@ -1214,7 +1271,7 @@ app.main = {
 		ctx.textBaseline = 'middle';
 		ctx.globalAlpha = 1;
 		this.fillText(ctx,"Space Battle With Lasers",camera.width/2,camera.height/5,"bold 64pt Aroma",'blue',.5);
-		this.fillText(ctx,"Space Battle With Lasers",camera.width/2,camera.height/5,"bold 24pt Aroma",'white');
+		this.fillText(ctx,"SPACE BATTLE WITH LASERS",camera.width/2,camera.height/5,"bold 24pt Aroma",'white');
 		this.fillText(ctx,"Press ENTER to start. Use WASD, the mouse, C, and TAB to control your ship",camera.width/2,4*camera.height/5,"12pt Aroma",'white');
 		ctx.restore();
 	},
