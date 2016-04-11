@@ -973,9 +973,9 @@ app.main = {
 		},this);
 
 		for(var c = -1;c<this.otherShips.length;c++){
-			var ship = (c==-1)? this.ship:this.otherShips[c];
-			for(var c = 0;c<this.asteroids.objs.length;c++){
-				var asteroid = this.asteroids.objs[c];
+			var ship = ((c==-1)? this.ship:this.otherShips[c]);
+			for(var n = 0;n<this.asteroids.objs.length;n++){
+				var asteroid = this.asteroids.objs[n];
 				var distance = (ship.x-asteroid.x)*(ship.x-asteroid.x) + (ship.y-asteroid.y)*(ship.y-asteroid.y);
 				var overlap = (ship.destructible.radius+asteroid.radius)*(ship.destructible.radius+asteroid.radius) - distance;
 				if(overlap>=0)
@@ -1235,7 +1235,7 @@ app.main = {
 		
 		//FPS text
 		if (this.debug){
-			this.fillText(this.camera.ctx,'fps: '+Math.floor(1/dt),15,15,"10pt Aroma",'white');
+			this.fillText(this.camera.ctx,'fps: '+Math.floor(1/dt),15,15,"8pt Orbitron",'white');
 		}
 
 		//this needs to be done
@@ -1308,7 +1308,7 @@ app.main = {
 		ctx.globalAlpha = 1;
 		this.fillText(ctx,"Space Battle With Lasers",camera.width/2,camera.height/5,"bold 64pt Aroma",'blue',.5);
 		this.fillText(ctx,"SPACE BATTLE WITH LASERS",camera.width/2,camera.height/5,"bold 24pt Aroma",'white');
-		this.fillText(ctx,"Press ENTER to start. Use WASD, the mouse, C, and TAB to control your ship",camera.width/2,4*camera.height/5,"12pt Aroma",'white');
+		this.fillText(ctx,"Press ENTER to start. Use WASD, the mouse, C, and TAB to control your ship",camera.width/2,4*camera.height/5,"12pt Orbitron",'white');
 		ctx.restore();
 	},
 	drawWinScreen:function(camera){
@@ -1321,7 +1321,7 @@ app.main = {
 		ctx.textBaseline = 'middle';
 		ctx.globalAlpha = 1;
 		this.fillText(ctx,"You win!",camera.width/2,camera.height/5,"24pt Aroma",'white');
-		this.fillText(ctx,"Good for you. Press R to continue.",camera.width/2,4*camera.height/5,"12pt Aroma",'white');
+		this.fillText(ctx,"Good for you. Press R to continue.",camera.width/2,4*camera.height/5,"12pt Orbitron",'white');
 		ctx.restore();		
 	},
 	drawLoseScreen:function(camera){
@@ -1333,8 +1333,8 @@ app.main = {
 		ctx.textAlign = 'center';
 		ctx.textBaseline = 'middle';
 		ctx.globalAlpha = 1;
-		this.fillText(ctx,"You lose!",camera.width/2,camera.height/5,"24pt courier",'white');
-		this.fillText(ctx,"Sucks to be you. Press R to try again.",camera.width/2,4*camera.height/5,"12pt courier",'white');
+		this.fillText(ctx,"You lose!",camera.width/2,camera.height/5,"24pt Aroma",'white');
+		this.fillText(ctx,"Sucks to be you. Press R to try again.",camera.width/2,4*camera.height/5,"12pt Orbitron",'white');
 		ctx.restore();		
 	},
 	//draw pause screen in the given camera
@@ -1347,7 +1347,7 @@ app.main = {
 		ctx.textAlign = 'center';
 		ctx.textBaseline = 'middle';
 		ctx.globalAlpha = 1;
-		this.fillText(ctx,"Paused",camera.width/2,camera.height/5,"24pt courier",'white');
+		this.fillText(ctx,"Paused",camera.width/2,camera.height/5,"24pt Aroma",'white');
 		ctx.restore();
 	},
 	drawLockedGraphic:function(camera){
