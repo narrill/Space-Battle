@@ -848,7 +848,9 @@ app.main = {
 		//if the cool down is up
 		if(now>ship.laser.lastFireTime+ship.laser.cd*1000){
 			ship.laser.lastFireTime = now;
-			ship.laser.currentPower = ship.laser.maxPower;			
+			ship.laser.currentPower = ship.laser.maxPower;	
+			if(this.sounds.loaded)
+				createjs.Sound.play(this.sounds.laser);		
 		}
 	},
 	shipAI:function(ship, target,dt){
