@@ -1310,7 +1310,7 @@ app.main = {
 		ctx.globalAlpha = 1;
 		this.fillText(ctx,"Space Battle With Lasers",camera.width/2,camera.height/5,"bold 64pt Aroma",'blue',.5);
 		this.fillText(ctx,"SPACE BATTLE WITH LASERS",camera.width/2,camera.height/5,"bold 24pt Aroma",'white');
-		this.fillText(ctx,"Press ENTER to start. Use WASD, the mouse, C, and TAB to control your ship",camera.width/2,4*camera.height/5,"12pt Orbitron",'white');
+		this.fillText(ctx,"Press ENTER to start. Use WASD, the mouse, C, and TAB to move your ship. Power up your thrusters lasers and shields with SHIFT RIGHT-CLICK and ALT.",camera.width/2,4*camera.height/5,"12pt Orbitron",'white');
 		ctx.restore();
 	},
 	drawWinScreen:function(camera){
