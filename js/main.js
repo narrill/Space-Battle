@@ -44,7 +44,7 @@ app.main = {
 	runningTime:0,
 	ship:{},
 	otherShips:[],
-	otherShipCount:1,
+	otherShipCount:3,
 	lasers:[],
 	camera:{
 		//position/rotation
