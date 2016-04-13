@@ -59,7 +59,7 @@ myMouse.BUTTONS = Object.freeze({
 myMouse.mousedown = [];
 myMouse.direction = 0;
 myMouse.wheel = 0;
-myMouse.sensitivity = .05;
+myMouse.sensitivity = .10;
 // myKeys.keydown array to keep track of which keys are down
 // this is called a "key daemon"
 // main.js will "poll" this array every frame

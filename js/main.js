@@ -18,6 +18,8 @@ var app = app || {};
 app.main = {
 	canvas: undefined,
 	minimapCanvas: undefined,
+	accumulator:0,
+	timeStep:.004,
 	drawStarField:true,
 	isoAngle:0,
 	thrusterDetail:2,
@@ -118,6 +120,7 @@ app.main = {
 	baseStarCameraZoom:.0001,
     // methods
 	init : function() {
+		//debugger;
 		// initialize properties
 		var canvas = this.canvas = document.querySelector('#canvas1');
 		//minimapCanvas.style.visibility = 'hidden';
@@ -142,7 +145,10 @@ app.main = {
 		}*/
 
 		// start the game loop
-		this.update();
+		
+		this.lastTime = Date.now();
+		this.animationID = requestAnimationFrame(this.frame.bind(this));
+		//this.frame.bind(this)();
 	},
 	resetGame:function(){
 		this.ship = {};
@@ -274,7 +280,7 @@ app.main = {
 			objectParams = {};
 		return{
 			enabled: (objectParams.enabled)? objectParams.enabled:true,
-			strength: (objectParams.strength)? objectParams.strength:400,
+			strength: (objectParams.strength)? objectParams.strength:1200,
 			thrustRatio: (objectParams.thrustRatio)?objectParams.thrustRatio:1.5,
 			clamps: this.createComponentStabilizerClamps(objectParams.clamps)
 		};
@@ -982,7 +988,7 @@ app.main = {
 					obj.destructible.hp+=obj.destructible.shield.current;
 					obj.destructible.shield.current = 0;
 				}
-				console.log(obj+' hp: '+obj.destructible.hp);
+				//console.log(obj+' hp: '+obj.destructible.hp);
 				var laserDir = [laser.endX-laser.startX,laser.endY-laser.startY];
 				var newEnd = [laser.startX+tValOfObj*laserDir[0],laser.startY+tValOfObj*laserDir[1]];
 				laser.endX = newEnd[0];
@@ -1131,12 +1137,24 @@ app.main = {
 				ships.splice(c--,1);
 		}
 	},
+	frame:function(){
+		this.animationID = requestAnimationFrame(this.frame.bind(this));
+		var dt = this.calculateDeltaTime();
+		if(dt>2)
+			dt = 0;
+		this.accumulator+=dt;
+		while(this.accumulator>=this.timeStep){
+			if(!this.paused)
+				this.update(this.timeStep);
+			this.accumulator-= this.timeStep;
+		}
+		this.draw();
+	},
 	//the game loop
-	update: function(){
-		//queue our next frame
-	 	this.animationID = requestAnimationFrame(this.update.bind(this));
-	 	var dt = this.calculateDeltaTime(); //delta for physics		
-
+	update: function(dt){
+	 	//var dt = this.calculateDeltaTime(); //delta for physics		
+	 	//if(this.paused)
+	 	//	return;
 	 	//clear values
 		this.clearLasers(this.lasers);
 		for(var c =-1;c<this.otherShips.length;c++){
@@ -1145,15 +1163,7 @@ app.main = {
 			this.shipClearPowerTarget(ship);
 		}
 		this.clearDestructibles(this.asteroids.objs);
-		this.clearDestructibles(this.otherShips);
-
-		//pause screen
-	 	if(this.gameState == this.GAME_STATES.PLAYING && this.paused){
-	 		dt = 0;
-	 		this.drawPauseScreen(this.camera);
-	 		//this.drawPauseScreen(this.worldCamera);
-	 		return;
-	 	} 
+		this.clearDestructibles(this.otherShips); 
 
 	 	if(this.otherShipCount<this.maxOtherShips)
 	 	{
@@ -1229,6 +1239,27 @@ app.main = {
 	 	this.starCamera.zoom = 1/(cameraDistance+10000);
 	 	this.gridCamera.zoom = 1/(cameraDistance+5);
 
+		//this needs to be done
+		resetMouse();
+
+		
+		
+
+		//because we might use the frame count for something at some point
+		this.frameCount++;
+	},
+	draw:function(){
+
+		//console.log('drawing');
+		//pause screen
+	 	if(this.gameState == this.GAME_STATES.PLAYING && this.paused){
+	 		//dt = 0;
+	 		this.drawPauseScreen(this.camera);
+	 		//this.drawPauseScreen(this.worldCamera);
+	 		return;
+	 	}
+		
+
 		//clear cameras
 		this.clearCamera(this.camera);
 		this.clearCamera(this.starCamera);
@@ -1277,15 +1308,10 @@ app.main = {
 		
 		//FPS text
 		if (this.debug){
-			this.fillText(this.camera.ctx,'fps: '+Math.floor(1/dt),15,15,"8pt Orbitron",'white');
+			//this.fillText(this.camera.ctx,'fps: '+Math.floor(1/dt),15,15,"8pt Orbitron",'white');
 		}
 
-		//this needs to be done
-		resetMouse();
-
 		this.drawLockedGraphic(this.camera);
-		//because we might use the frame count for something at some point
-		this.frameCount++;
 	},
 	drawHUD: function(camera){
 		var ctx = camera.ctx;
@@ -1422,12 +1448,12 @@ app.main = {
 	pauseGame:function(){
 		this.paused = true;
 		cancelAnimationFrame(this.animationID);
-		this.update();
+		this.frame.bind(this)();
 	},
 	resumeGame:function(){
 		cancelAnimationFrame(this.animationID);
 		this.paused = false;
-		this.update();
+		this.frame().bind(this)();
 	},
 	fillText: function(ctx,string, x, y, css, color, alpha) {
 		ctx.save();
