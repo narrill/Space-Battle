@@ -1002,17 +1002,21 @@ app.main = {
 				var asteroid = this.asteroids.objs[n];
 				var distance = (ship.x-asteroid.x)*(ship.x-asteroid.x) + (ship.y-asteroid.y)*(ship.y-asteroid.y);
 				var overlap = (ship.destructible.radius+asteroid.radius)*(ship.destructible.radius+asteroid.radius) - distance;
-				if(overlap>=0 && c == -1) //only the player's ship collides with asteroids, since I don't have time to get the AI to avoid them
+				if(overlap>=0) //only the player's ship collides with asteroids, since I don't have time to get the AI to avoid them
 				{
 					if(this.frameCount==0)
-						asteroid.destructible.hp=0;
+						asteroid.destructible.hp=-1;
 					else{
-						ship.destructible.shield.current-=15*dt;
+						var objectSpeed = Math.sqrt(ship.velocityX*ship.velocityX+ship.velocityY*ship.velocityY);
+						ship.destructible.shield.current-=((c == -1)?.1:.01)*dt*objectSpeed;
+						asteroid.destructible.hp-=.2*dt*objectSpeed;
 						if(ship.destructible.shield.current<0)
 						{
 							ship.destructible.hp+=ship.destructible.shield.current;
 							ship.destructible.shield.current = 0;
 						}
+						ship.velocityX*=(1-2*dt);
+						ship.velocityY*=(1-2*dt);
 					}
 				}
 			}
@@ -1144,7 +1148,7 @@ app.main = {
 			dt = 0;
 		this.accumulator+=dt;
 		while(this.accumulator>=this.timeStep){
-			if(!this.paused)
+			if(!((this.gameState == this.GAME_STATES.PLAYING || this.gameState == this.GAME_STATES.TUTORIAL) && this.paused))
 				this.update(this.timeStep);
 			this.accumulator-= this.timeStep;
 		}
@@ -1252,7 +1256,7 @@ app.main = {
 
 		//console.log('drawing');
 		//pause screen
-	 	if(this.gameState == this.GAME_STATES.PLAYING && this.paused){
+	 	if((this.gameState == this.GAME_STATES.PLAYING || this.gameState == this.GAME_STATES.TUTORIAL) && this.paused){
 	 		//dt = 0;
 	 		this.drawPauseScreen(this.camera);
 	 		//this.drawPauseScreen(this.worldCamera);
@@ -1453,7 +1457,7 @@ app.main = {
 	resumeGame:function(){
 		cancelAnimationFrame(this.animationID);
 		this.paused = false;
-		this.frame().bind(this)();
+		this.frame.bind(this)();
 	},
 	fillText: function(ctx,string, x, y, css, color, alpha) {
 		ctx.save();
