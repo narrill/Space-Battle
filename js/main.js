@@ -852,8 +852,11 @@ app.main = {
 		if(now>ship.laser.lastFireTime+ship.laser.cd*1000){
 			ship.laser.lastFireTime = now;
 			ship.laser.currentPower = ship.laser.maxPower;	
-			if(this.sounds.loaded)
-				createjs.Sound.play(this.sounds.laser);		
+			if(this.sounds.laser.loaded)
+			{
+				var laserSound = createjs.Sound.play(this.sounds.laser.id,{interrupt: createjs.Sound.INTERRUPT_ANY});
+				laserSound.volume = .5;	
+			}
 		}
 	},
 	shipAI:function(ship, target,dt){
@@ -907,10 +910,14 @@ app.main = {
 				this.shipLateralStabilizers(ship,dt);
 			//rotational motion - mouse			
 			this.shipRotationalThrusters(ship,-myMouse.direction*myMouse.sensitivity*ship.thrusters.rotational.maxStrength/ship.stabilizer.thrustRatio);
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_LEFT])
+				this.shipRotationalThrusters(ship,ship.thrusters.rotational.maxStrength/ship.stabilizer.thrustRatio);
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_RIGHT])
+				this.shipRotationalThrusters(ship,-ship.thrusters.rotational.maxStrength/ship.stabilizer.thrustRatio);
 			if(ship.stabilizer.enabled)
 				this.shipRotationalStabilizers(ship,dt);
 			//lasers
-			if(myMouse.mousedown[myMouse.BUTTONS.LEFT])
+			if(myMouse.mousedown[myMouse.BUTTONS.LEFT] || myKeys.keydown[myKeys.KEYBOARD.KEY_SPACE])
 				this.shipFireLaser(ship);
 			if(myKeys.keydown[myKeys.KEYBOARD.KEY_SHIFT])
 				ship.powerSystem.target[this.SHIP_COMPONENTS.THRUSTERS] = 1;
@@ -1243,6 +1250,8 @@ app.main = {
 			this.drawAsteroids(this.asteroids,this.camera, this.gridCamera);
 			this.drawHUD(this.camera);
 			this.drawMinimap(this.minimapCamera);
+			if(this.gameState == this.GAME_STATES.TUTORIAL)
+				this.drawTutorialGraphics(this.camera);
 		}
 		else if(this.gameState == this.GAME_STATES.TITLE)
 		{
@@ -1282,7 +1291,7 @@ app.main = {
 		ctx.fillRect(0,camera.height,camera.width,-30);
 		this.fillText(ctx, ((this.ship.stabilizer.enabled)?'assisted':'manual'),camera.width/2,camera.height-10,"bold 12pt Orbitron",(this.ship.stabilizer.enabled)?'green':'red');
 		ctx.textAlign = 'left';
-		this.fillText(ctx,'clamps',10,camera.height-10,"8pt Orbitron",'white');
+		this.fillText(ctx,'limiter',10,camera.height-10,"8pt Orbitron",'white');
 		if(this.ship.stabilizer.clamps.enabled)
 		{
 			ctx.textAlign = 'right';
@@ -1387,8 +1396,22 @@ app.main = {
 		this.fillText(ctx,"Click me",camera.width/2,camera.height/2,"10pt Orbitron",'white');
 		ctx.restore();
 	},
-	drawTutorialScreen:function(camera){
-
+	drawTutorialGraphics:function(camera){
+		var ctx = camera.ctx;
+		ctx.save();
+		ctx.textAlign = 'left';
+		this.fillText(ctx,"WASD moves your ship",camera.width/10,camera.height/12,"10pt Orbitron",'white');
+		this.fillText(ctx,"LEFT and RIGHT arrow or mouse turns your ship",camera.width/10,2*camera.height/12,"10pt Orbitron",'white');		
+		this.fillText(ctx,"UP and DOWN arrow or mouse-wheel zooms the camera",camera.width/10,3*camera.height/12,"10pt Orbitron",'white');
+		this.fillText(ctx,"SPACE or LEFT-CLICK fires your laser",camera.width/10,4*camera.height/12,"10pt Orbitron",'white');
+		this.fillText(ctx,"SHIFT over-charges your thrusters",camera.width/10,5*camera.height/12,"10pt Orbitron",'white');
+		this.fillText(ctx,"ALT over-charges your shield",camera.width/10,6*camera.height/12,"10pt Orbitron",'white');
+		this.fillText(ctx,"RIGHT-CLICK over-charges your laser",camera.width/10,7*camera.height/12,"10pt Orbitron",'white');
+		this.fillText(ctx,"C toggles the velocity limiter",camera.width/10,8*camera.height/12,"10pt Orbitron",'white');
+		this.fillText(ctx,"TAB switches between assisted and manual controls",camera.width/10,9*camera.height/12,"10pt Orbitron",'white');
+		this.fillText(ctx,"P pauses, F turns off the star-field graphics (they can be a resource hog)",camera.width/10,10*camera.height/12,"10pt Orbitron",'white');
+		this.fillText(ctx,"Play around for a bit, then press ENTER to start the game",camera.width/10,11*camera.height/12,"10pt Orbitron",'white');
+		this.fill
 	},
 	pauseGame:function(){
 		this.paused = true;
