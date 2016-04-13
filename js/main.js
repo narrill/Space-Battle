@@ -20,8 +20,8 @@ app.main = {
 	minimapCanvas: undefined,
 	drawStarField:true,
 	isoAngle:0,
-	thrusterDetail:12,
-	laserDetail:12,
+	thrusterDetail:2,
+	laserDetail:3,
 	gameState:0,
 	GAME_STATES:{
 		TITLE:0,
