@@ -29,7 +29,7 @@ app.main = {
 		WIN:2,
 		LOSE:3,
 		MENU:4,
-		SHIPCONFIG:5
+		TUTORIAL:5
 	},
 	SHIP_COMPONENTS:{
 		THRUSTERS:0,
@@ -44,7 +44,8 @@ app.main = {
 	runningTime:0,
 	ship:{},
 	otherShips:[],
-	otherShipCount:3,
+	otherShipCount:0,
+	maxOtherShips:10,
 	lasers:[],
 	camera:{
 		//position/rotation
@@ -126,7 +127,7 @@ app.main = {
 		
 		
 
-		this.makeAsteroids.bind(this, this.asteroids, this.grid)();
+		//this.makeAsteroids.bind(this, this.asteroids, this.grid)();
 		this.generateStarField.bind(this, this.stars)();
 		this.ship = this.createShip({},this.grid);
 		this.camera = this.createCamera(canvas,{x:this.ship.x,y:this.ship.y,rotation:this.ship.rotation,zoom:.5,minZoom:.025,maxZoom:5});
@@ -134,26 +135,28 @@ app.main = {
 		this.starCamera = this.createCamera(canvas);
 		this.gridCamera = this.createCamera(canvas);
 		this.minimapCamera = this.createCamera(canvas,{x:this.grid.gridStart[0]+this.grid.gridLines*this.grid.gridSpacing/2,y:this.grid.gridStart[1]+this.grid.gridLines*this.grid.gridSpacing/2,zoom:.001,viewport:{startX:.83,startY:.7,endX:1,endY:1}});
-		for(var c = 0;c<this.otherShipCount;c++)
+		/*for(var c = 0;c<this.otherShipCount;c++)
 		{
 			this.otherShips.push(this.createShip({},this.grid));
 			this.otherShips[c].ai = this.createComponentShipAI();
-		}
+		}*/
 
 		// start the game loop
 		this.update();
 	},
 	resetGame:function(){
-		this.ship.destructible.hp = this.ship.destructible.maxHp;
-		this.ship.destructible.shield.current = this.ship.destructible.shield.max;
+		this.ship = {};
+		this.ship = this.createShip({},this.grid);
 		this.makeAsteroids.bind(this,this.asteroids,this.grid)();
 		this.otherShips = [];
+		this.otherShipCount = 1;
 		for(var c = 0;c<this.otherShipCount;c++)
 		{
 			this.otherShips.push(this.createShip({},this.grid));
 			this.otherShips[c].ai = this.createComponentShipAI();
 		}
 		this.gameState = this.GAME_STATES.PLAYING;
+		this.frameCount = 0;
 	},
 	//returns a camera object with the given values and the context from the given canvas
 	createCamera:function(canvas, objectParams){
@@ -980,13 +983,17 @@ app.main = {
 				var asteroid = this.asteroids.objs[n];
 				var distance = (ship.x-asteroid.x)*(ship.x-asteroid.x) + (ship.y-asteroid.y)*(ship.y-asteroid.y);
 				var overlap = (ship.destructible.radius+asteroid.radius)*(ship.destructible.radius+asteroid.radius) - distance;
-				if(overlap>=0)
+				if(overlap>=0 && c == -1) //only the player's ship collides with asteroids, since I don't have time to get the AI to avoid them
 				{
-					ship.destructible.shield.current-=15*dt;
-					if(ship.destructible.shield.current<0)
-					{
-						ship.destructible.hp+=ship.destructible.shield.current;
-						ship.destructible.shield.current = 0;
+					if(this.frameCount==0)
+						asteroid.destructible.hp=0;
+					else{
+						ship.destructible.shield.current-=15*dt;
+						if(ship.destructible.shield.current<0)
+						{
+							ship.destructible.hp+=ship.destructible.shield.current;
+							ship.destructible.shield.current = 0;
+						}
 					}
 				}
 			}
@@ -1135,11 +1142,20 @@ app.main = {
 	 		return;
 	 	} 
 
+	 	if(this.otherShipCount<this.maxOtherShips)
+	 	{
+			this.otherShipCount+=this.otherShipCount-this.otherShips.length;
+			for(;this.otherShips.length<this.otherShipCount;){ //lol
+				this.otherShips.push(this.createShip({},this.grid));
+				this.otherShips[this.otherShips.length-1].ai = this.createComponentShipAI();
+			}
+	 	}
+
 		if(this.otherShips.length==0 && this.gameState==this.GAME_STATES.PLAYING)
 			this.gameState = this.GAME_STATES.WIN;
 		else if(this.gameState == this.GAME_STATES.PLAYING && this.ship.destructible.hp<=0)
 			this.gameState = this.GAME_STATES.LOSE;
-		else if(this.gameState == this.GAME_STATES.PLAYING){
+		else if(this.gameState == this.GAME_STATES.PLAYING || this.gameState==this.GAME_STATES.TUTORIAL){				
 
 			this.otherShips.forEach(function(ship){
 				this.shipAI(ship,this.ship,dt);
@@ -1161,10 +1177,19 @@ app.main = {
 				this.updateShip(ship,dt);
 			},this);
 
-			this.checkCollisions(dt);				
+			this.checkCollisions(dt);	
+
+			if(this.gameState == this.GAME_STATES.TUTORIAL && myKeys.keydown[myKeys.KEYBOARD.KEY_ENTER]){
+				this.resetGame();
+				this.gameState = this.GAME_STATES.PLAYING;
+			}			
 		}
 		else if(this.gameState == this.GAME_STATES.TITLE && myKeys.keydown[myKeys.KEYBOARD.KEY_ENTER])
-			this.gameState = this.GAME_STATES.PLAYING;
+		{
+			this.gameState = this.GAME_STATES.TUTORIAL;
+			myKeys.keydown[myKeys.KEYBOARD.KEY_ENTER] = false;
+			//this.resetGame();
+		}
 		else if((this.gameState == this.GAME_STATES.WIN || this.gameState == this.GAME_STATES.LOSE) && myKeys.keydown[myKeys.KEYBOARD.KEY_R])
 			this.resetGame();
 
@@ -1201,7 +1226,7 @@ app.main = {
 			this.drawAsteroids(this.stars,this.starCamera);
 		
 		
-		if(this.gameState == this.GAME_STATES.PLAYING)
+		if(this.gameState == this.GAME_STATES.PLAYING || this.gameState == this.GAME_STATES.TUTORIAL)
 		{
 			this.drawGrid(this.gridCamera);
 			this.drawAsteroidsOverlay(this.asteroids,this.camera,this.gridCamera);
@@ -1361,6 +1386,9 @@ app.main = {
 		ctx.textBaseline = 'middle';
 		this.fillText(ctx,"Click me",camera.width/2,camera.height/2,"10pt Orbitron",'white');
 		ctx.restore();
+	},
+	drawTutorialScreen:function(camera){
+
 	},
 	pauseGame:function(){
 		this.paused = true;
