@@ -274,7 +274,7 @@ app.main = {
 			objectParams = {};
 		return{
 			enabled: (objectParams.enabled)? objectParams.enabled:true,
-			strength: (objectParams.strength)? objectParams.strength:800,
+			strength: (objectParams.strength)? objectParams.strength:400,
 			thrustRatio: (objectParams.thrustRatio)?objectParams.thrustRatio:1.5,
 			clamps: this.createComponentStabilizerClamps(objectParams.clamps)
 		};
@@ -529,6 +529,7 @@ app.main = {
 	},
 	//draws the given ship in the given camera
 	drawShip: function(ship, camera){
+		var shipArray = (Array.isArray(ship))?ship:[ship];
 		var ctx = camera.ctx;
 		ctx.save();
 		var shipPosInCameraSpace = worldPointToCameraSpace(ship.x,ship.y,camera); //get ship's position in camera space
@@ -552,10 +553,12 @@ app.main = {
 		//forward thrust
 		for(var c = 0;c<=this.thrusterDetail;c++){
 			ctx.fillStyle = shadeRGBColor(ship.thrusters.color,.5*c);
+			ctx.save();
+			ctx.beginPath();
 			if(ship.thrusters.medial.currentStrength>0){
-				ctx.save();				
+				//ctx.save();				
 				//ctx.fillStyle = ship.thrusterColor;
-				ctx.beginPath();
+				
 				ctx.moveTo(-15,5);
 				ctx.lineTo(-10,5);
 				ctx.lineTo(-12.5,5+40*(ship.thrusters.medial.currentStrength/ship.thrusters.medial.efficiency)*(1-(c/(this.thrusterDetail+1)))); //furthest point goes outward with thruster strength and scales inward with efficiency
@@ -564,14 +567,14 @@ app.main = {
 				ctx.lineTo(10,5);
 				ctx.lineTo(12.5,5+40*(ship.thrusters.medial.currentStrength/ship.thrusters.medial.efficiency)*(1-(c/(this.thrusterDetail+1))));
 				ctx.lineTo(15,5);
-				ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
-				ctx.fill();
-				ctx.restore();
+				//ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
+				//ctx.fill();
+				//ctx.restore();
 			}
 			//backward thrust
 			else if(ship.thrusters.medial.currentStrength<0){
-				ctx.save();				
-				ctx.beginPath();
+				//ctx.save();				
+				//ctx.beginPath();
 				ctx.moveTo(-15,0);
 				ctx.lineTo(-10,0);
 				ctx.lineTo(-12.5,40*(ship.thrusters.medial.currentStrength/ship.thrusters.medial.efficiency)*(1-(c/(this.thrusterDetail+1))));
@@ -580,62 +583,65 @@ app.main = {
 				ctx.lineTo(10,0);
 				ctx.lineTo(12.5,40*(ship.thrusters.medial.currentStrength/ship.thrusters.medial.efficiency)*(1-(c/(this.thrusterDetail+1))));
 				ctx.lineTo(15,0);
-				ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
-				ctx.fill();
-				ctx.restore();
+				//ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
+				//ctx.fill();
+				//ctx.restore();
 			}	
 
 			//rotational thrusters	
 			//ccw
 			if(ship.thrusters.rotational.currentStrength>0){
-				ctx.save();				
-				ctx.beginPath();
+				//ctx.save();				
+				//ctx.beginPath();
 				ctx.moveTo(5,-10);
 				ctx.lineTo(5,-15);
 				ctx.lineTo(5+40*(ship.thrusters.rotational.currentStrength/ship.thrusters.rotational.efficiency)*(1-(c/(this.thrusterDetail+1))),-12.5);
 				ctx.lineTo(5,-10);
-				ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
-				ctx.fill();
-				ctx.restore();
+				//ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
+				//ctx.fill();
+				//ctx.restore();
 			}
 			//cw
 			else if(ship.thrusters.rotational.currentStrength<0){
-				ctx.save();				
-				ctx.beginPath();
+				//ctx.save();				
+				//ctx.beginPath();
 				ctx.moveTo(-5,-10);
 				ctx.lineTo(-5,-15);
 				ctx.lineTo(-5+40*(ship.thrusters.rotational.currentStrength/ship.thrusters.rotational.efficiency)*(1-(c/(this.thrusterDetail+1))),-12.5);
 				ctx.lineTo(-5,-10);
-				ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
-				ctx.fill();
-				ctx.restore();
+				//ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
+				//ctx.fill();
+				//ctx.restore();
 			}
 
 			//lateral thrusters
 			//rightward
 			if(ship.thrusters.lateral.currentStrength>0){
-				ctx.save();				
-				ctx.beginPath();
+				//ctx.save();				
+				//ctx.beginPath();
 				ctx.moveTo(-10,0);
 				ctx.lineTo(-10,-5);
 				ctx.lineTo(-10-40*(ship.thrusters.lateral.currentStrength/ship.thrusters.lateral.efficiency)*(1-(c/(this.thrusterDetail+1))),-2.5);
 				ctx.lineTo(-10,0);
-				ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
-				ctx.fill();
-				ctx.restore();
+				//ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
+				//ctx.fill();
+				//ctx.restore();
 			}
 			//leftward
 			else if(ship.thrusters.lateral.currentStrength<-0.01){
-				ctx.save();				
-				ctx.beginPath();
+				//ctx.save();				
+				//ctx.beginPath();
 				ctx.moveTo(10,0);
 				ctx.lineTo(10,-5);
 				ctx.lineTo(10-40*(ship.thrusters.lateral.currentStrength/ship.thrusters.lateral.efficiency)*(1-(c/(this.thrusterDetail+1))),-2.5);
 				ctx.lineTo(10,0);
-				ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
-				ctx.fill();
-				ctx.restore();
+				//ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
+				//ctx.fill();
+				//ctx.restore();
 			}
+			ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
+			ctx.fill();
+			ctx.restore();
 		}
 
 		//shields
