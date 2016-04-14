@@ -873,7 +873,7 @@ app.main = {
 			if(this.sounds.laser.loaded)
 			{
 				var laserSound = createjs.Sound.play(this.sounds.laser.id,{interrupt: createjs.Sound.INTERRUPT_ANY});
-				laserSound.volume = .5 * (1-(1-this.camera.zoom)/1.2);	
+				laserSound.volume = .5 * (1-(1-this.camera.zoom)/1.8);	
 			}
 		}
 	},
@@ -1182,7 +1182,10 @@ app.main = {
 	 	}
 
 		if(this.otherShips.length==0 && this.gameState==this.GAME_STATES.PLAYING)
+		{
 			this.gameState = this.GAME_STATES.WIN;
+			this.maxOtherShips*=2;
+		}
 		else if(this.gameState == this.GAME_STATES.PLAYING && this.ship.destructible.hp<=0)
 			this.gameState = this.GAME_STATES.LOSE;
 		else if(this.gameState == this.GAME_STATES.PLAYING || this.gameState==this.GAME_STATES.TUTORIAL){				
@@ -1250,7 +1253,7 @@ app.main = {
 		resetMouse();
 
 		if(this.thrusterSound && (this.gameState == this.GAME_STATES.PLAYING || this.gameState == this.GAME_STATES.TUTORIAL))
-			this.thrusterSound.volume = (this.paused)?0:this.ship.thrusters.noiseLevel*(1-(1-this.camera.zoom)/1.2);
+			this.thrusterSound.volume = (this.paused)?0:this.ship.thrusters.noiseLevel*(1-(1-this.camera.zoom)/1.8);
 
 		//because we might use the frame count for something at some point
 		this.frameCount++;
@@ -1345,7 +1348,10 @@ app.main = {
 		}
 		//this.fillText(ctx, "Thruster clamps: "+((this.ship.stabilizer.clamps.enabled)?'Medial '+Math.round(this.ship.stabilizer.clamps.medial)+' Lateral '+Math.round(this.ship.stabilizer.clamps.lateral)+' Rotational '+Math.round(this.ship.stabilizer.clamps.rotational):'disabled'),0,camera.height-10,"12pt Prime",'white')
 		ctx.textAlign = 'right';
-		this.fillText(ctx, "Overcharge: Thrusters "+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.THRUSTERS)*100)+'% Laser '+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.LASERS)*100)+'% Shields '+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.SHIELDS)*100)+'%',camera.width,camera.height-10,"10pt Orbitron",'white')
+		this.fillText(ctx,'T '+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.THRUSTERS)*100)+'%',camera.width-220,camera.height-10,"10pt Orbitron",'green');
+		this.fillText(ctx,' L '+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.LASERS)*100)+'%',camera.width-120,camera.height-10,"10pt Orbitron",'red');
+		this.fillText(ctx,' S '+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.SHIELDS)*100)+'%',camera.width-20,camera.height-10,"10pt Orbitron",'dodgerblue');
+		//this.fillText(ctx, "Overcharge: Thrusters "+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.THRUSTERS)*100)+'% Laser '+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.LASERS)*100)+'% Shields '+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.SHIELDS)*100)+'%',camera.width,camera.height-10,"10pt Orbitron",'white')
 		ctx.restore(); // NEW
 	},
 	drawMinimap:function(camera){
