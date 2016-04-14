@@ -25,12 +25,46 @@
 			src: url(Orbitron-Black.ttf);
 			font-weight:bold;
 		}
+		.font-loader
+		{
+			visibility: hidden;
+			position: absolute;
+		}
+
+		.font-loader .aroma-light
+		{
+			font-family: Aroma, Arial, Sans-serif;
+		}
+
+		.font-loader .aroma-bold
+		{
+			font-family: Aroma, Arial, Sans-serif;
+		}
+		.font-loader .prime
+		{
+			font-family: Prime, Arial, Sans-serif;
+		}
+		.font-loader .orbitron-light
+		{
+			font-family: Orbitron, Arial, Sans-serif;
+		}
+		.font-loader .orbitron-black
+		{
+			font-family: Orbitron, Arial, Sans-serif;
+		}
 		canvas{border:1px solid gray;}
 		audio{display:none;}
 	</style>
 	<title>Space Battle</title>
 </head>
 <body>
+	<span class="font-loader">
+		<span class="aroma-light"><!-- / --></span>
+		<span class="aroma-bold"><!-- / --></span>
+		<span class="prime"><!-- / --></span>
+		<span class="orbitron-light"><!-- / --></span>
+		<span class="orbitron-black"><!-- / --></span>
+	</span>
 	<canvas id="canvas1" width=1600 height=900>
 	</canvas>
 	<script src="https://code.createjs.com/soundjs-0.6.2.min.js"></script>

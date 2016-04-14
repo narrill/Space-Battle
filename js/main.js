@@ -1144,7 +1144,7 @@ app.main = {
 	frame:function(){
 		this.animationID = requestAnimationFrame(this.frame.bind(this));
 		var dt = this.calculateDeltaTime();
-		if(dt>2)
+		if(dt>this.timeStep*4)
 			dt = 0;
 		this.accumulator+=dt;
 		while(this.accumulator>=this.timeStep){
