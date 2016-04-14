@@ -305,8 +305,8 @@ app.main = {
 			color:(objectParams.color)?objectParams.color:getRandomBrightColor(),
 			currentPower:0,
 			coherence:(objectParams.coherence)?objectParams.coherence:.995,
-			maxPower:(objectParams.maxPower)?objectParams.maxPower:3000,
-			efficiency:(objectParams.efficiency)?objectParams.efficiency:100,
+			maxPower:(objectParams.maxPower)?objectParams.maxPower:6000,
+			efficiency:(objectParams.efficiency)?objectParams.efficiency:200,
 			spread:(objectParams.spread)?objectParams.spread:.8
 		};
 	},
@@ -982,7 +982,7 @@ app.main = {
 			}
 			if(obj)
 			{
-				obj.destructible.shield.current-=laser.power*dt;
+				obj.destructible.shield.current-=laser.power*dt*(1-tValOfObj);
 				if(obj.destructible.shield.current<0)
 				{
 					obj.destructible.hp+=obj.destructible.shield.current;

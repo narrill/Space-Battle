@@ -206,6 +206,21 @@ function distanceFromPointToLine(x, y, x1, y1, x2, y2) {
 	return [Math.sqrt(dx * dx + dy * dy),param];
 }
 
+function raySphereIntersect(s,e,c,r){
+	var l = [c[0]-s[0],c[1]-s[1]];
+	var startToEnd = [e[0]-s[0],e[1]-s[1]];
+	var magnitude = Math.sqrt(startToEnd[0]*startToEnd[0]+startToEnd[1]*startToEnd[1]);
+	var direction = [startToEnd[0]/magnitude,startToEnd[1]/magnitude];
+	var tca = l[0]*direction[0]+l[1]*direction[1];
+	if(tca<0)
+		return false;
+	var d = Math.sqrt((l[0]*l[0]+l[1]*l[1]) - (tca*tca));
+	if(d<0)
+		return false;
+	var thc = Math.sqrt(r*r - d*d);
+	return tca-thc;
+}
+
 //http://stackoverflow.com/questions/9614109/how-to-calculate-an-angle-from-points
 function angle(cx, cy, ex, ey) {
 	var dy = ey - cy;
