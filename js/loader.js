@@ -20,7 +20,7 @@ window.onload = function(){
 		{id:"bgm",src:"space rudder.mp3"}
 		//{id:"thruster",src:"thruster.mp3"}
 	];
-	var thrusterSound = {id:"thruster",src:"thruster.mp3"};
+	var thrusterSound = [{id:"thruster",src:"thruster.mp3"}];
 	app.main.sounds = {
 		laser:{id:'laser',loaded:false},
 		thruster:{id:'thruster',loaded:false},
@@ -29,7 +29,7 @@ window.onload = function(){
 	createjs.Sound.alternateExtensions = ["mp3"];
 	createjs.Sound.addEventListener("fileload",handleLoad);
 	createjs.Sound.registerSounds(sounds,audioPath,1);
-	createjs.Sound.registerSounds(thrusterSound,audioPath,3);
+	createjs.Sound.registerSounds(thrusterSound,audioPath,1);
 	app.main.init();
 	pointerInit();
 }
@@ -37,6 +37,11 @@ window.onload = function(){
 function handleLoad(event){
 	if(event.id==app.main.sounds.bgm.id)
 		createjs.Sound.play(event.src,{loop:-1});
+	else if(event.id==app.main.sounds.thruster.id)
+	{
+		app.main.thrusterSound = createjs.Sound.play(event.src,{loop:-1});
+		app.main.thrusterSound.volume = 0;
+	}
 	app.main.sounds[event.id].loaded = true;
 }
 

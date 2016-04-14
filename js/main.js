@@ -21,7 +21,7 @@ app.main = {
 	accumulator:0,
 	timeStep:.004,
 	drawStarField:true,
-	isoAngle:0,
+	thrusterSound:undefined,
 	thrusterDetail:2,
 	laserDetail:3,
 	gameState:0,
@@ -241,6 +241,7 @@ app.main = {
 			objectParams = {};
 		return {
 			color:(objectParams.color)? objectParams.color: getRandomBrightColor(),
+			noiseLevel:0,
 			medial:this.createComponentThruster((objectParams.medial)?objectParams.medial:{
 				maxStrength:3000,
 				efficiency:1000
@@ -806,6 +807,11 @@ app.main = {
 		ship.destructible.shield.current*=(1+shieldPower);
 		ship.destructible.shield.max*=(1+shieldPower);
 		ship.destructible.shield.recharge*=(1+shieldPower);
+
+		//thruster percentage for the sound effect
+		var thrusterTotal = Math.abs(ship.thrusters.medial.currentStrength)+Math.abs(ship.thrusters.lateral.currentStrength)+Math.abs(ship.thrusters.rotational.currentStrength);
+		var thrusterEfficiencyTotal = ship.thrusters.medial.efficiency+ship.thrusters.lateral.efficiency+ship.thrusters.rotational.efficiency;
+		ship.thrusters.noiseLevel = (thrusterTotal/thrusterEfficiencyTotal);
 	},
 	//clears the active thruster values
 	shipClearThrusters:function(ship){
@@ -867,7 +873,7 @@ app.main = {
 			if(this.sounds.laser.loaded)
 			{
 				var laserSound = createjs.Sound.play(this.sounds.laser.id,{interrupt: createjs.Sound.INTERRUPT_ANY});
-				laserSound.volume = .5;	
+				laserSound.volume = .5 * (1-(1-this.camera.zoom)/1.2);	
 			}
 		}
 	},
@@ -1156,9 +1162,6 @@ app.main = {
 	},
 	//the game loop
 	update: function(dt){
-	 	//var dt = this.calculateDeltaTime(); //delta for physics		
-	 	//if(this.paused)
-	 	//	return;
 	 	//clear values
 		this.clearLasers(this.lasers);
 		for(var c =-1;c<this.otherShips.length;c++){
@@ -1246,8 +1249,8 @@ app.main = {
 		//this needs to be done
 		resetMouse();
 
-		
-		
+		if(this.thrusterSound && (this.gameState == this.GAME_STATES.PLAYING || this.gameState == this.GAME_STATES.TUTORIAL))
+			this.thrusterSound.volume = (this.paused)?0:this.ship.thrusters.noiseLevel*(1-(1-this.camera.zoom)/1.2);
 
 		//because we might use the frame count for something at some point
 		this.frameCount++;
