@@ -22,6 +22,7 @@ app.main = {
 	timeStep:.004,
 	drawStarField:true,
 	thrusterSound:undefined,
+	soundLevel:2.5,
 	thrusterDetail:2,
 	laserDetail:3,
 	gameState:0,
@@ -873,7 +874,7 @@ app.main = {
 			if(this.sounds.laser.loaded)
 			{
 				var laserSound = createjs.Sound.play(this.sounds.laser.id,{interrupt: createjs.Sound.INTERRUPT_ANY});
-				laserSound.volume = .5 * (1-(1-this.camera.zoom)/1.8);	
+				laserSound.volume = .5 * (1-(1-this.camera.zoom)/this.soundLevel);	
 			}
 		}
 	},
@@ -1253,7 +1254,7 @@ app.main = {
 		resetMouse();
 
 		if(this.thrusterSound && (this.gameState == this.GAME_STATES.PLAYING || this.gameState == this.GAME_STATES.TUTORIAL))
-			this.thrusterSound.volume = (this.paused)?0:this.ship.thrusters.noiseLevel*(1-(1-this.camera.zoom)/1.8);
+			this.thrusterSound.volume = (this.paused)?0:this.ship.thrusters.noiseLevel*2*(1-(1-this.camera.zoom)/this.soundLevel);
 
 		//because we might use the frame count for something at some point
 		this.frameCount++;
