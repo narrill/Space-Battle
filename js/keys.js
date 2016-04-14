@@ -110,12 +110,12 @@ function requestLock(){
 }
 
 function mouseDown(e){
-	console.log(e.button);
+	//console.log(e.button);
 	myMouse.mousedown[e.button] = true;
 }
 
 function mouseUp(e){
-	console.log('up');
+	//console.log('up');
 	myMouse.mousedown[e.button] = false;
 }
 
@@ -153,7 +153,7 @@ function changeCallback(){
 	}
 }
 function moveCallback(e){
-	console.log('move');
+	//console.log('move');
 	var movementX = e.movementX ||
 		e.mozMovementX          ||
 		0;

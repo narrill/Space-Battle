@@ -19,7 +19,8 @@ app.main = {
 	canvas: undefined,
 	minimapCanvas: undefined,
 	accumulator:0,
-	timeStep:.004,
+	timeStep:.005,
+	updatesPerDraw:0,
 	drawStarField:true,
 	thrusterSound:undefined,
 	soundLevel:2.5,
@@ -124,14 +125,6 @@ app.main = {
 		//debugger;
 		// initialize properties
 		var canvas = this.canvas = document.querySelector('#canvas1');
-		//minimapCanvas.style.visibility = 'hidden';
-		//canvas.onmousedown = this.doMousedown.bind(this);
-		//var canvas2 = document.querySelector('#canvas2');
-		//canvas2.onmousedown = this.doMousedown.bind(this);
-		
-		
-
-		//this.makeAsteroids.bind(this, this.asteroids, this.grid)();
 		this.generateStarField.bind(this, this.stars)();
 		this.ship = this.createShip({},this.grid);
 		this.camera = this.createCamera(canvas,{x:this.ship.x,y:this.ship.y,rotation:this.ship.rotation,zoom:.5,minZoom:.025,maxZoom:5});
@@ -139,18 +132,13 @@ app.main = {
 		this.starCamera = this.createCamera(canvas);
 		this.gridCamera = this.createCamera(canvas);
 		this.minimapCamera = this.createCamera(canvas,{x:this.grid.gridStart[0]+this.grid.gridLines*this.grid.gridSpacing/2,y:this.grid.gridStart[1]+this.grid.gridLines*this.grid.gridSpacing/2,zoom:.001,viewport:{startX:.83,startY:.7,endX:1,endY:1}});
-		/*for(var c = 0;c<this.otherShipCount;c++)
-		{
-			this.otherShips.push(this.createShip({},this.grid));
-			this.otherShips[c].ai = this.createComponentShipAI();
-		}*/
 
 		// start the game loop
 		
 		this.lastTime = Date.now();
 		this.animationID = requestAnimationFrame(this.frame.bind(this));
-		//this.frame.bind(this)();
 	},
+	//resets the game state
 	resetGame:function(){
 		this.ship = {};
 		this.ship = this.createShip({},this.grid);
@@ -189,10 +177,7 @@ app.main = {
 		ctx.fillRect(0,0,camera.width,camera.height);
 		ctx.fill();
 	},
-	reset:function(){
-	},
-	doMousedown: function(e){
-	},
+	//constructor for ship objects
 	createShip:function(objectParams, grid){
 		var lower = [grid.gridStart[0],grid.gridStart[1]];
 		var upper = [lower[0]+grid.gridLines*grid.gridSpacing,lower[1]+grid.gridLines*grid.gridSpacing];
@@ -230,13 +215,7 @@ app.main = {
 			laser:this.createComponentLaser((objectParams.laser))
 		};
 	},
-	createComponentPoints:function(objectParams){
-		if(!objectParams)
-			objectParams = {};
-		return {
-			points:(objectParams.points)?objectParams.points:0
-		};
-	},
+	//constructor for the thruster system component
 	createComponentThrusterSystem:function(objectParams){
 		if(!objectParams)
 			objectParams = {};
@@ -257,6 +236,7 @@ app.main = {
 			})
 		};
 	},
+	//constructor for the thruster component
 	createComponentThruster:function(objectParams){
 		if(!objectParams)
 			objectParams = {};
@@ -268,6 +248,7 @@ app.main = {
 			powerRampPercentage: (objectParams.powerRampPercentage)? objectParams.powerRampPercentage: 20
 		};
 	},
+	//constructor for the power system component
 	createComponentPowerSystem:function(objectParams){
 		if(!objectParams)
 			objectParams = {};
@@ -277,6 +258,7 @@ app.main = {
 			transferRate:6
 		};
 	},
+	//constructor for the stabilizer component
 	createComponentStabilizer:function(objectParams){
 		if(!objectParams)
 			objectParams = {};
@@ -287,6 +269,7 @@ app.main = {
 			clamps: this.createComponentStabilizerClamps(objectParams.clamps)
 		};
 	},
+	//constructor for the stabilizer clamps sub-component
 	createComponentStabilizerClamps:function(objectParams){
 		if(!objectParams)
 			objectParams = {};
@@ -297,6 +280,7 @@ app.main = {
 			rotational:(objectParams.rotational)?objectParams.rotational:90
 		};
 	},
+	//constructor for the laser component
 	createComponentLaser:function(objectParams){
 		if(!objectParams)
 			objectParams = {};
@@ -312,6 +296,7 @@ app.main = {
 			spread:(objectParams.spread)?objectParams.spread:.8
 		};
 	},
+	//constructor for the destructible component - stores hp, shields, and collider radius
 	createComponentDestructible:function(objectParams){
 		if(!objectParams)
 			objectParams = {};
@@ -320,9 +305,9 @@ app.main = {
 			maxHp: (objectParams.hp)?objectParams.hp:500,
 			radius:(objectParams.radius)?objectParams.radius:500,
 			shield:this.createComponentDestructibleShield(objectParams.shield),
-			points:(objectParams.points)?objectParams.points:0
 		};
 	},
+	//constructor for the shield sub-component
 	createComponentDestructibleShield:function(objectParams){
 		if(!objectParams)
 			objectParams = {};
@@ -333,6 +318,7 @@ app.main = {
 			recharge:(objectParams.recharge)?objectParams.recharge:0
 		};
 	},
+	//constructor for the AI component
 	createComponentShipAI:function(objectParams){
 		if(!objectParams)
 			objectParams = {};
@@ -1152,7 +1138,7 @@ app.main = {
 		this.animationID = requestAnimationFrame(this.frame.bind(this));
 		var dt = this.calculateDeltaTime();
 		if(dt>this.timeStep*4)
-			dt = 0;
+			dt = this.timeStep;
 		this.accumulator+=dt;
 		while(this.accumulator>=this.timeStep){
 			if(!((this.gameState == this.GAME_STATES.PLAYING || this.gameState == this.GAME_STATES.TUTORIAL) && this.paused))
@@ -1198,6 +1184,10 @@ app.main = {
 			this.shipKeyboardControl(this.ship,dt);
 
 		 	//camera zoom controls
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_UP] && this.camera.zoom<=this.camera.maxZoom)
+				this.camera.zoom*=1.05;
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_DOWN] && this.camera.zoom>=this.camera.minZoom)
+				this.camera.zoom*=.95;
 			if(myMouse.wheel)
 				this.camera.zoom*=1+(myMouse.wheel/500);
 			if(this.camera.zoom>this.camera.maxZoom)
@@ -1456,7 +1446,7 @@ app.main = {
 		this.fillText(ctx,"C toggles the velocity limiter",camera.width/10,8*camera.height/12,"10pt Orbitron",'white');
 		this.fillText(ctx,"TAB switches between assisted and manual controls",camera.width/10,9*camera.height/12,"10pt Orbitron",'white');
 		this.fillText(ctx,"P pauses, F turns off the star-field graphics (they can be a resource hog)",camera.width/10,10*camera.height/12,"10pt Orbitron",'white');
-		this.fillText(ctx,"Play around for a bit, then press ENTER to start the game",camera.width/10,11*camera.height/12,"10pt Orbitron",'white');
+		this.fillText(ctx,"Play around for a bit, then press ENTER to start the game. Your goal is to destroy all enemy ships",camera.width/10,11*camera.height/12,"10pt Orbitron",'white');
 		this.fill
 	},
 	pauseGame:function(){
