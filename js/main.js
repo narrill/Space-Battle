@@ -740,7 +740,7 @@ app.main = {
 		if(ship.laser.currentPower>0){
 			var laserVector = [0,-ship.laser.range];
 			laserVector = rotate(0,0,laserVector[0],laserVector[1],-ship.rotation+Math.random()*ship.laser.spread-ship.laser.spread/2);
-			this.createLaser(this.lasers,ship.x+normalizedForwardVector[0]*30,ship.y+normalizedForwardVector[1]*30,ship.x+laserVector[0],ship.y+laserVector[1],ship.laser.color,ship.laser.currentPower, ship.laser.efficiency);
+			this.createLaser(this.lasers,ship.x+normalizedForwardVector[0]*(30),ship.y+normalizedForwardVector[1]*30,ship.x+laserVector[0],ship.y+laserVector[1],ship.laser.color,ship.laser.currentPower, ship.laser.efficiency);
 			ship.laser.currentPower-=ship.laser.maxPower*(1-ship.laser.coherence)*dt*1000;
 		}
 		else if(ship.laser.currentPower<0)
@@ -1172,9 +1172,13 @@ app.main = {
 		{
 			this.gameState = this.GAME_STATES.WIN;
 			this.maxOtherShips*=2;
+			this.thrusterSound.volume = 0;
 		}
 		else if(this.gameState == this.GAME_STATES.PLAYING && this.ship.destructible.hp<=0)
+		{
 			this.gameState = this.GAME_STATES.LOSE;
+			this.thrusterSound.volume = 0;
+		}
 		else if(this.gameState == this.GAME_STATES.PLAYING || this.gameState==this.GAME_STATES.TUTORIAL){				
 
 			this.otherShips.forEach(function(ship){
