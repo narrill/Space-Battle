@@ -759,13 +759,12 @@ app.main = {
 				ship.rotation+=360;
 
 		//create laser objects
-			if(ship.laser.currentPower>0){
-				var laserVector = [0,-ship.laser.range];
-				laserVector = rotate(0,0,laserVector[0],laserVector[1],-ship.rotation+Math.random()*ship.laser.spread-ship.laser.spread/2);
-				this.createLaser(this.lasers,ship.x+normalizedForwardVector[0]*(30),ship.y+normalizedForwardVector[1]*30,ship.x+laserVector[0],ship.y+laserVector[1],ship.laser.color,ship.laser.currentPower, ship.laser.efficiency);
-				ship.laser.currentPower-=ship.laser.maxPower*(1-ship.laser.coherence)*dt*1000;
-			}
-			else if(ship.laser.currentPower<0)
+			var laserVector = [0,-ship.laser.range];
+			laserVector = rotate(0,0,laserVector[0],laserVector[1],-ship.rotation+Math.random()*ship.laser.spread-ship.laser.spread/2);
+			ship.laser.previousLaser = this.createLaser(this.lasers,ship.x+normalizedForwardVector[0]*(30),ship.y+normalizedForwardVector[1]*30,ship.x+laserVector[0],ship.y+laserVector[1],ship.laser.color,ship.laser.currentPower, ship.laser.efficiency, ship.laser.previousLaser);
+			ship.laser.previousLaser.previousLaser = null; //avoiding a memory leak - without this the lasers will chain backwards in time continuously
+			ship.laser.currentPower-=ship.laser.maxPower*(1-ship.laser.coherence)*dt*1000;
+			if(ship.laser.currentPower<0)
 				ship.laser.currentPower=0;
 
 		//refresh shields
@@ -953,16 +952,19 @@ app.main = {
 			if(myKeys.keydown[myKeys.KEYBOARD.KEY_ALT])
 				ship.powerSystem.target[this.SHIP_COMPONENTS.SHIELDS] = 1;
 	},
-	createLaser:function(lasers, startX,startY,endX,endY,color, power,efficiency){
-		lasers.push({
+	createLaser:function(lasers, startX,startY,endX,endY,color, power,efficiency, previousLaser){
+		var lsr = {
 			startX:startX,
 			startY:startY,
 			endX:endX,
 			endY:endY,
 			color:color,
 			power:power,
-			efficiency:efficiency
-		});
+			efficiency:efficiency,
+			previousLaser:previousLaser
+		};
+		lasers.push(lsr);
+		return lsr;
 	},
 	clearLasers:function(lasers){
 		lasers.length=0;
@@ -1040,6 +1042,8 @@ app.main = {
 	drawLasers:function(lasers,camera){
 		var ctx = camera.ctx;
 		lasers.forEach(function(laser){
+			if(laser.power == 0)
+				return;
 			var start = worldPointToCameraSpace(laser.startX,laser.startY,camera);
 			var end = worldPointToCameraSpace(laser.endX,laser.endY,camera);
 			var angle = angleBetweenVectors(end[0]-start[0],end[1]-start[1],1,0);
