@@ -107,8 +107,8 @@ app.main = {
 	asteroids:{
 		total:60,
 		colors:[
-			'#654321',
-			'sienna'
+			'#6B2A06'//,
+			//'sienna'
 		],
 		objs:[]
 	},
@@ -122,21 +122,19 @@ app.main = {
 	baseStarCameraZoom:.0001,
     // methods
 	init : function() {
-		//debugger;
 		// initialize properties
-		var canvas = this.canvas = document.querySelector('#canvas1');
-		this.generateStarField.bind(this, this.stars)();
-		this.ship = this.createShip({},this.grid);
-		this.camera = this.createCamera(canvas,{x:this.ship.x,y:this.ship.y,rotation:this.ship.rotation,zoom:.5,minZoom:.025,maxZoom:5});
-		this.camera.globalCompositeOperation = 'hard-light';
-		this.starCamera = this.createCamera(canvas);
-		this.gridCamera = this.createCamera(canvas);
-		this.minimapCamera = this.createCamera(canvas,{x:this.grid.gridStart[0]+this.grid.gridLines*this.grid.gridSpacing/2,y:this.grid.gridStart[1]+this.grid.gridLines*this.grid.gridSpacing/2,zoom:.001,viewport:{startX:.83,startY:.7,endX:1,endY:1}});
+			var canvas = this.canvas = document.querySelector('#canvas1');
+			this.generateStarField.bind(this, this.stars)();
+			this.ship = this.createShip({},this.grid);
+			this.camera = this.createCamera(canvas,{x:this.ship.x,y:this.ship.y,rotation:this.ship.rotation,zoom:.5,minZoom:.025,maxZoom:5});
+			this.camera.globalCompositeOperation = 'hard-light';
+			this.starCamera = this.createCamera(canvas);
+			this.gridCamera = this.createCamera(canvas);
+			this.minimapCamera = this.createCamera(canvas,{x:this.grid.gridStart[0]+this.grid.gridLines*this.grid.gridSpacing/2,y:this.grid.gridStart[1]+this.grid.gridLines*this.grid.gridSpacing/2,zoom:.001,viewport:{startX:.83,startY:.7,endX:1,endY:1}});
 
-		// start the game loop
-		
-		this.lastTime = Date.now();
-		this.animationID = requestAnimationFrame(this.frame.bind(this));
+		// start the game loop		
+			this.lastTime = Date.now();
+			this.animationID = requestAnimationFrame(this.frame.bind(this));
 	},
 	//resets the game state
 	resetGame:function(){
@@ -152,6 +150,16 @@ app.main = {
 		}
 		this.gameState = this.GAME_STATES.PLAYING;
 		this.frameCount = 0;
+	},
+	//returns a random position within the given grid
+	randomGridPosition:function(grid){
+		var lower = [grid.gridStart[0],grid.gridStart[1]];
+		var upper = [lower[0]+grid.gridLines*grid.gridSpacing,lower[1]+grid.gridLines*grid.gridSpacing];
+		return {
+			//position/rotation
+			x: Math.random() * (upper[0] - lower[0]) + lower[0],
+			y: Math.random() * (upper[1] - lower[1]) + lower[1]
+		};
 	},
 	//returns a camera object with the given values and the context from the given canvas
 	createCamera:function(canvas, objectParams){
@@ -179,12 +187,11 @@ app.main = {
 	},
 	//constructor for ship objects
 	createShip:function(objectParams, grid){
-		var lower = [grid.gridStart[0],grid.gridStart[1]];
-		var upper = [lower[0]+grid.gridLines*grid.gridSpacing,lower[1]+grid.gridLines*grid.gridSpacing];
+		var gridPosition = this.randomGridPosition(grid);
 		return {
 			//position/rotation
-			x:(objectParams.x)?objectParams.x : Math.random()*(upper[0]-lower[0])+lower[0],
-			y:(objectParams.x)?objectParams.y : Math.random()*(upper[1]-lower[1])+lower[1],
+			x:(objectParams.x)?objectParams.x : gridPosition.x,
+			y:(objectParams.x)?objectParams.y : gridPosition.y,
 			rotation:(objectParams.rotation)?objectParams.rotation : 0,
 			//velocities
 			velocityX:0, //in absolute form, used for movement
@@ -245,7 +252,8 @@ app.main = {
 			targetStrength:0,
 			maxStrength: (objectParams.maxStrength)?objectParams.maxStrength:1000,
 			efficiency: (objectParams.efficiency) ? objectParams.efficiency:1000,
-			powerRampPercentage: (objectParams.powerRampPercentage)? objectParams.powerRampPercentage: 20
+			powerRampPercentage: (objectParams.powerRampPercentage)? objectParams.powerRampPercentage: 20,
+			powerRampLimit: (objectParams.powerRampLimit) ? objectParams.powerRampLimit : 6000
 		};
 	},
 	//constructor for the power system component
@@ -266,6 +274,7 @@ app.main = {
 			enabled: (objectParams.enabled)? objectParams.enabled:true,
 			strength: (objectParams.strength)? objectParams.strength:1200,
 			thrustRatio: (objectParams.thrustRatio)?objectParams.thrustRatio:1.5,
+			precision: (objectParams.precision) ? objectParams.precision : 30,
 			clamps: this.createComponentStabilizerClamps(objectParams.clamps)
 		};
 	},
@@ -543,262 +552,275 @@ app.main = {
 
 		ctx.translate(0,7);
 
-		//main thrusters
-		//forward thrust
-		for(var c = 0;c<=this.thrusterDetail;c++){
-			ctx.fillStyle = shadeRGBColor(ship.thrusters.color,.5*c);
-			ctx.save();
-			ctx.beginPath();
-			if(ship.thrusters.medial.currentStrength>0){
-				//ctx.save();				
-				//ctx.fillStyle = ship.thrusterColor;
-				
-				ctx.moveTo(-15,5);
-				ctx.lineTo(-10,5);
-				ctx.lineTo(-12.5,5+40*(ship.thrusters.medial.currentStrength/ship.thrusters.medial.efficiency)*(1-(c/(this.thrusterDetail+1)))); //furthest point goes outward with thruster strength and scales inward with efficiency
-				ctx.lineTo(-15,5);
-				ctx.moveTo(15,5);
-				ctx.lineTo(10,5);
-				ctx.lineTo(12.5,5+40*(ship.thrusters.medial.currentStrength/ship.thrusters.medial.efficiency)*(1-(c/(this.thrusterDetail+1))));
-				ctx.lineTo(15,5);
-				//ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
-				//ctx.fill();
-				//ctx.restore();
-			}
-			//backward thrust
-			else if(ship.thrusters.medial.currentStrength<0){
-				//ctx.save();				
-				//ctx.beginPath();
-				ctx.moveTo(-15,0);
-				ctx.lineTo(-10,0);
-				ctx.lineTo(-12.5,40*(ship.thrusters.medial.currentStrength/ship.thrusters.medial.efficiency)*(1-(c/(this.thrusterDetail+1))));
-				ctx.lineTo(-15,0);
-				ctx.moveTo(15,0);
-				ctx.lineTo(10,0);
-				ctx.lineTo(12.5,40*(ship.thrusters.medial.currentStrength/ship.thrusters.medial.efficiency)*(1-(c/(this.thrusterDetail+1))));
-				ctx.lineTo(15,0);
-				//ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
-				//ctx.fill();
-				//ctx.restore();
-			}	
+		//Thrusters
+			//forward thrust
+			for(var c = 0;c<=this.thrusterDetail;c++){
+				ctx.fillStyle = shadeRGBColor(ship.thrusters.color,.5*c);
+				ctx.save();
+				ctx.beginPath();
 
-			//rotational thrusters	
-			//ccw
-			if(ship.thrusters.rotational.currentStrength>0){
-				//ctx.save();				
-				//ctx.beginPath();
-				ctx.moveTo(5,-10);
-				ctx.lineTo(5,-15);
-				ctx.lineTo(5+40*(ship.thrusters.rotational.currentStrength/ship.thrusters.rotational.efficiency)*(1-(c/(this.thrusterDetail+1))),-12.5);
-				ctx.lineTo(5,-10);
-				//ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
-				//ctx.fill();
-				//ctx.restore();
-			}
-			//cw
-			else if(ship.thrusters.rotational.currentStrength<0){
-				//ctx.save();				
-				//ctx.beginPath();
-				ctx.moveTo(-5,-10);
-				ctx.lineTo(-5,-15);
-				ctx.lineTo(-5+40*(ship.thrusters.rotational.currentStrength/ship.thrusters.rotational.efficiency)*(1-(c/(this.thrusterDetail+1))),-12.5);
-				ctx.lineTo(-5,-10);
-				//ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
-				//ctx.fill();
-				//ctx.restore();
-			}
+				//Medial Thrusters
+					//forward
+						if(ship.thrusters.medial.currentStrength>0){
+							//ctx.save();				
+							//ctx.fillStyle = ship.thrusterColor;
+							
+							ctx.moveTo(-15,5);
+							ctx.lineTo(-10,5);
+							ctx.lineTo(-12.5,5+40*(ship.thrusters.medial.currentStrength/ship.thrusters.medial.efficiency)*(1-(c/(this.thrusterDetail+1)))); //furthest point goes outward with thruster strength and scales inward with efficiency
+							ctx.lineTo(-15,5);
+							ctx.moveTo(15,5);
+							ctx.lineTo(10,5);
+							ctx.lineTo(12.5,5+40*(ship.thrusters.medial.currentStrength/ship.thrusters.medial.efficiency)*(1-(c/(this.thrusterDetail+1))));
+							ctx.lineTo(15,5);
+							//ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
+							//ctx.fill();
+							//ctx.restore();
+						}
+					//backward
+						else if(ship.thrusters.medial.currentStrength<0){
+							//ctx.save();				
+							//ctx.beginPath();
+							ctx.moveTo(-15,0);
+							ctx.lineTo(-10,0);
+							ctx.lineTo(-12.5,40*(ship.thrusters.medial.currentStrength/ship.thrusters.medial.efficiency)*(1-(c/(this.thrusterDetail+1))));
+							ctx.lineTo(-15,0);
+							ctx.moveTo(15,0);
+							ctx.lineTo(10,0);
+							ctx.lineTo(12.5,40*(ship.thrusters.medial.currentStrength/ship.thrusters.medial.efficiency)*(1-(c/(this.thrusterDetail+1))));
+							ctx.lineTo(15,0);
+							//ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
+							//ctx.fill();
+							//ctx.restore();
+						}	
 
-			//lateral thrusters
-			//rightward
-			if(ship.thrusters.lateral.currentStrength>0){
-				//ctx.save();				
-				//ctx.beginPath();
-				ctx.moveTo(-10,0);
-				ctx.lineTo(-10,-5);
-				ctx.lineTo(-10-40*(ship.thrusters.lateral.currentStrength/ship.thrusters.lateral.efficiency)*(1-(c/(this.thrusterDetail+1))),-2.5);
-				ctx.lineTo(-10,0);
-				//ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
-				//ctx.fill();
-				//ctx.restore();
+				//rotational thrusters	
+					//ccw
+						if(ship.thrusters.rotational.currentStrength>0){
+							//ctx.save();				
+							//ctx.beginPath();
+							ctx.moveTo(5,-10);
+							ctx.lineTo(5,-15);
+							ctx.lineTo(5+40*(ship.thrusters.rotational.currentStrength/ship.thrusters.rotational.efficiency)*(1-(c/(this.thrusterDetail+1))),-12.5);
+							ctx.lineTo(5,-10);
+							//ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
+							//ctx.fill();
+							//ctx.restore();
+						}
+					//cw
+						else if(ship.thrusters.rotational.currentStrength<0){
+							//ctx.save();				
+							//ctx.beginPath();
+							ctx.moveTo(-5,-10);
+							ctx.lineTo(-5,-15);
+							ctx.lineTo(-5+40*(ship.thrusters.rotational.currentStrength/ship.thrusters.rotational.efficiency)*(1-(c/(this.thrusterDetail+1))),-12.5);
+							ctx.lineTo(-5,-10);
+							//ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
+							//ctx.fill();
+							//ctx.restore();
+						}
+
+				//lateral thrusters
+					//rightward
+						if(ship.thrusters.lateral.currentStrength>0){
+							//ctx.save();				
+							//ctx.beginPath();
+							ctx.moveTo(-10,0);
+							ctx.lineTo(-10,-5);
+							ctx.lineTo(-10-40*(ship.thrusters.lateral.currentStrength/ship.thrusters.lateral.efficiency)*(1-(c/(this.thrusterDetail+1))),-2.5);
+							ctx.lineTo(-10,0);
+							//ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
+							//ctx.fill();
+							//ctx.restore();
+						}
+					//leftward
+						else if(ship.thrusters.lateral.currentStrength<-0.01){
+							//ctx.save();				
+							//ctx.beginPath();
+							ctx.moveTo(10,0);
+							ctx.lineTo(10,-5);
+							ctx.lineTo(10-40*(ship.thrusters.lateral.currentStrength/ship.thrusters.lateral.efficiency)*(1-(c/(this.thrusterDetail+1))),-2.5);
+							ctx.lineTo(10,0);
+							//ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
+							//ctx.fill();
+							//ctx.restore();
+						}
+
+				ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
+				ctx.fill();
+				ctx.restore();
 			}
-			//leftward
-			else if(ship.thrusters.lateral.currentStrength<-0.01){
-				//ctx.save();				
-				//ctx.beginPath();
-				ctx.moveTo(10,0);
-				ctx.lineTo(10,-5);
-				ctx.lineTo(10-40*(ship.thrusters.lateral.currentStrength/ship.thrusters.lateral.efficiency)*(1-(c/(this.thrusterDetail+1))),-2.5);
-				ctx.lineTo(10,0);
-				//ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
-				//ctx.fill();
-				//ctx.restore();
-			}
-			ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
-			ctx.fill();
-			ctx.restore();
-		}
 
 		//shields
-		var shieldCoeff = (ship.destructible.shield.max/ship.destructible.shield.efficiency);
-		ctx.save();
-		ctx.fillStyle = 'dodgerblue';
-		ctx.beginPath();
-		//ctx.arc(0,-5,30,0,Math.PI*2);
-		ctx.moveTo(-20-1*shieldCoeff,10+1*shieldCoeff);
-		ctx.lineTo(0,0+.5*shieldCoeff);
-		ctx.lineTo(20+1*shieldCoeff,10+1*shieldCoeff);
-		ctx.lineTo(0,-30-1.2*shieldCoeff);
-		ctx.globalAlpha = ship.destructible.shield.current/ship.destructible.shield.max;
-		ctx.fill();
-		ctx.restore();
+			var shieldCoeff = (ship.destructible.shield.max/ship.destructible.shield.efficiency);
+			ctx.save();
+			ctx.fillStyle = 'dodgerblue';
+			ctx.beginPath();
+			//ctx.arc(0,-5,30,0,Math.PI*2);
+			ctx.moveTo(-20-1*shieldCoeff,10+1*shieldCoeff);
+			ctx.lineTo(0,0+.5*shieldCoeff);
+			ctx.lineTo(20+1*shieldCoeff,10+1*shieldCoeff);
+			ctx.lineTo(0,-30-1.2*shieldCoeff);
+			ctx.globalAlpha = ship.destructible.shield.current/ship.destructible.shield.max;
+			ctx.fill();
+			ctx.restore();
 
 		//the rest of the ship
-		ctx.beginPath();
-		ctx.moveTo(-20,10);
-		ctx.lineTo(0,0);
-		ctx.lineTo(20,10);
-		ctx.lineTo(0,-30);
-		ctx.closePath();
-		ctx.fillStyle = ship.color;
-		ctx.fill();
-		ctx.restore();
+			ctx.beginPath();
+			ctx.moveTo(-20,10);
+			ctx.lineTo(0,0);
+			ctx.lineTo(20,10);
+			ctx.lineTo(0,-30);
+			ctx.closePath();
+			ctx.fillStyle = ship.color;
+			ctx.fill();
+			ctx.restore();
 	},
 	updateShip: function(ship,dt){
 		//initialize acceleration values
-		var accelerationX = 0;
-		var accelerationY = 0;
-		var rotationalAcceleration = 0;
+			var accelerationX = 0;
+			var accelerationY = 0;
+			var rotationalAcceleration = 0;
 
-		var normalizedForwardVector = rotate(0,0,0,-1,-ship.rotation);
-		var normalizedRightVector = rotate(0,0,0,-1,-ship.rotation-90);
-		ship.forwardVectorX = normalizedForwardVector[0],
-		ship.forwardVectorY = normalizedForwardVector[1];
-		ship.rightVectorX = normalizedRightVector[0];
-		ship.rightVectorY = normalizedRightVector[1];
+			var normalizedForwardVector = rotate(0,0,0,-1,-ship.rotation);
+			var normalizedRightVector = rotate(0,0,0,-1,-ship.rotation-90);
+			ship.forwardVectorX = normalizedForwardVector[0],
+			ship.forwardVectorY = normalizedForwardVector[1];
+			ship.rightVectorX = normalizedRightVector[0];
+			ship.rightVectorY = normalizedRightVector[1];
 
 		//add acceleration from each thruster
-		//medial
-		var strength = ship.thrusters.medial.targetStrength;
+			//medial
+				var strength = ship.thrusters.medial.targetStrength;
 
-		//clamp target strength to the thruster's max
-		var maxStrength = ship.thrusters.medial.maxStrength;
-		strength = clamp(-maxStrength,strength,maxStrength);
-		//lerp current thruster strength to target strength at the power ramp rate, then set current strength and the target strength to the lerped value
-		strength = ship.thrusters.medial.currentStrength = lerp(ship.thrusters.medial.currentStrength,strength,ship.thrusters.medial.powerRampPercentage*dt); //for the lolz
-		strength = clamp(-maxStrength,strength,maxStrength); //this is in case of really low dt values
+				//clamp target strength to the thruster's max
+					var maxStrength = ship.thrusters.medial.maxStrength;
+					strength = clamp(-maxStrength,strength,maxStrength);
+				//lerp current thruster strength to target strength at the power ramp rate, then set current strength and the target strength to the lerped value
+					var thrusterDelta = lerp(ship.thrusters.medial.currentStrength,strength,ship.thrusters.medial.powerRampPercentage*dt) - ship.thrusters.medial.currentStrength;
+					if(thrusterDelta * ship.thrusters.medial.currentStrength > 0)
+						thrusterDelta = clamp(-ship.thrusters.medial.powerRampLimit * dt, thrusterDelta, ship.thrusters.medial.powerRampLimit * dt);
+					strength = ship.thrusters.medial.currentStrength = ship.thrusters.medial.currentStrength + thrusterDelta;
+					strength = clamp(-maxStrength,strength,maxStrength); //this is in case of really low dt values
 
-		//add forward vector times strength to acceleration
-		accelerationX += normalizedForwardVector[0]*strength;
-		accelerationY += normalizedForwardVector[1]*strength;
+				//add forward vector times strength to acceleration
+					accelerationX += normalizedForwardVector[0]*strength;
+					accelerationY += normalizedForwardVector[1]*strength;
 
-		//lateral
-		var strength = ship.thrusters.lateral.targetStrength;
+			//lateral
+				var strength = ship.thrusters.lateral.targetStrength;
 
-		//clamp strength
-		var maxStrength = ship.thrusters.lateral.maxStrength;
-		strength = clamp(-maxStrength,strength,maxStrength);
-		//lerp current thruster strength to target strength at the power ramp rate, then set current strength and the target strength to the lerped value
-		strength = ship.thrusters.lateral.currentStrength = lerp(ship.thrusters.lateral.currentStrength,strength,ship.thrusters.lateral.powerRampPercentage*dt); //for the lolz
-		strength = clamp(-maxStrength,strength,maxStrength);
+				//clamp strength
+					var maxStrength = ship.thrusters.lateral.maxStrength;
+					strength = clamp(-maxStrength,strength,maxStrength);
+				//lerp current thruster strength to target strength at the power ramp rate, then set current strength and the target strength to the lerped value
+					var thrusterDelta = lerp(ship.thrusters.lateral.currentStrength,strength,ship.thrusters.lateral.powerRampPercentage*dt) - ship.thrusters.lateral.currentStrength;
+					if(thrusterDelta * ship.thrusters.lateral.currentStrength > 0)
+						thrusterDelta = clamp(-ship.thrusters.lateral.powerRampLimit * dt, thrusterDelta, ship.thrusters.lateral.powerRampLimit * dt);
+					strength = ship.thrusters.lateral.currentStrength = ship.thrusters.lateral.currentStrength + thrusterDelta;
+					strength = clamp(-maxStrength,strength,maxStrength);
 
-		//add right vector times strength to acceleration
-		accelerationX += normalizedRightVector[0]*strength;
-		accelerationY += normalizedRightVector[1]*strength;
+				//add right vector times strength to acceleration
+					accelerationX += normalizedRightVector[0]*strength;
+					accelerationY += normalizedRightVector[1]*strength;
 
-		//rotational
-		var strength = ship.thrusters.rotational.targetStrength;
+			//rotational
+				var strength = ship.thrusters.rotational.targetStrength;
 
-		//clamp strength
-		var maxStrength = ship.thrusters.rotational.maxStrength;
-		strength = clamp(-maxStrength,strength,maxStrength);
-		//lerp current thruster strength to target strength at the power ramp rate, then set current strength and the target strength to the lerped value
-		strength = ship.thrusters.rotational.currentStrength = lerp(ship.thrusters.rotational.currentStrength,strength,ship.thrusters.rotational.powerRampPercentage*dt); //for the lolz
-		strength = clamp(-maxStrength,strength,maxStrength);
+				//clamp strength
+					var maxStrength = ship.thrusters.rotational.maxStrength;
+					strength = clamp(-maxStrength,strength,maxStrength);
+				//lerp current thruster strength to target strength at the power ramp rate, then set current strength and the target strength to the lerped value
+					var thrusterDelta = lerp(ship.thrusters.rotational.currentStrength,strength,ship.thrusters.rotational.powerRampPercentage*dt) - ship.thrusters.rotational.currentStrength;
+					if(thrusterDelta * ship.thrusters.rotational.currentStrength > 0)
+						thrusterDelta = clamp(-ship.thrusters.rotational.powerRampLimit * dt, thrusterDelta, ship.thrusters.rotational.powerRampLimit * dt);
+					strength = ship.thrusters.rotational.currentStrength = ship.thrusters.rotational.currentStrength + thrusterDelta;
+					strength = clamp(-maxStrength,strength,maxStrength);
 
-		//this one we can set directly
-		rotationalAcceleration = -strength;
+				//this one we can set directly
+					rotationalAcceleration = -strength;
 
 		//accelerate
-		ship.velocityX+=accelerationX*dt;
-		ship.velocityY+=accelerationY*dt;
-		ship.rotationalVelocity+=rotationalAcceleration*dt;
+			ship.velocityX+=accelerationX*dt;
+			ship.velocityY+=accelerationY*dt;
+			ship.rotationalVelocity+=rotationalAcceleration*dt;
 
 		//calculate velocity components for the stabilizers
-		ship.medialVelocity = -scalarComponentOf1InDirectionOf2(ship.velocityX,ship.velocityY,normalizedForwardVector[0],normalizedForwardVector[1]); //get magnitude of projection of velocity onto the forward vector
-		ship.lateralVelocity = -scalarComponentOf1InDirectionOf2(ship.velocityX,ship.velocityY,normalizedRightVector[0],normalizedRightVector[1]); //et magnitude of velocity's projection onto the right vector
+			ship.medialVelocity = -scalarComponentOf1InDirectionOf2(ship.velocityX,ship.velocityY,normalizedForwardVector[0],normalizedForwardVector[1]); //get magnitude of projection of velocity onto the forward vector
+			ship.lateralVelocity = -scalarComponentOf1InDirectionOf2(ship.velocityX,ship.velocityY,normalizedRightVector[0],normalizedRightVector[1]); //et magnitude of velocity's projection onto the right vector
 
 		//move
-		ship.x+=ship.velocityX*dt;
-		ship.y+=ship.velocityY*dt;
-		ship.rotation+=ship.rotationalVelocity*dt;
-		if(ship.rotation>180)
-			ship.rotation-=360;
-		else if(ship.rotation<-180)
-			ship.rotation+=360;
+			ship.x+=ship.velocityX*dt;
+			ship.y+=ship.velocityY*dt;
+			ship.rotation+=ship.rotationalVelocity*dt;
+			if(ship.rotation>180)
+				ship.rotation-=360;
+			else if(ship.rotation<-180)
+				ship.rotation+=360;
 
 		//create laser objects
-		if(ship.laser.currentPower>0){
-			var laserVector = [0,-ship.laser.range];
-			laserVector = rotate(0,0,laserVector[0],laserVector[1],-ship.rotation+Math.random()*ship.laser.spread-ship.laser.spread/2);
-			this.createLaser(this.lasers,ship.x+normalizedForwardVector[0]*(30),ship.y+normalizedForwardVector[1]*30,ship.x+laserVector[0],ship.y+laserVector[1],ship.laser.color,ship.laser.currentPower, ship.laser.efficiency);
-			ship.laser.currentPower-=ship.laser.maxPower*(1-ship.laser.coherence)*dt*1000;
-		}
-		else if(ship.laser.currentPower<0)
-			ship.laser.currentPower=0;
+			if(ship.laser.currentPower>0){
+				var laserVector = [0,-ship.laser.range];
+				laserVector = rotate(0,0,laserVector[0],laserVector[1],-ship.rotation+Math.random()*ship.laser.spread-ship.laser.spread/2);
+				this.createLaser(this.lasers,ship.x+normalizedForwardVector[0]*(30),ship.y+normalizedForwardVector[1]*30,ship.x+laserVector[0],ship.y+laserVector[1],ship.laser.color,ship.laser.currentPower, ship.laser.efficiency);
+				ship.laser.currentPower-=ship.laser.maxPower*(1-ship.laser.coherence)*dt*1000;
+			}
+			else if(ship.laser.currentPower<0)
+				ship.laser.currentPower=0;
 
 		//refresh shields
-		if(ship.destructible.shield.current<ship.destructible.shield.max)
-		{
-			ship.destructible.shield.current+=ship.destructible.shield.recharge*dt;
-			if(ship.destructible.shield.current>ship.destructible.shield.max)
-				ship.destructible.shield.current = ship.destructible.shield.max;
-		}
+			if(ship.destructible.shield.current<ship.destructible.shield.max)
+			{
+				ship.destructible.shield.current+=ship.destructible.shield.recharge*dt;
+				if(ship.destructible.shield.current>ship.destructible.shield.max)
+					ship.destructible.shield.current = ship.destructible.shield.max;
+			}
 
 		//update power system
-		//scale all relevant values down from the augmented to their normal using the old power values
-		var thrusterPower = this.getPowerForComponent(ship.powerSystem, this.SHIP_COMPONENTS.THRUSTERS);
-		var laserPower = this.getPowerForComponent(ship.powerSystem, this.SHIP_COMPONENTS.LASERS);
-		var shieldPower = this.getPowerForComponent(ship.powerSystem, this.SHIP_COMPONENTS.SHIELDS);
-		//thrusters
-		ship.thrusters.medial.maxStrength/=(1+thrusterPower);
-		ship.thrusters.lateral.maxStrength/=(1+thrusterPower);
-		ship.thrusters.rotational.maxStrength/=(1+thrusterPower);
-		ship.stabilizer.clamps.medial/=(1+thrusterPower);
-		ship.stabilizer.clamps.lateral/=(1+thrusterPower);
-		ship.stabilizer.clamps.rotational/=(1+thrusterPower);
-		//lasers
-		ship.laser.maxPower/=(1+laserPower);
-		//shields
-		ship.destructible.shield.current/=(1+shieldPower);
-		ship.destructible.shield.max/=(1+shieldPower);
-		ship.destructible.shield.recharge/=(1+shieldPower);
+			//scale all relevant values down from the augmented to their normal using the old power values
+				var thrusterPower = this.getPowerForComponent(ship.powerSystem, this.SHIP_COMPONENTS.THRUSTERS);
+				var laserPower = this.getPowerForComponent(ship.powerSystem, this.SHIP_COMPONENTS.LASERS);
+				var shieldPower = this.getPowerForComponent(ship.powerSystem, this.SHIP_COMPONENTS.SHIELDS);
+				//thrusters
+					ship.thrusters.medial.maxStrength/=(1+thrusterPower);
+					ship.thrusters.lateral.maxStrength/=(1+thrusterPower);
+					ship.thrusters.rotational.maxStrength/=(1+thrusterPower);
+					ship.stabilizer.clamps.medial/=(1+thrusterPower);
+					ship.stabilizer.clamps.lateral/=(1+thrusterPower);
+					ship.stabilizer.clamps.rotational/=(1+thrusterPower);
+				//lasers
+					ship.laser.maxPower/=(1+laserPower);
+				//shields
+					ship.destructible.shield.current/=(1+shieldPower);
+					ship.destructible.shield.max/=(1+shieldPower);
+					ship.destructible.shield.recharge/=(1+shieldPower);
 
-		//update the power values
-		this.scalePowerTarget(ship.powerSystem);
-		ship.powerSystem.current = lerp3d(ship.powerSystem.current,ship.powerSystem.target,ship.powerSystem.transferRate*dt);
+			//update the power values
+				this.scalePowerTarget(ship.powerSystem);
+				ship.powerSystem.current = lerp3d(ship.powerSystem.current,ship.powerSystem.target,ship.powerSystem.transferRate*dt);
 
-		//scale back up to augmented with the new power values
-		thrusterPower = this.getPowerForComponent(ship.powerSystem, this.SHIP_COMPONENTS.THRUSTERS);
-		laserPower = this.getPowerForComponent(ship.powerSystem, this.SHIP_COMPONENTS.LASERS);
-		shieldPower = this.getPowerForComponent(ship.powerSystem, this.SHIP_COMPONENTS.SHIELDS);
-		//thrusters
-		ship.thrusters.medial.maxStrength*=(1+thrusterPower);
-		ship.thrusters.lateral.maxStrength*=(1+thrusterPower);
-		ship.thrusters.rotational.maxStrength*=(1+thrusterPower);
-		ship.stabilizer.clamps.medial*=(1+thrusterPower);
-		ship.stabilizer.clamps.lateral*=(1+thrusterPower);
-		ship.stabilizer.clamps.rotational*=(1+thrusterPower);
-		//lasers
-		ship.laser.maxPower*=(1+laserPower);
-		//shields
-		ship.destructible.shield.current*=(1+shieldPower);
-		ship.destructible.shield.max*=(1+shieldPower);
-		ship.destructible.shield.recharge*=(1+shieldPower);
+			//scale back up to augmented with the new power values
+				thrusterPower = this.getPowerForComponent(ship.powerSystem, this.SHIP_COMPONENTS.THRUSTERS);
+				laserPower = this.getPowerForComponent(ship.powerSystem, this.SHIP_COMPONENTS.LASERS);
+				shieldPower = this.getPowerForComponent(ship.powerSystem, this.SHIP_COMPONENTS.SHIELDS);
+				//thrusters
+					ship.thrusters.medial.maxStrength*=(1+thrusterPower);
+					ship.thrusters.lateral.maxStrength*=(1+thrusterPower);
+					ship.thrusters.rotational.maxStrength*=(1+thrusterPower);
+					ship.stabilizer.clamps.medial*=(1+thrusterPower);
+					ship.stabilizer.clamps.lateral*=(1+thrusterPower);
+					ship.stabilizer.clamps.rotational*=(1+thrusterPower);
+				//lasers
+					ship.laser.maxPower*=(1+laserPower);
+				//shields
+					ship.destructible.shield.current*=(1+shieldPower);
+					ship.destructible.shield.max*=(1+shieldPower);
+					ship.destructible.shield.recharge*=(1+shieldPower);
 
 		//thruster percentage for the sound effect
-		var thrusterTotal = Math.abs(ship.thrusters.medial.currentStrength)+Math.abs(ship.thrusters.lateral.currentStrength)+Math.abs(ship.thrusters.rotational.currentStrength);
-		var thrusterEfficiencyTotal = ship.thrusters.medial.efficiency+ship.thrusters.lateral.efficiency+ship.thrusters.rotational.efficiency;
-		ship.thrusters.noiseLevel = (thrusterTotal/thrusterEfficiencyTotal);
+			var thrusterTotal = Math.abs(ship.thrusters.medial.currentStrength)+Math.abs(ship.thrusters.lateral.currentStrength)+Math.abs(ship.thrusters.rotational.currentStrength);
+			var thrusterEfficiencyTotal = ship.thrusters.medial.efficiency+ship.thrusters.lateral.efficiency+ship.thrusters.rotational.efficiency;
+			ship.thrusters.noiseLevel = (thrusterTotal/thrusterEfficiencyTotal);
 	},
 	//clears the active thruster values
 	shipClearThrusters:function(ship){
@@ -824,7 +846,7 @@ app.main = {
 	//rotational stabilizer
 	shipRotationalStabilizers:function(ship,dt){
 		//if the side thruster isn't active, or is active in the opposite direction of our rotation
-		if(ship.thrusters.rotational.targetStrength*ship.rotationalVelocity>=0)
+		if(ship.thrusters.rotational.targetStrength*ship.rotationalVelocity>=0 && Math.abs(ship.rotationalVelocity) > ship.stabilizer.precision/6)
 			//add correctional strength in the opposite direction of our rotation
 			this.shipRotationalThrusters(ship,ship.rotationalVelocity*ship.stabilizer.strength*dt); //we check the direction because the stabilizers can apply more thrust than the player
 		//or, if we've exceeded our clamp speed and are trying to keep accelerating in that direction
@@ -835,7 +857,7 @@ app.main = {
 	//medial stabilizer
 	shipMedialStabilizers:function(ship,dt){
 		//if the main thruster isn't active, or is working against our velocity
-		if(ship.thrusters.medial.targetStrength*ship.medialVelocity>=0)
+		if(ship.thrusters.medial.targetStrength*ship.medialVelocity>=0 && Math.abs(ship.medialVelocity) > ship.stabilizer.precision)
 			//add corrective strength
 			this.shipMedialThrusters(ship,ship.medialVelocity*ship.stabilizer.strength*dt);
 		//or, if we're past our clamp and trying to keep going
@@ -846,7 +868,7 @@ app.main = {
 	//lateral stabilizer
 	shipLateralStabilizers:function(ship,dt){
 		//see above
-		if(ship.thrusters.lateral.targetStrength*ship.lateralVelocity>=0)
+		if(ship.thrusters.lateral.targetStrength*ship.lateralVelocity>=0 && Math.abs(ship.lateralVelocity) > ship.stabilizer.precision)
 			this.shipLateralThrusters(ship,ship.lateralVelocity*ship.stabilizer.strength*dt);
 		else if (ship.stabilizer.clamps.enabled && Math.abs(ship.lateralVelocity)>=ship.stabilizer.clamps.lateral && ship.thrusters.lateral.targetStrength*ship.lateralVelocity<0)
 			ship.thrusters.lateral.targetStrength = 0;

@@ -265,6 +265,10 @@ function lerp3d(from,to,percent){
 	return [x,y,z];
 }
 
+function lerpNd(from, to, percent){
+	
+}
+
 function clamp(min, value, max){
 	return Math.max(min, Math.min(value, max))
 }
