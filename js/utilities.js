@@ -221,6 +221,46 @@ function raySphereIntersect(s,e,c,r){
 	return tca-thc;
 }
 
+function polygonCircleSAT(polygon, circle)
+{
+	function circleAxisCheck(vertices, circle, axis){
+		var normalizedAxis = normalizeVector(axis[0], axis[1]);
+		var max1;
+		var min1;
+		var maxCircle;
+		var minCircle;
+		//project each vec3 in the first object onto the axis, saving min and max values
+		for (var c = 0; c < vertices.length; c++) {
+			var vert = vertices[c];
+			var projectedVert = vert[0]*normalizedAxis[0]+vert[1]*normalizedAxis[1];// / glm::length(vert);
+			if (c == 0 || projectedVert > max1)
+				max1 = projectedVert;
+			if (c == 0 || projectedVert < min1)
+				min1 = projectedVert;
+		}
+		var projectedCenter = circle.center[0]*normalizedAxis[0] + circle.center[1]*normalizedAxis[1];
+		maxCircle = projectedCenter + circle.radius;
+		minCircle = projectedCenter - circle.radius;
+
+		return !(max1 < minCircle || maxCircle < min1);
+	}
+
+	for(var i = 0;i<polygon.length;i++){
+		var nextPoint = (i==polygon.length-1) ? polygon[0] : polygon[i + 1];
+		var normalAxis = [-(nextPoint[1] - polygon[i][1]), nextPoint[0] - polygon[i][0]];
+		//var normalAxis = [nextPoint[0] - polygon[i][0], nextPoint[1] - polygon[i][1]];
+		var circleAxis = [circle.center[0] - polygon[i][0], circle.center[1] - polygon[i][1]];
+		if(!circleAxisCheck(polygon, circle, circleAxis))
+			return false;
+		else if(normalAxis == [0,0])
+			continue;
+		else if(!circleAxisCheck(polygon, circle, normalAxis))
+			return false;
+	}
+
+	return true;
+}
+
 //http://stackoverflow.com/questions/9614109/how-to-calculate-an-angle-from-points
 function angle(cx, cy, ex, ey) {
 	var dy = ey - cy;

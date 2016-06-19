@@ -92,7 +92,8 @@ app.main = {
 			},
 			{
 				color:'mediumblue',
-				interval:50
+				interval:50,
+				minimap: true
 			},
 			{
 				color:'darkblue',
@@ -107,8 +108,8 @@ app.main = {
 	asteroids:{
 		total:60,
 		colors:[
-			'#6B2A06'//,
-			//'sienna'
+			'#6B2A06',
+			'sienna'
 		],
 		objs:[]
 	},
@@ -120,6 +121,7 @@ app.main = {
 		]
 	},
 	baseStarCameraZoom:.0001,
+
     // methods
 	init : function() {
 		// initialize properties
@@ -136,6 +138,7 @@ app.main = {
 			this.lastTime = Date.now();
 			this.animationID = requestAnimationFrame(this.frame.bind(this));
 	},
+
 	//resets the game state
 	resetGame:function(){
 		this.ship = {};
@@ -151,6 +154,7 @@ app.main = {
 		this.gameState = this.GAME_STATES.PLAYING;
 		this.frameCount = 0;
 	},
+
 	//returns a random position within the given grid
 	randomGridPosition:function(grid){
 		var lower = [grid.gridStart[0],grid.gridStart[1]];
@@ -161,6 +165,7 @@ app.main = {
 			y: Math.random() * (upper[1] - lower[1]) + lower[1]
 		};
 	},
+
 	//returns a camera object with the given values and the context from the given canvas
 	createCamera:function(canvas, objectParams){
 		if(!objectParams)
@@ -178,6 +183,7 @@ app.main = {
 			ctx:canvas.getContext('2d')
 		};
 	},
+
 	//clears the given camera's canvas
 	clearCamera:function(camera){
 		var ctx = camera.ctx;
@@ -185,6 +191,7 @@ app.main = {
 		ctx.fillRect(0,0,camera.width,camera.height);
 		ctx.fill();
 	},
+
 	//constructor for ship objects
 	createShip:function(objectParams, grid){
 		var gridPosition = this.randomGridPosition(grid);
@@ -222,6 +229,7 @@ app.main = {
 			laser:this.createComponentLaser((objectParams.laser))
 		};
 	},
+
 	//constructor for the thruster system component
 	createComponentThrusterSystem:function(objectParams){
 		if(!objectParams)
@@ -243,6 +251,7 @@ app.main = {
 			})
 		};
 	},
+
 	//constructor for the thruster component
 	createComponentThruster:function(objectParams){
 		if(!objectParams)
@@ -256,6 +265,7 @@ app.main = {
 			powerRampLimit: (objectParams.powerRampLimit) ? objectParams.powerRampLimit : 6000
 		};
 	},
+
 	//constructor for the power system component
 	createComponentPowerSystem:function(objectParams){
 		if(!objectParams)
@@ -266,6 +276,7 @@ app.main = {
 			transferRate:6
 		};
 	},
+
 	//constructor for the stabilizer component
 	createComponentStabilizer:function(objectParams){
 		if(!objectParams)
@@ -278,6 +289,7 @@ app.main = {
 			clamps: this.createComponentStabilizerClamps(objectParams.clamps)
 		};
 	},
+
 	//constructor for the stabilizer clamps sub-component
 	createComponentStabilizerClamps:function(objectParams){
 		if(!objectParams)
@@ -289,6 +301,7 @@ app.main = {
 			rotational:(objectParams.rotational)?objectParams.rotational:90
 		};
 	},
+
 	//constructor for the laser component
 	createComponentLaser:function(objectParams){
 		if(!objectParams)
@@ -302,9 +315,10 @@ app.main = {
 			coherence:(objectParams.coherence)?objectParams.coherence:.995,
 			maxPower:(objectParams.maxPower)?objectParams.maxPower:6000,
 			efficiency:(objectParams.efficiency)?objectParams.efficiency:200,
-			spread:(objectParams.spread)?objectParams.spread:.8
+			spread:(objectParams.spread)?objectParams.spread:0
 		};
 	},
+
 	//constructor for the destructible component - stores hp, shields, and collider radius
 	createComponentDestructible:function(objectParams){
 		if(!objectParams)
@@ -316,6 +330,7 @@ app.main = {
 			shield:this.createComponentDestructibleShield(objectParams.shield),
 		};
 	},
+
 	//constructor for the shield sub-component
 	createComponentDestructibleShield:function(objectParams){
 		if(!objectParams)
@@ -327,6 +342,7 @@ app.main = {
 			recharge:(objectParams.recharge)?objectParams.recharge:0
 		};
 	},
+
 	//constructor for the AI component
 	createComponentShipAI:function(objectParams){
 		if(!objectParams)
@@ -338,6 +354,7 @@ app.main = {
 			fireSpread:5
 		};
 	},
+
 	createComponentViewport:function(objectParams){
 		if(!objectParams)
 			objectParams = {};
@@ -348,6 +365,23 @@ app.main = {
 			endY:(objectParams.endY)?objectParams.endY:1
 		};
 	},
+
+	createLaser:function(lasers, startX,startY,endX,endY,color, power,efficiency, previousLaser, owner){
+		var lsr = {
+			startX:startX,
+			startY:startY,
+			endX:endX,
+			endY:endY,
+			color:color,
+			power:power,
+			efficiency:efficiency,
+			previousLaser:previousLaser,
+			owner:owner
+		};
+		lasers.push(lsr);
+		return lsr;
+	},
+
 	scalePowerTarget:function(ps){
 		var sum = 0;
 		for(var c = 0;c<ps.target.length;c++)
@@ -362,20 +396,24 @@ app.main = {
 		for(var c = 0;c<ps.target.length;c++)
 			ps.target[c] = ps.target[c]/sum;
 	},
+
 	getPowerForComponent:function(ps,component){
 		if(component>=ps.current.length || component<0)
 			return 0;
 		var components = ps.current.length;
 		return clamp(0,(ps.current[component]-(1/components))/(2*(1/components)),1);
 	},
+
 	//draws the grid in the given camera
-	drawGrid:function(camera){
+	drawGrid:function(camera, minimap){
 		var ctx = camera.ctx;
 		var gridLines = this.grid.gridLines;
 		var gridSpacing = this.grid.gridSpacing;
 		var gridStart = this.grid.gridStart;
 
-		for(var c = 0;c<this.grid.colors.length;c++){			
+		for(var c = 0;c<this.grid.colors.length;c++){	
+			if(minimap && !this.grid.colors[c].minimap)
+				continue;		
 			ctx.save();
 			ctx.beginPath();
 			for(var x = 0;x<=gridLines;x++){
@@ -384,7 +422,7 @@ app.main = {
 				var correctInterval = true;
 				for(var n = 0;n<c;n++)
 				{
-					if(x%this.grid.colors[n].interval == 0)
+					if(x%this.grid.colors[n].interval == 0 && (!minimap || this.grid.colors[n].minimap))
 					{
 						correctInterval = false;
 						break;
@@ -407,7 +445,7 @@ app.main = {
 				var correctInterval = true;
 				for(var n = 0;n<c;n++)
 				{
-					if(y%this.grid.colors[n].interval == 0)
+					if(y%this.grid.colors[n].interval == 0 && (!minimap || this.grid.colors[n].minimap))
 					{
 						correctInterval = false;
 						break;
@@ -431,6 +469,7 @@ app.main = {
 			ctx.restore();
 		}
 	},
+
 	//generates the field of asteroids
 	makeAsteroids:function(asteroids, grid){
 		var lower = [grid.gridStart[0],grid.gridStart[1]];
@@ -453,6 +492,7 @@ app.main = {
 			});
 		}
 	},
+
 	generateStarField:function(stars){
 		var lower = -10000000;
 		var upper = 10000000;
@@ -468,6 +508,7 @@ app.main = {
 			});
 		}
 	},
+
 	drawShipOverlay:function(ship,camera,gridCamera){
 		var ctx = camera.ctx;
 		
@@ -510,6 +551,7 @@ app.main = {
 		ctx.fill();
 		ctx.restore();
 	},
+
 	drawShipMinimap:function(ship,camera){
 		var ctx = camera.ctx;
 		ctx.save();
@@ -530,13 +572,19 @@ app.main = {
 		ctx.fill();
 		ctx.restore();
 	},
+
 	//draws the given ship in the given camera
 	drawShip: function(ship, camera){
 		var shipArray = (Array.isArray(ship))?ship:[ship];
-		var ctx = camera.ctx;
-		ctx.save();
+
 		var shipPosInCameraSpace = worldPointToCameraSpace(ship.x,ship.y,camera); //get ship's position in camera space
 
+		if(shipPosInCameraSpace[0] - ship.destructible.radius * camera.zoom > camera.width || shipPosInCameraSpace[0] + ship.destructible.radius * camera.zoom< 0
+			|| shipPosInCameraSpace[1] - ship.destructible.radius * camera.zoom> camera.height || shipPosInCameraSpace[1] + ship.destructible.radius * camera.zoom< 0)
+			return;
+
+		var ctx = camera.ctx;
+		ctx.save();
 		ctx.translate(shipPosInCameraSpace[0],shipPosInCameraSpace[1]); //translate to camera space position
 		ctx.rotate((ship.rotation-camera.rotation) * (Math.PI / 180)); //rotate by difference in rotations
 
@@ -676,6 +724,122 @@ app.main = {
 			ctx.fill();
 			ctx.restore();
 	},
+
+	drawLasers:function(lasers,camera){
+		var ctx = camera.ctx;
+		lasers.forEach(function(laser){
+			if(laser.power == 0)
+				return;
+			var start = worldPointToCameraSpace(laser.startX,laser.startY,camera);
+			var end = worldPointToCameraSpace(laser.endX,laser.endY,camera);
+			var startPrev = worldPointToCameraSpace(laser.previousLaser.startX,laser.previousLaser.startY,camera);
+			var endPrev = worldPointToCameraSpace(laser.previousLaser.endX,laser.previousLaser.endY,camera);
+			var angle = angleBetweenVectors(end[0]-start[0],end[1]-start[1],1,0);
+			var rightVector = rotate(0,0,1,0,angle+90	);
+			var width = (laser.power/laser.efficiency)*camera.zoom;
+			if(width<.8)
+				width = .8;
+			for(var c = 0;c<=this.laserDetail;c++)
+			{
+				var coeff = 1-(c/(this.laserDetail+1));
+				ctx.save();
+				ctx.beginPath();
+				ctx.moveTo(start[0],start[1]);
+				ctx.lineTo(start[0]+coeff*width*rightVector[0]/2,start[1]+width*rightVector[1]/2);
+				ctx.lineTo(end[0],end[1]);
+				ctx.lineTo(start[0]-coeff*width*rightVector[0]/2,start[1]-width*rightVector[1]/2);
+				ctx.arc(start[0],start[1],coeff*width/2,-(angle-90)*(Math.PI/180),(angle-90)*(Math.PI/180)-90,false);
+				//ctx.closePath();
+				//ctx.globalAlpha = 
+				ctx.fillStyle = shadeRGBColor(laser.color,0+c/(this.laserDetail+1));
+				//ctx.lineCap = 'round';
+				
+				//ctx.lineWidth = width;
+				ctx.fill();
+				ctx.restore();
+			}
+		},this);
+	},
+
+	drawAsteroidsOverlay:function(asteroids, camera, gridCamera){
+		var start = [0,0];
+		var end = [camera.width,camera.height];
+		var ctx = camera.ctx;
+		var cameraPositions = [];
+		if(gridCamera)
+		{
+			ctx.save();
+			ctx.beginPath();
+			for(var c = 0; c<asteroids.objs.length;c++)
+			{
+				var asteroid = asteroids.objs[c];
+				var gridPosition = worldPointToCameraSpace(asteroid.x,asteroid.y,gridCamera);
+				if(gridPosition[0] + asteroid.destructible.radius*gridCamera.zoom<start[0] || gridPosition[0] - asteroid.destructible.radius*gridCamera.zoom>end[0] || gridPosition[1] + asteroid.destructible.radius*gridCamera.zoom<start[1] || gridPosition[1] - asteroid.destructible.radius*gridCamera.zoom>end[1])
+					continue;			
+				cameraPositions[c] =(worldPointToCameraSpace(asteroid.x,asteroid.y,camera));
+				ctx.moveTo(cameraPositions[c][0],cameraPositions[c][1]);
+				ctx.lineTo(gridPosition[0],gridPosition[1]);
+				ctx.moveTo(gridPosition[0],gridPosition[1]);
+				//ctx.beginPath();
+				ctx.arc(gridPosition[0],gridPosition[1], asteroid.destructible.radius*gridCamera.zoom,0,Math.PI*2);
+			}	
+			ctx.strokeStyle = 'grey';
+			ctx.lineWidth = .5;
+			ctx.globalAlpha = .5;
+			ctx.stroke();
+			ctx.restore();		
+		}
+	},
+
+	//draws asteroids from the given asteroids array to the given camera
+	drawAsteroids: function(asteroids,camera){
+		var start = [0,0];
+		var end = [camera.width,camera.height];
+		var ctx = camera.ctx;
+		for(var group = 0;group<asteroids.colors.length;group++){
+			ctx.save()
+			ctx.fillStyle = asteroids.colors[group];
+			ctx.beginPath();
+			for(var c = 0;c<asteroids.objs.length;c++){
+				var asteroid = asteroids.objs[c];
+				if(asteroid.colorIndex!=group)
+					continue;
+
+				var finalPosition = worldPointToCameraSpace(asteroid.x,asteroid.y,camera); //get asteroid's position in camera space
+				
+				if(finalPosition[0] + asteroid.radius*camera.zoom<start[0] || finalPosition[0]-asteroid.radius*camera.zoom>end[0] || finalPosition[1] + asteroid.radius*camera.zoom<start[1] || finalPosition[1]-asteroid.radius*camera.zoom>end[1])
+						continue;
+				ctx.moveTo(finalPosition[0],finalPosition[1]);
+				ctx.arc(finalPosition[0],finalPosition[1],asteroid.radius*camera.zoom,0,Math.PI*2);
+			};
+			ctx.closePath();
+			ctx.fill();
+			ctx.restore();
+		};
+	},
+
+	//draws asteroids from the given asteroids array to the given camera
+	drawStars: function(stars,camera){
+		var start = [0,0];
+		var end = [camera.width,camera.height];
+		var ctx = camera.ctx;
+		for(var c = 0;c<stars.length;c++){
+			var star = stars[c];
+			ctx.save();
+			var finalPosition = worldPointToCameraSpace(star.x,star.y,camera); //get asteroid's position in camera space
+			if(finalPosition[0] + star.radius*camera.zoom<start[0] || finalPosition[0]-star.radius*camera.zoom>end[0] || finalPosition[1] + star.radius*camera.zoom<start[1] || finalPosition[1]-star.radius*camera.zoom>end[1])
+					continue;
+			ctx.translate(finalPosition[0],finalPosition[1]); //translate to that position
+			ctx.scale(camera.zoom,camera.zoom); //scale to zoom
+			ctx.beginPath();
+			ctx.arc(0,0,star.radius,0,Math.PI*2);
+			ctx.globalAlpha = .5;
+			ctx.fillStyle = star.color;
+			ctx.fill();
+			ctx.restore();
+		};
+	},
+
 	updateShip: function(ship,dt){
 		//initialize acceleration values
 			var accelerationX = 0;
@@ -761,8 +925,9 @@ app.main = {
 		//create laser objects
 			var laserVector = [0,-ship.laser.range];
 			laserVector = rotate(0,0,laserVector[0],laserVector[1],-ship.rotation+Math.random()*ship.laser.spread-ship.laser.spread/2);
-			ship.laser.previousLaser = this.createLaser(this.lasers,ship.x+normalizedForwardVector[0]*(30),ship.y+normalizedForwardVector[1]*30,ship.x+laserVector[0],ship.y+laserVector[1],ship.laser.color,ship.laser.currentPower, ship.laser.efficiency, ship.laser.previousLaser);
-			ship.laser.previousLaser.previousLaser = null; //avoiding a memory leak - without this the lasers will chain backwards in time continuously
+			if(ship.laser.previousLaser)
+				ship.laser.previousLaser.previousLaser = null; //avoiding a memory leak - without this the lasers will chain backwards in time continuously
+			ship.laser.previousLaser = this.createLaser(this.lasers,ship.x+normalizedForwardVector[0]*(30),ship.y+normalizedForwardVector[1]*30,ship.x+laserVector[0],ship.y+laserVector[1],ship.laser.color,ship.laser.currentPower, ship.laser.efficiency, ship.laser.previousLaser, ship);
 			ship.laser.currentPower-=ship.laser.maxPower*(1-ship.laser.coherence)*dt*1000;
 			if(ship.laser.currentPower<0)
 				ship.laser.currentPower=0;
@@ -821,27 +986,33 @@ app.main = {
 			var thrusterEfficiencyTotal = ship.thrusters.medial.efficiency+ship.thrusters.lateral.efficiency+ship.thrusters.rotational.efficiency;
 			ship.thrusters.noiseLevel = (thrusterTotal/thrusterEfficiencyTotal);
 	},
+
 	//clears the active thruster values
 	shipClearThrusters:function(ship){
 		ship.thrusters.medial.targetStrength = 0;
 		ship.thrusters.lateral.targetStrength = 0;
 		ship.thrusters.rotational.targetStrength = 0;
 	},
+
 	shipClearPowerTarget:function(ship){
 		ship.powerSystem.target = [0,0,0];
 	},
+
 	//add given strength to main thruster
 	shipMedialThrusters:function(ship, strength){
 		ship.thrusters.medial.targetStrength += strength;
 	},
+
 	//add strength to side thruster
 	shipRotationalThrusters: function(ship, strength){
 		ship.thrusters.rotational.targetStrength += strength;
 	},
+
 	//add strength to lateral thruster
 	shipLateralThrusters:function(ship, strength){
 		ship.thrusters.lateral.targetStrength += strength;
 	},
+
 	//rotational stabilizer
 	shipRotationalStabilizers:function(ship,dt){
 		//if the side thruster isn't active, or is active in the opposite direction of our rotation
@@ -853,6 +1024,7 @@ app.main = {
 			//shut off the thruster
 			ship.thrusters.rotational.targetStrength = 0;
 	},
+
 	//medial stabilizer
 	shipMedialStabilizers:function(ship,dt){
 		//if the main thruster isn't active, or is working against our velocity
@@ -864,6 +1036,7 @@ app.main = {
 			//shut off the thruster
 			ship.thrusters.medial.targetStrength = 0;
 	},
+
 	//lateral stabilizer
 	shipLateralStabilizers:function(ship,dt){
 		//see above
@@ -872,6 +1045,7 @@ app.main = {
 		else if (ship.stabilizer.clamps.enabled && Math.abs(ship.lateralVelocity)>=ship.stabilizer.clamps.lateral && ship.thrusters.lateral.targetStrength*ship.lateralVelocity<0)
 			ship.thrusters.lateral.targetStrength = 0;
 	},
+
 	shipFireLaser:function(ship){
 		var now = Date.now();
 		//if the cool down is up
@@ -885,6 +1059,7 @@ app.main = {
 			}
 		}
 	},
+
 	shipAI:function(ship, target,dt){
 		var vectorToTarget = [target.x-ship.x,target.y-ship.y];
 		var relativeAngleToTarget = angleBetweenVectors(ship.forwardVectorX,ship.forwardVectorY,vectorToTarget[0],vectorToTarget[1]);
@@ -917,6 +1092,7 @@ app.main = {
 		this.shipLateralStabilizers(ship,dt);
 		this.shipRotationalStabilizers(ship,dt);
 	},
+
 	shipKeyboardControl(ship, dt){
 		//set ship thruster values
 		 	//assisted controls
@@ -952,214 +1128,113 @@ app.main = {
 			if(myKeys.keydown[myKeys.KEYBOARD.KEY_ALT])
 				ship.powerSystem.target[this.SHIP_COMPONENTS.SHIELDS] = 1;
 	},
-	createLaser:function(lasers, startX,startY,endX,endY,color, power,efficiency, previousLaser){
-		var lsr = {
-			startX:startX,
-			startY:startY,
-			endX:endX,
-			endY:endY,
-			color:color,
-			power:power,
-			efficiency:efficiency,
-			previousLaser:previousLaser
-		};
-		lasers.push(lsr);
-		return lsr;
-	},
+
 	clearLasers:function(lasers){
 		lasers.length=0;
 	},
-	checkCollisions:function(dt){
-		this.lasers.forEach(function(laser){
-			var obj; //the chosen object
-			var tValOfObj = Number.MAX_VALUE;
-			var xInv = laser.endX<laser.startX;
-			var yInv = laser.endY<laser.startY;
-			var start = [(xInv) ? laser.endX : laser.startX, (yInv) ? laser.endY : laser.startY];
-			var end = [(xInv) ? laser.startX : laser.endX, (yInv) ? laser.startY : laser.endY];
-			for(var c = 0;c<this.asteroids.objs.length;c++){
-				var thisObj = this.asteroids.objs[c];
-				if(thisObj.x + thisObj.destructible.radius<start[0] || thisObj.x-thisObj.destructible.radius>end[0] || thisObj.y + thisObj.destructible.radius<start[1] || thisObj.y-thisObj.destructible.radius>end[1])
-					continue;
-				var thisDistance = distanceFromPointToLine(thisObj.x,thisObj.y,laser.startX,laser.startY,laser.endX,laser.endY);
-				if(thisDistance[0]<thisObj.destructible.radius && thisDistance[1]<tValOfObj){
-					obj = thisObj;
-					tValOfObj = thisDistance[1];
-				}
-			}
-			for(var c = -1;c<this.otherShips.length;c++){
-				var thisObj = ((c==-1) ? this.ship : this.otherShips[c]); //lol
-				if(thisObj.x + thisObj.destructible.radius<start[0] || thisObj.x-thisObj.destructible.radius>end[0] || thisObj.y + thisObj.destructible.radius<start[1] || thisObj.y-thisObj.destructible.radius>end[1])
-					continue;
-				var thisDistance = distanceFromPointToLine(thisObj.x,thisObj.y,laser.startX,laser.startY,laser.endX,laser.endY);
-				if(thisDistance[0]<thisObj.destructible.radius && thisDistance[1]<tValOfObj){
-					obj = thisObj;
-					tValOfObj = thisDistance[1];
-				}
-			}
-			if(obj)
-			{
-				obj.destructible.shield.current-=laser.power*dt*(1-tValOfObj);
-				if(obj.destructible.shield.current<0)
-				{
-					obj.destructible.hp+=obj.destructible.shield.current;
-					obj.destructible.shield.current = 0;
-				}
-				//console.log(obj+' hp: '+obj.destructible.hp);
-				var laserDir = [laser.endX-laser.startX,laser.endY-laser.startY];
-				var newEnd = [laser.startX+tValOfObj*laserDir[0],laser.startY+tValOfObj*laserDir[1]];
-				laser.endX = newEnd[0];
-				laser.endY = newEnd[1];
-			}
-		},this);
 
-		for(var c = -1;c<this.otherShips.length;c++){
-			var ship = ((c==-1)? this.ship:this.otherShips[c]);
-			for(var n = 0;n<this.asteroids.objs.length;n++){
-				var asteroid = this.asteroids.objs[n];
-				var distance = (ship.x-asteroid.x)*(ship.x-asteroid.x) + (ship.y-asteroid.y)*(ship.y-asteroid.y);
-				var overlap = (ship.destructible.radius+asteroid.radius)*(ship.destructible.radius+asteroid.radius) - distance;
-				if(overlap>=0) //only the player's ship collides with asteroids, since I don't have time to get the AI to avoid them
-				{
-					if(this.frameCount==0)
-						asteroid.destructible.hp=-1;
-					else{
-						var objectSpeed = Math.sqrt(ship.velocityX*ship.velocityX+ship.velocityY*ship.velocityY);
-						ship.destructible.shield.current-=((c == -1)?.1:.01)*dt*objectSpeed;
-						asteroid.destructible.hp-=.2*dt*objectSpeed;
-						if(ship.destructible.shield.current<0)
-						{
-							ship.destructible.hp+=ship.destructible.shield.current;
-							ship.destructible.shield.current = 0;
+	checkCollisions:function(dt){
+		//laser collisions
+			this.lasers.forEach(function(laser){
+				if(laser.power == 0)
+					return;
+				var obj; //the chosen object
+				var tValOfObj = Number.MAX_VALUE;
+				var xInv = laser.endX<laser.startX;
+				var yInv = laser.endY<laser.startY;
+				var start = [(xInv) ? laser.endX : laser.startX, (yInv) ? laser.endY : laser.startY];
+				var end = [(xInv) ? laser.startX : laser.endX, (yInv) ? laser.startY : laser.endY];
+				var laserVertices = [
+					[laser.startX, laser.startY],
+					[laser.endX, laser.endY],
+					[laser.previousLaser.endX,laser.previousLaser.endY],
+					[laser.previousLaser.startX, laser.previousLaser.startY]
+				];
+				//laser-asteroid
+					for(var c = 0;c<this.asteroids.objs.length;c++){
+						var thisObj = this.asteroids.objs[c];
+						if(thisObj.x + thisObj.destructible.radius<start[0] || thisObj.x-thisObj.destructible.radius>end[0] || thisObj.y + thisObj.destructible.radius<start[1] || thisObj.y-thisObj.destructible.radius>end[1])
+							continue;
+						var thisDistance = distanceFromPointToLine(thisObj.x,thisObj.y,laser.startX,laser.startY,laser.endX,laser.endY);
+						if(thisDistance[0]<thisObj.destructible.radius && thisDistance[1]<tValOfObj){
+							obj = thisObj;
+							tValOfObj = thisDistance[1];
 						}
-						ship.velocityX*=(1-2*dt);
-						ship.velocityY*=(1-2*dt);
+					}
+				//laser-ship
+					for(var c = -1;c<this.otherShips.length;c++){
+						var thisObj = ((c==-1) ? this.ship : this.otherShips[c]); //lol
+						if(thisObj == laser.owner)
+							continue;
+						if(thisObj.x + thisObj.destructible.radius<start[0] || thisObj.x-thisObj.destructible.radius>end[0] || thisObj.y + thisObj.destructible.radius<start[1] || thisObj.y-thisObj.destructible.radius>end[1])
+							continue;
+						var thisDistance = distanceFromPointToLine(thisObj.x,thisObj.y,laser.startX,laser.startY,laser.endX,laser.endY);
+
+						if(/*thisDistance[0]<thisObj.destructible.radius && */thisDistance[1]<tValOfObj && polygonCircleSAT(laserVertices, {center:[thisObj.x,thisObj.y], radius:thisObj.destructible.radius})){
+							obj = thisObj;
+							tValOfObj = thisDistance[1];
+						}
+					}
+
+				//resolve collision
+					if(obj)
+					{
+						obj.destructible.shield.current-=laser.power*dt*(1-tValOfObj);
+						if(obj.destructible.shield.current<0)
+						{
+							obj.destructible.hp+=obj.destructible.shield.current;
+							obj.destructible.shield.current = 0;
+						}
+						//console.log(obj+' hp: '+obj.destructible.hp);
+						var laserDir = [laser.endX-laser.startX,laser.endY-laser.startY];
+						var newEnd = [laser.startX+tValOfObj*laserDir[0],laser.startY+tValOfObj*laserDir[1]];
+						laser.endX = newEnd[0];
+						laser.endY = newEnd[1];
+					}
+			},this);
+
+		//asteroid collisions
+			for(var c = -1;c<this.otherShips.length;c++){
+				var ship = ((c==-1)? this.ship:this.otherShips[c]);
+				for(var n = 0;n<this.asteroids.objs.length;n++){
+					var asteroid = this.asteroids.objs[n];
+					var distance = (ship.x-asteroid.x)*(ship.x-asteroid.x) + (ship.y-asteroid.y)*(ship.y-asteroid.y);
+					var overlap = (ship.destructible.radius+asteroid.radius)*(ship.destructible.radius+asteroid.radius) - distance;
+					if(overlap>=0) //only the player's ship collides with asteroids, since I don't have time to get the AI to avoid them
+					{
+						if(this.frameCount==0)
+							asteroid.destructible.hp=-1;
+						else{
+							var objectSpeed = Math.sqrt(ship.velocityX*ship.velocityX+ship.velocityY*ship.velocityY);
+							ship.destructible.shield.current-=((c == -1)?.1:.01)*dt*objectSpeed;
+							asteroid.destructible.hp-=.2*dt*objectSpeed;
+							if(ship.destructible.shield.current<0)
+							{
+								ship.destructible.hp+=ship.destructible.shield.current;
+								ship.destructible.shield.current = 0;
+							}
+							ship.velocityX*=(1-2*dt);
+							ship.velocityY*=(1-2*dt);
+						}
 					}
 				}
 			}
-		}
-	},
-	drawLasers:function(lasers,camera){
-		var ctx = camera.ctx;
-		lasers.forEach(function(laser){
-			if(laser.power == 0)
-				return;
-			var start = worldPointToCameraSpace(laser.startX,laser.startY,camera);
-			var end = worldPointToCameraSpace(laser.endX,laser.endY,camera);
-			var angle = angleBetweenVectors(end[0]-start[0],end[1]-start[1],1,0);
-			var rightVector = rotate(0,0,1,0,angle+90	);
-			var width = (laser.power/laser.efficiency)*camera.zoom;
-			if(width<.8)
-				width = .8;
-			for(var c = 0;c<=this.laserDetail;c++)
-			{
-				var coeff = 1-(c/(this.laserDetail+1));
-				ctx.save();
-				ctx.beginPath();
-				ctx.moveTo(start[0],start[1]);
-				ctx.lineTo(start[0]+coeff*width*rightVector[0]/2,start[1]+width*rightVector[1]/2);
-				ctx.lineTo(end[0],end[1]);
-				ctx.lineTo(start[0]-coeff*width*rightVector[0]/2,start[1]-width*rightVector[1]/2);
-				ctx.arc(start[0],start[1],coeff*width/2,-(angle-90)*(Math.PI/180),(angle-90)*(Math.PI/180)-90,false);
-				//ctx.closePath();
-				//ctx.globalAlpha = 
-				ctx.fillStyle = shadeRGBColor(laser.color,0+c/(this.laserDetail+1));
-				//ctx.lineCap = 'round';
-				
-				//ctx.lineWidth = width;
-				ctx.fill();
-				ctx.restore();
-			}
-		},this);
-	},
+	},	
+
 	clearDestructibles:function(destructibles){
 		for(var c = 0;c<destructibles.length;c++){
 			if(destructibles[c].destructible.hp<=0)
 				destructibles.splice(c--,1);
 		}
 	},
-	drawAsteroidsOverlay:function(asteroids, camera, gridCamera){
-		var start = [0,0];
-		var end = [camera.width,camera.height];
-		var ctx = camera.ctx;
-		var cameraPositions = [];
-		if(gridCamera)
-		{
-			ctx.save();
-			ctx.beginPath();
-			for(var c = 0; c<asteroids.objs.length;c++)
-			{
-				var asteroid = asteroids.objs[c];
-				var gridPosition = worldPointToCameraSpace(asteroid.x,asteroid.y,gridCamera);
-				if(gridPosition[0] + asteroid.destructible.radius*gridCamera.zoom<start[0] || gridPosition[0] - asteroid.destructible.radius*gridCamera.zoom>end[0] || gridPosition[1] + asteroid.destructible.radius*gridCamera.zoom<start[1] || gridPosition[1] - asteroid.destructible.radius*gridCamera.zoom>end[1])
-					continue;			
-				cameraPositions[c] =(worldPointToCameraSpace(asteroid.x,asteroid.y,camera));
-				ctx.moveTo(cameraPositions[c][0],cameraPositions[c][1]);
-				ctx.lineTo(gridPosition[0],gridPosition[1]);
-				ctx.moveTo(gridPosition[0],gridPosition[1]);
-				//ctx.beginPath();
-				ctx.arc(gridPosition[0],gridPosition[1], asteroid.destructible.radius*gridCamera.zoom,0,Math.PI*2);
-			}	
-			ctx.strokeStyle = 'grey';
-			ctx.lineWidth = .5;
-			ctx.globalAlpha = .5;
-			ctx.stroke();
-			ctx.restore();		
-		}
-	},
-	//draws asteroids from the given asteroids array to the given camera
-	drawAsteroids: function(asteroids,camera){
-		var start = [0,0];
-		var end = [camera.width,camera.height];
-		var ctx = camera.ctx;
-		for(var group = 0;group<asteroids.colors.length;group++){
-			ctx.save()
-			ctx.fillStyle = asteroids.colors[group];
-			ctx.beginPath();
-			for(var c = 0;c<asteroids.objs.length;c++){
-				var asteroid = asteroids.objs[c];
-				if(asteroid.colorIndex!=group)
-					continue;
 
-				var finalPosition = worldPointToCameraSpace(asteroid.x,asteroid.y,camera); //get asteroid's position in camera space
-				
-				if(finalPosition[0] + asteroid.radius*camera.zoom<start[0] || finalPosition[0]-asteroid.radius*camera.zoom>end[0] || finalPosition[1] + asteroid.radius*camera.zoom<start[1] || finalPosition[1]-asteroid.radius*camera.zoom>end[1])
-						continue;
-				ctx.moveTo(finalPosition[0],finalPosition[1]);
-				ctx.arc(finalPosition[0],finalPosition[1],asteroid.radius*camera.zoom,0,Math.PI*2);
-			};
-			ctx.closePath();
-			ctx.fill();
-			ctx.restore();
-		};
-	},
-	//draws asteroids from the given asteroids array to the given camera
-	drawStars: function(stars,camera){
-		var start = [0,0];
-		var end = [camera.width,camera.height];
-		var ctx = camera.ctx;
-		for(var c = 0;c<stars.length;c++){
-			var star = stars[c];
-			ctx.save();
-			var finalPosition = worldPointToCameraSpace(star.x,star.y,camera); //get asteroid's position in camera space
-			if(finalPosition[0] + star.radius*camera.zoom<start[0] || finalPosition[0]-star.radius*camera.zoom>end[0] || finalPosition[1] + star.radius*camera.zoom<start[1] || finalPosition[1]-star.radius*camera.zoom>end[1])
-					continue;
-			ctx.translate(finalPosition[0],finalPosition[1]); //translate to that position
-			ctx.scale(camera.zoom,camera.zoom); //scale to zoom
-			ctx.beginPath();
-			ctx.arc(0,0,star.radius,0,Math.PI*2);
-			ctx.globalAlpha = .5;
-			ctx.fillStyle = star.color;
-			ctx.fill();
-			ctx.restore();
-		};
-	},
 	clearShips:function(ships){
 		for(var c = 0;c<ships.length;c++){
 			if(ships[c].destructible.hp<=0)
 				ships.splice(c--,1);
 		}
 	},
+
 	frame:function(){
 		this.animationID = requestAnimationFrame(this.frame.bind(this));
 		var dt = this.calculateDeltaTime();
@@ -1173,6 +1248,7 @@ app.main = {
 		}
 		this.draw();
 	},
+
 	//the game loop
 	update: function(dt){
 	 	//clear values
@@ -1279,6 +1355,7 @@ app.main = {
 		//because we might use the frame count for something at some point
 		this.frameCount++;
 	},
+
 	draw:function(){
 
 		//console.log('drawing');
@@ -1286,6 +1363,7 @@ app.main = {
 	 	if((this.gameState == this.GAME_STATES.PLAYING || this.gameState == this.GAME_STATES.TUTORIAL) && this.paused){
 	 		//dt = 0;
 	 		this.drawPauseScreen(this.camera);
+	 		this.drawLockedGraphic(this.camera);
 	 		//this.drawPauseScreen(this.worldCamera);
 	 		return;
 	 	}
@@ -1344,6 +1422,7 @@ app.main = {
 
 		this.drawLockedGraphic(this.camera);
 	},
+
 	drawHUD: function(camera){
 		var ctx = camera.ctx;
 		ctx.save(); // NEW
@@ -1375,6 +1454,7 @@ app.main = {
 		//this.fillText(ctx, "Overcharge: Thrusters "+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.THRUSTERS)*100)+'% Laser '+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.LASERS)*100)+'% Shields '+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.SHIELDS)*100)+'%',camera.width,camera.height-10,"10pt Orbitron",'white')
 		ctx.restore(); // NEW
 	},
+
 	drawMinimap:function(camera){
 		var ctx = camera.ctx;
 		var viewportStart = [camera.width*camera.viewport.startX,camera.height*camera.viewport.startY];
@@ -1391,7 +1471,7 @@ app.main = {
 		ctx.clip();
 		ctx.translate((viewportStart[0]+viewportDimensions[0]/2-camera.width/2),(viewportStart[1]+viewportDimensions[1]/2-camera.height/2));
 		//ctx.translate(600,300);
-		this.drawGrid(this.minimapCamera);
+		this.drawGrid(this.minimapCamera, true);
 		this.drawAsteroids(this.asteroids,this.minimapCamera);
 		for(var n = this.otherShips.length-1;n>=-1;n--){
 			var ship = (n==-1)?this.ship:this.otherShips[n];
@@ -1399,6 +1479,7 @@ app.main = {
 		}
 		ctx.restore();
 	},
+
 	drawTitleScreen:function(camera){
 		var ctx = camera.ctx;
 		ctx.save();
@@ -1413,6 +1494,7 @@ app.main = {
 		this.fillText(ctx,"Press ENTER to start",camera.width/2,4*camera.height/5,"12pt Orbitron",'white');
 		ctx.restore();
 	},
+
 	drawWinScreen:function(camera){
 		var ctx = camera.ctx;
 		ctx.save();
@@ -1426,6 +1508,7 @@ app.main = {
 		this.fillText(ctx,"Good for you. Press R to continue.",camera.width/2,4*camera.height/5,"12pt Orbitron",'white');
 		ctx.restore();		
 	},
+
 	drawLoseScreen:function(camera){
 		var ctx = camera.ctx;
 		ctx.save();
@@ -1439,6 +1522,7 @@ app.main = {
 		this.fillText(ctx,"Sucks to be you. Press R to try again.",camera.width/2,4*camera.height/5,"12pt Orbitron",'white');
 		ctx.restore();		
 	},
+
 	//draw pause screen in the given camera
 	drawPauseScreen:function(camera){
 		var ctx = camera.ctx;
@@ -1452,6 +1536,7 @@ app.main = {
 		this.fillText(ctx,"Paused",camera.width/2,camera.height/5,"24pt Aroma",'white');
 		ctx.restore();
 	},
+
 	drawLockedGraphic:function(camera){
 		if(locked)
 			return;
@@ -1462,6 +1547,7 @@ app.main = {
 		this.fillText(ctx,"Click me",camera.width/2,camera.height/2,"10pt Orbitron",'white');
 		ctx.restore();
 	},
+
 	drawTutorialGraphics:function(camera){
 		var ctx = camera.ctx;
 		ctx.save();
@@ -1479,16 +1565,19 @@ app.main = {
 		this.fillText(ctx,"Play around for a bit, then press ENTER to start the game. Your goal is to destroy all enemy ships",camera.width/10,11*camera.height/12,"10pt Orbitron",'white');
 		this.fill
 	},
+
 	pauseGame:function(){
 		this.paused = true;
 		cancelAnimationFrame(this.animationID);
 		this.frame.bind(this)();
 	},
+
 	resumeGame:function(){
 		cancelAnimationFrame(this.animationID);
 		this.paused = false;
 		this.frame.bind(this)();
 	},
+
 	fillText: function(ctx,string, x, y, css, color, alpha) {
 		ctx.save();
 		// https://developer.mozilla.org/en-US/docs/Web/CSS/font
@@ -1499,6 +1588,7 @@ app.main = {
 		ctx.fillText(string, x, y);
 		ctx.restore();
 	},	
+
 	calculateDeltaTime: function(){
 		var now,fps;
 		now = (Date.now().valueOf()); //get date as unix timestamp
