@@ -221,14 +221,14 @@ function raySphereIntersect(s,e,c,r){
 	return tca-thc;
 }
 
-function polygonCircleSAT(polygon, circle)
+function polygonCapsuleSAT(polygon, capsule)
 {
-	function circleAxisCheck(vertices, circle, axis){
+	function capsuleAxisCheck(vertices, capsule, axis){
 		var normalizedAxis = normalizeVector(axis[0], axis[1]);
 		var max1;
 		var min1;
-		var maxCircle;
-		var minCircle;
+		var maxCapsule;
+		var minCapsule;
 		//project each vec3 in the first object onto the axis, saving min and max values
 		for (var c = 0; c < vertices.length; c++) {
 			var vert = vertices[c];
@@ -238,25 +238,37 @@ function polygonCircleSAT(polygon, circle)
 			if (c == 0 || projectedVert < min1)
 				min1 = projectedVert;
 		}
-		var projectedCenter = circle.center[0]*normalizedAxis[0] + circle.center[1]*normalizedAxis[1];
-		maxCircle = projectedCenter + circle.radius;
-		minCircle = projectedCenter - circle.radius;
+		var projectedCenters = [capsule.center1[0]*normalizedAxis[0] + capsule.center1[1]*normalizedAxis[1], capsule.center2[0]*normalizedAxis[0] + capsule.center2[1]*normalizedAxis[1]];
+		if(projectedCenters[0]>projectedCenters[1]){
+			maxCapsule = projectedCenters[0];
+			minCapsule = projectedCenters[1];
+		}
+		else{
+			maxCapsule = projectedCenters[1];
+			minCapsule = projectedCenters[0];
+		}
+		maxCapsule+=capsule.radius;
+		minCapsule-=capsule.radius;
 
-		return !(max1 < minCircle || maxCircle < min1);
+		return !(max1 < minCapsule || maxCapsule < min1);
 	}
 
 	for(var i = 0;i<polygon.length;i++){
 		var nextPoint = (i==polygon.length-1) ? polygon[0] : polygon[i + 1];
 		var normalAxis = [-(nextPoint[1] - polygon[i][1]), nextPoint[0] - polygon[i][0]];
-		//var normalAxis = [nextPoint[0] - polygon[i][0], nextPoint[1] - polygon[i][1]];
-		var circleAxis = [circle.center[0] - polygon[i][0], circle.center[1] - polygon[i][1]];
-		if(!circleAxisCheck(polygon, circle, circleAxis))
+		var centerAxis1 = [capsule.center1[0] - polygon[i][0], capsule.center1[1] - polygon[i][1]];
+		var centerAxis2 = [capsule.center2[0] - polygon[i][0], capsule.center2[1] - polygon[i][1]];
+		if(!capsuleAxisCheck(polygon, capsule, centerAxis1) || !capsuleAxisCheck(polygon, capsule, centerAxis2))
 			return false;
 		else if(normalAxis == [0,0])
 			continue;
-		else if(!circleAxisCheck(polygon, circle, normalAxis))
+		else if(!capsuleAxisCheck(polygon, capsule, normalAxis))
 			return false;
 	}
+
+	var capsuleAxisNormal = [-(capsule.center2[1] - capsule.center1[1]), capsule.center2[0] - capsule.center1[0]];
+	if(!capsuleAxisCheck(polygon, capsule, capsuleAxisNormal))
+		return false;
 
 	return true;
 }

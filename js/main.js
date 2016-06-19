@@ -200,6 +200,8 @@ app.main = {
 			x:(objectParams.x)?objectParams.x : gridPosition.x,
 			y:(objectParams.x)?objectParams.y : gridPosition.y,
 			rotation:(objectParams.rotation)?objectParams.rotation : 0,
+			prevX: (objectParams.x)?objectParams.x : gridPosition.x,
+			prevY: (objectParams.x)?objectParams.y : gridPosition.y,
 			//velocities
 			velocityX:0, //in absolute form, used for movement
 			velocityY:0,
@@ -841,6 +843,10 @@ app.main = {
 	},
 
 	updateShip: function(ship,dt){
+		//store position at previous update for swept area construction
+			ship.prevX = ship.x;
+			ship.prevY = ship.y;
+
 		//initialize acceleration values
 			var accelerationX = 0;
 			var accelerationY = 0;
@@ -1170,7 +1176,7 @@ app.main = {
 							continue;
 						var thisDistance = distanceFromPointToLine(thisObj.x,thisObj.y,laser.startX,laser.startY,laser.endX,laser.endY);
 
-						if(/*thisDistance[0]<thisObj.destructible.radius && */thisDistance[1]<tValOfObj && polygonCircleSAT(laserVertices, {center:[thisObj.x,thisObj.y], radius:thisObj.destructible.radius})){
+						if(thisDistance[1]<tValOfObj && polygonCapsuleSAT(laserVertices, {center1:[thisObj.x, thisObj.y], center2:[thisObj.prevX, thisObj.prevY], radius:thisObj.destructible.radius})){
 							obj = thisObj;
 							tValOfObj = thisDistance[1];
 						}
