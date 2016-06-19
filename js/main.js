@@ -142,6 +142,7 @@ app.main = {
 
 	//resets the game state
 	resetGame:function(){
+		this.clearProjectiles(this.projectiles);
 		this.ship = {};
 		this.ship = this.createShip({},this.grid);
 		this.makeAsteroids.bind(this,this.asteroids,this.grid)();
@@ -811,7 +812,7 @@ app.main = {
 		var distanceSqr = vectorMagnitudeSqr(vectorToTarget[0],vectorToTarget[1]);
 
 		if(relativeAngleToTarget<ship.ai.fireSpread/2 && relativeAngleToTarget>-ship.ai.fireSpread/2  && distanceSqr<(ship.laser.range*ship.laser.range))
-			this.shipFireLaser(ship);
+			this.shipFireCannon(ship);
 
 		if(distanceSqr > ship.ai.followMax*ship.ai.followMax)
 			this.shipMedialThrusters(ship,ship.thrusters.medial.maxStrength/ship.stabilizer.thrustRatio);
@@ -870,6 +871,10 @@ app.main = {
 
 	clearLasers:function(lasers){
 		lasers.length=0;
+	},
+
+	clearProjectiles: function(projectiles){
+		projectiles.length = 0;
 	},
 
 	checkCollisions:function(dt){
@@ -931,6 +936,23 @@ app.main = {
 						laser.endY = newEnd[1];
 					}
 			},this);
+
+		//projectile collisions
+			this.projectiles.forEach(function(prj){
+				var prjCapsule = {center1:[prj.x,prj.y], center2:[prj.prevX, prj.prevY], radius:prj.destructible.radius};
+				//projectile-ship
+					for(var c = -1;c<this.otherShips.length;c++){
+						var thisObj = ((c==-1) ? this.ship : this.otherShips[c]); //lol
+						if(thisObj == prj.owner)
+							continue;
+						//if()
+						//	continue;
+						if(capsuleCapsuleSAT({center1:[thisObj.x,thisObj.y], center2:[thisObj.prevX, thisObj.prevY], radius:thisObj.destructible.radius}, prjCapsule))
+						{
+							prj.destructible.hp = 0;
+						}
+					}
+			}, this);
 
 		//asteroid collisions
 			for(var c = -1;c<this.otherShips.length;c++){

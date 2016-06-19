@@ -345,7 +345,7 @@ function capsuleCapsuleAxisCheck(capsule1, capsule2, axis){
 	minCapsule2-=capsule2.radius;
 
 	//return whether they overlap
-	return !(max1 < minCapsule || maxCapsule < min1);
+	return !(maxCapsule1 < minCapsule2 || maxCapsule2 < minCapsule1);
 }
 
 //http://stackoverflow.com/questions/9614109/how-to-calculate-an-angle-from-points
