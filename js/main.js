@@ -51,6 +51,7 @@ app.main = {
 	otherShipCount:0,
 	maxOtherShips:10,
 	lasers:[],
+	projectiles:[],
 	camera:{
 		//position/rotation
 		x:0,
@@ -166,6 +167,15 @@ app.main = {
 		};
 	},
 
+	isPositionInGrid: function(position, grid, tolerances){
+		if(!tolerances)
+			tolerances = [0,0];
+		var lower = [grid.gridStart[0],grid.gridStart[1]];
+		var upper = [lower[0]+grid.gridLines*grid.gridSpacing,lower[1]+grid.gridLines*grid.gridSpacing];
+
+		return position[0] > lower[0] - tolerances[0] && position[0] < upper[0] + tolerances[0] && position[1] > lower[1] - tolerances[1] && position[1] < upper[1] + tolerances[1];
+	},
+
 	//returns a camera object with the given values and the context from the given canvas
 	createCamera:function(canvas, objectParams){
 		if(!objectParams)
@@ -228,7 +238,8 @@ app.main = {
 			color:(objectParams.color)?objectParams.color : getRandomBrightColor(),
 			//used for controlling laser fire rate
 			//lastLaserTime:0,
-			laser:this.createComponentLaser((objectParams.laser))
+			laser:this.createComponentLaser((objectParams.laser)),
+			cannon:this.createComponentCannon(objectParams.cannon)
 		};
 	},
 
@@ -321,6 +332,18 @@ app.main = {
 		};
 	},
 
+	createComponentCannon:function(objectParams){
+		if(!objectParams)
+			objectParams = {};
+		return{
+			firing:false,
+			lastFireTime:0,
+			cd:(objectParams.cd)?objectParams.cd:.1,
+			power:(objectParams.power)?objectParams.power:24000,
+
+		};
+	},
+
 	//constructor for the destructible component - stores hp, shields, and collider radius
 	createComponentDestructible:function(objectParams){
 		if(!objectParams)
@@ -382,6 +405,21 @@ app.main = {
 		};
 		lasers.push(lsr);
 		return lsr;
+	},
+
+	createProjectile:function(projectiles, startX, startY, velX, velY, destructible, color, owner){
+		var prj = {
+			x:startX,
+			y:startY,
+			prevX:startX,
+			prevY:startY,
+			velocityX:velX,
+			velocityY:velY,
+			destructible:destructible,
+			color:color,
+			owner:owner
+		};
+		projectiles.push(prj);
 	},
 
 	scalePowerTarget:function(ps){
@@ -509,6 +547,637 @@ app.main = {
 				colorIndex:group
 			});
 		}
+	},
+
+	updateProjectile: function(prj, dt){
+		prj.prevX = prj.x;
+		prj.prevY = prj.y;
+		prj.x += prj.velocityX * dt;
+		prj.y += prj.velocityY * dt;
+	},
+
+	updateShip: function(ship,dt){
+		//store position at previous update for swept area construction
+			ship.prevX = ship.x;
+			ship.prevY = ship.y;
+
+		//initialize acceleration values
+			var accelerationX = 0;
+			var accelerationY = 0;
+			var rotationalAcceleration = 0;
+
+			var normalizedForwardVector = rotate(0,0,0,-1,-ship.rotation);
+			var normalizedRightVector = rotate(0,0,0,-1,-ship.rotation-90);
+			ship.forwardVectorX = normalizedForwardVector[0],
+			ship.forwardVectorY = normalizedForwardVector[1];
+			ship.rightVectorX = normalizedRightVector[0];
+			ship.rightVectorY = normalizedRightVector[1];
+
+		//add acceleration from each thruster
+			//medial
+				var strength = ship.thrusters.medial.targetStrength;
+
+				//clamp target strength to the thruster's max
+					var maxStrength = ship.thrusters.medial.maxStrength;
+					strength = clamp(-maxStrength,strength,maxStrength);
+				//lerp current thruster strength to target strength at the power ramp rate, then set current strength and the target strength to the lerped value
+					var thrusterDelta = lerp(ship.thrusters.medial.currentStrength,strength,ship.thrusters.medial.powerRampPercentage*dt) - ship.thrusters.medial.currentStrength;
+					if(thrusterDelta * ship.thrusters.medial.currentStrength > 0)
+						thrusterDelta = clamp(-ship.thrusters.medial.powerRampLimit * dt, thrusterDelta, ship.thrusters.medial.powerRampLimit * dt);
+					strength = ship.thrusters.medial.currentStrength = ship.thrusters.medial.currentStrength + thrusterDelta;
+					strength = clamp(-maxStrength,strength,maxStrength); //this is in case of really low dt values
+
+				//add forward vector times strength to acceleration
+					accelerationX += normalizedForwardVector[0]*strength;
+					accelerationY += normalizedForwardVector[1]*strength;
+
+			//lateral
+				var strength = ship.thrusters.lateral.targetStrength;
+
+				//clamp strength
+					var maxStrength = ship.thrusters.lateral.maxStrength;
+					strength = clamp(-maxStrength,strength,maxStrength);
+				//lerp current thruster strength to target strength at the power ramp rate, then set current strength and the target strength to the lerped value
+					var thrusterDelta = lerp(ship.thrusters.lateral.currentStrength,strength,ship.thrusters.lateral.powerRampPercentage*dt) - ship.thrusters.lateral.currentStrength;
+					if(thrusterDelta * ship.thrusters.lateral.currentStrength > 0)
+						thrusterDelta = clamp(-ship.thrusters.lateral.powerRampLimit * dt, thrusterDelta, ship.thrusters.lateral.powerRampLimit * dt);
+					strength = ship.thrusters.lateral.currentStrength = ship.thrusters.lateral.currentStrength + thrusterDelta;
+					strength = clamp(-maxStrength,strength,maxStrength);
+
+				//add right vector times strength to acceleration
+					accelerationX += normalizedRightVector[0]*strength;
+					accelerationY += normalizedRightVector[1]*strength;
+
+			//rotational
+				var strength = ship.thrusters.rotational.targetStrength;
+
+				//clamp strength
+					var maxStrength = ship.thrusters.rotational.maxStrength;
+					strength = clamp(-maxStrength,strength,maxStrength);
+				//lerp current thruster strength to target strength at the power ramp rate, then set current strength and the target strength to the lerped value
+					var thrusterDelta = lerp(ship.thrusters.rotational.currentStrength,strength,ship.thrusters.rotational.powerRampPercentage*dt) - ship.thrusters.rotational.currentStrength;
+					if(thrusterDelta * ship.thrusters.rotational.currentStrength > 0)
+						thrusterDelta = clamp(-ship.thrusters.rotational.powerRampLimit * dt, thrusterDelta, ship.thrusters.rotational.powerRampLimit * dt);
+					strength = ship.thrusters.rotational.currentStrength = ship.thrusters.rotational.currentStrength + thrusterDelta;
+					strength = clamp(-maxStrength,strength,maxStrength);
+
+				//this one we can set directly
+					rotationalAcceleration = -strength;
+
+		//accelerate
+			ship.velocityX+=accelerationX*dt;
+			ship.velocityY+=accelerationY*dt;
+			ship.rotationalVelocity+=rotationalAcceleration*dt;
+
+		//calculate velocity components for the stabilizers
+			ship.medialVelocity = -scalarComponentOf1InDirectionOf2(ship.velocityX,ship.velocityY,normalizedForwardVector[0],normalizedForwardVector[1]); //get magnitude of projection of velocity onto the forward vector
+			ship.lateralVelocity = -scalarComponentOf1InDirectionOf2(ship.velocityX,ship.velocityY,normalizedRightVector[0],normalizedRightVector[1]); //et magnitude of velocity's projection onto the right vector
+
+		//move
+			ship.x+=ship.velocityX*dt;
+			ship.y+=ship.velocityY*dt;
+			ship.rotation+=ship.rotationalVelocity*dt;
+			if(ship.rotation>180)
+				ship.rotation-=360;
+			else if(ship.rotation<-180)
+				ship.rotation+=360;
+
+		//create laser objects
+			var laserVector = [0,-ship.laser.range];
+			laserVector = rotate(0,0,laserVector[0],laserVector[1],-ship.rotation+Math.random()*ship.laser.spread-ship.laser.spread/2);
+			if(ship.laser.previousLaser)
+				ship.laser.previousLaser.previousLaser = null; //avoiding a memory leak - without this the lasers will chain backwards in time continuously
+			ship.laser.previousLaser = this.createLaser(this.lasers,ship.x+normalizedForwardVector[0]*(30),ship.y+normalizedForwardVector[1]*30,ship.x+laserVector[0],ship.y+laserVector[1],ship.laser.color,ship.laser.currentPower, ship.laser.efficiency, ship.laser.previousLaser, ship);
+			ship.laser.currentPower-=ship.laser.maxPower*(1-ship.laser.coherence)*dt*1000;
+			if(ship.laser.currentPower<0)
+				ship.laser.currentPower=0;
+
+		//create projectiles
+			if(ship.cannon.firing){
+				var prjVelocity = [ship.forwardVectorX * ship.cannon.power, ship.forwardVectorY * ship.cannon.power];
+				var prjDestructible = {
+					hp:10,
+					radius:2
+				};
+				this.createProjectile(this.projectiles, ship.x+normalizedForwardVector[0]*(30), ship.y+normalizedForwardVector[1]*30, prjVelocity[0] + ship.velocityX, prjVelocity[1] + ship.velocityY, this.createComponentDestructible(prjDestructible), 'yellow', ship);
+				ship.cannon.firing = false;
+			}
+
+		//refresh shields
+			if(ship.destructible.shield.current<ship.destructible.shield.max)
+			{
+				ship.destructible.shield.current+=ship.destructible.shield.recharge*dt;
+				if(ship.destructible.shield.current>ship.destructible.shield.max)
+					ship.destructible.shield.current = ship.destructible.shield.max;
+			}
+
+		//update power system
+			//scale all relevant values down from the augmented to their normal using the old power values
+				var thrusterPower = this.getPowerForComponent(ship.powerSystem, this.SHIP_COMPONENTS.THRUSTERS);
+				var laserPower = this.getPowerForComponent(ship.powerSystem, this.SHIP_COMPONENTS.LASERS);
+				var shieldPower = this.getPowerForComponent(ship.powerSystem, this.SHIP_COMPONENTS.SHIELDS);
+				//thrusters
+					ship.thrusters.medial.maxStrength/=(1+thrusterPower);
+					ship.thrusters.lateral.maxStrength/=(1+thrusterPower);
+					ship.thrusters.rotational.maxStrength/=(1+thrusterPower);
+					ship.stabilizer.clamps.medial/=(1+thrusterPower);
+					ship.stabilizer.clamps.lateral/=(1+thrusterPower);
+					ship.stabilizer.clamps.rotational/=(1+thrusterPower);
+				//lasers
+					ship.laser.maxPower/=(1+laserPower);
+				//shields
+					ship.destructible.shield.current/=(1+shieldPower);
+					ship.destructible.shield.max/=(1+shieldPower);
+					ship.destructible.shield.recharge/=(1+shieldPower);
+
+			//update the power values
+				this.scalePowerTarget(ship.powerSystem);
+				ship.powerSystem.current = lerp3d(ship.powerSystem.current,ship.powerSystem.target,ship.powerSystem.transferRate*dt);
+
+			//scale back up to augmented with the new power values
+				thrusterPower = this.getPowerForComponent(ship.powerSystem, this.SHIP_COMPONENTS.THRUSTERS);
+				laserPower = this.getPowerForComponent(ship.powerSystem, this.SHIP_COMPONENTS.LASERS);
+				shieldPower = this.getPowerForComponent(ship.powerSystem, this.SHIP_COMPONENTS.SHIELDS);
+				//thrusters
+					ship.thrusters.medial.maxStrength*=(1+thrusterPower);
+					ship.thrusters.lateral.maxStrength*=(1+thrusterPower);
+					ship.thrusters.rotational.maxStrength*=(1+thrusterPower);
+					ship.stabilizer.clamps.medial*=(1+thrusterPower);
+					ship.stabilizer.clamps.lateral*=(1+thrusterPower);
+					ship.stabilizer.clamps.rotational*=(1+thrusterPower);
+				//lasers
+					ship.laser.maxPower*=(1+laserPower);
+				//shields
+					ship.destructible.shield.current*=(1+shieldPower);
+					ship.destructible.shield.max*=(1+shieldPower);
+					ship.destructible.shield.recharge*=(1+shieldPower);
+
+		//thruster percentage for the sound effect
+			var thrusterTotal = Math.abs(ship.thrusters.medial.currentStrength)+Math.abs(ship.thrusters.lateral.currentStrength)+Math.abs(ship.thrusters.rotational.currentStrength);
+			var thrusterEfficiencyTotal = ship.thrusters.medial.efficiency+ship.thrusters.lateral.efficiency+ship.thrusters.rotational.efficiency;
+			ship.thrusters.noiseLevel = (thrusterTotal/thrusterEfficiencyTotal);
+	},
+
+	//clears the active thruster values
+	shipClearThrusters:function(ship){
+		ship.thrusters.medial.targetStrength = 0;
+		ship.thrusters.lateral.targetStrength = 0;
+		ship.thrusters.rotational.targetStrength = 0;
+	},
+
+	shipClearPowerTarget:function(ship){
+		ship.powerSystem.target = [0,0,0];
+	},
+
+	//add given strength to main thruster
+	shipMedialThrusters:function(ship, strength){
+		ship.thrusters.medial.targetStrength += strength;
+	},
+
+	//add strength to side thruster
+	shipRotationalThrusters: function(ship, strength){
+		ship.thrusters.rotational.targetStrength += strength;
+	},
+
+	//add strength to lateral thruster
+	shipLateralThrusters:function(ship, strength){
+		ship.thrusters.lateral.targetStrength += strength;
+	},
+
+	//rotational stabilizer
+	shipRotationalStabilizers:function(ship,dt){
+		//if the side thruster isn't active, or is active in the opposite direction of our rotation
+		if(ship.thrusters.rotational.targetStrength*ship.rotationalVelocity>=0 && Math.abs(ship.rotationalVelocity) > ship.stabilizer.precision/6)
+			//add correctional strength in the opposite direction of our rotation
+			this.shipRotationalThrusters(ship,ship.rotationalVelocity*ship.stabilizer.strength*dt); //we check the direction because the stabilizers can apply more thrust than the player
+		//or, if we've exceeded our clamp speed and are trying to keep accelerating in that direction
+		else if (ship.stabilizer.clamps.enabled && Math.abs(ship.rotationalVelocity)>=ship.stabilizer.clamps.rotational && ship.thrusters.rotational.targetStrength*ship.rotationalVelocity<0)
+			//shut off the thruster
+			ship.thrusters.rotational.targetStrength = 0;
+	},
+
+	//medial stabilizer
+	shipMedialStabilizers:function(ship,dt){
+		//if the main thruster isn't active, or is working against our velocity
+		if(ship.thrusters.medial.targetStrength*ship.medialVelocity>=0 && Math.abs(ship.medialVelocity) > ship.stabilizer.precision)
+			//add corrective strength
+			this.shipMedialThrusters(ship,ship.medialVelocity*ship.stabilizer.strength*dt);
+		//or, if we're past our clamp and trying to keep going
+		else if (ship.stabilizer.clamps.enabled && Math.abs(ship.medialVelocity)>=ship.stabilizer.clamps.medial && ship.thrusters.medial.targetStrength*ship.medialVelocity<0)
+			//shut off the thruster
+			ship.thrusters.medial.targetStrength = 0;
+	},
+
+	//lateral stabilizer
+	shipLateralStabilizers:function(ship,dt){
+		//see above
+		if(ship.thrusters.lateral.targetStrength*ship.lateralVelocity>=0 && Math.abs(ship.lateralVelocity) > ship.stabilizer.precision)
+			this.shipLateralThrusters(ship,ship.lateralVelocity*ship.stabilizer.strength*dt);
+		else if (ship.stabilizer.clamps.enabled && Math.abs(ship.lateralVelocity)>=ship.stabilizer.clamps.lateral && ship.thrusters.lateral.targetStrength*ship.lateralVelocity<0)
+			ship.thrusters.lateral.targetStrength = 0;
+	},
+
+	shipFireLaser:function(ship){
+		var now = Date.now();
+		//if the cool down is up
+		if(now>ship.laser.lastFireTime+ship.laser.cd*1000){
+			ship.laser.lastFireTime = now;
+			ship.laser.currentPower = ship.laser.maxPower;	
+			if(this.sounds.laser.loaded)
+			{
+				var laserSound = createjs.Sound.play(this.sounds.laser.id,{interrupt: createjs.Sound.INTERRUPT_ANY});
+				laserSound.volume = .5 * (1-(1-this.camera.zoom)/this.soundLevel);	
+			}
+		}
+	},
+
+	shipFireCannon: function(ship){
+		var now = Date.now();
+		if(now>ship.cannon.lastFireTime+ship.cannon.cd*1000){
+			ship.cannon.lastFireTime = now;
+			ship.cannon.firing = true;
+		}
+	},
+
+	shipAI:function(ship, target,dt){
+		var vectorToTarget = [target.x-ship.x,target.y-ship.y];
+		var relativeAngleToTarget = angleBetweenVectors(ship.forwardVectorX,ship.forwardVectorY,vectorToTarget[0],vectorToTarget[1]);
+
+		if(relativeAngleToTarget>0)
+			this.shipRotationalThrusters(ship,-relativeAngleToTarget * dt * ship.ai.accuracy * ship.thrusters.rotational.maxStrength/ship.stabilizer.thrustRatio);
+		else if (relativeAngleToTarget<0)
+			this.shipRotationalThrusters(ship,-relativeAngleToTarget * dt * ship.ai.accuracy * ship.thrusters.rotational.maxStrength/ship.stabilizer.thrustRatio);
+
+		var distanceSqr = vectorMagnitudeSqr(vectorToTarget[0],vectorToTarget[1]);
+
+		if(relativeAngleToTarget<ship.ai.fireSpread/2 && relativeAngleToTarget>-ship.ai.fireSpread/2  && distanceSqr<(ship.laser.range*ship.laser.range))
+			this.shipFireLaser(ship);
+
+		if(distanceSqr > ship.ai.followMax*ship.ai.followMax)
+			this.shipMedialThrusters(ship,ship.thrusters.medial.maxStrength/ship.stabilizer.thrustRatio);
+		else if(distanceSqr<ship.ai.followMin*ship.ai.followMin)
+			this.shipMedialThrusters(ship,-ship.thrusters.medial.maxStrength/ship.stabilizer.thrustRatio);
+
+		var vectorFromTarget = [-vectorToTarget[0],-vectorToTarget[1]];
+		var relativeAngleToMe = angleBetweenVectors(target.forwardVectorX,target.forwardVectorY,vectorFromTarget[0],vectorFromTarget[1]);
+		//console.log(Math.floor(relativeAngleToMe));
+
+		if(distanceSqr<2*(target.laser.range*target.laser.range) && relativeAngleToMe<90 && relativeAngleToMe>0)
+			this.shipLateralThrusters(ship, -ship.thrusters.lateral.maxStrength/ship.stabilizer.thrustRatio);
+		else if(distanceSqr<2*(target.laser.range*target.laser.range) && relativeAngleToMe>-90 &&relativeAngleToMe<0)
+			this.shipLateralThrusters(ship, ship.thrusters.lateral.maxStrength/ship.stabilizer.thrustRatio);
+
+		this.shipMedialStabilizers(ship,dt);
+		this.shipLateralStabilizers(ship,dt);
+		this.shipRotationalStabilizers(ship,dt);
+	},
+
+	shipKeyboardControl(ship, dt){
+		//set ship thruster values
+		 	//assisted controls
+			//medial motion
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_W])
+				this.shipMedialThrusters(ship,ship.thrusters.medial.maxStrength/ship.stabilizer.thrustRatio);
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_S])
+				this.shipMedialThrusters(ship,-ship.thrusters.medial.maxStrength/ship.stabilizer.thrustRatio);
+			if(ship.stabilizer.enabled)
+				this.shipMedialStabilizers(ship,dt);
+			//lateral motion
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_A])
+				this.shipLateralThrusters(ship,-ship.thrusters.lateral.maxStrength/ship.stabilizer.thrustRatio);
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_D])
+				this.shipLateralThrusters(ship,ship.thrusters.lateral.maxStrength/ship.stabilizer.thrustRatio);
+			if(ship.stabilizer.enabled)
+				this.shipLateralStabilizers(ship,dt);
+			//rotational motion - mouse			
+			this.shipRotationalThrusters(ship,-myMouse.direction*myMouse.sensitivity*ship.thrusters.rotational.maxStrength/ship.stabilizer.thrustRatio);
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_LEFT])
+				this.shipRotationalThrusters(ship,ship.thrusters.rotational.maxStrength/ship.stabilizer.thrustRatio);
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_RIGHT])
+				this.shipRotationalThrusters(ship,-ship.thrusters.rotational.maxStrength/ship.stabilizer.thrustRatio);
+			if(ship.stabilizer.enabled)
+				this.shipRotationalStabilizers(ship,dt);
+			//lasers
+			if(myMouse.mousedown[myMouse.BUTTONS.LEFT] || myKeys.keydown[myKeys.KEYBOARD.KEY_SPACE])
+				this.shipFireCannon(ship);
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_SHIFT])
+				ship.powerSystem.target[this.SHIP_COMPONENTS.THRUSTERS] = 1;
+			if(myMouse.mousedown[myMouse.BUTTONS.RIGHT])
+				ship.powerSystem.target[this.SHIP_COMPONENTS.LASERS] = 1;
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_ALT])
+				ship.powerSystem.target[this.SHIP_COMPONENTS.SHIELDS] = 1;
+	},
+
+	clearLasers:function(lasers){
+		lasers.length=0;
+	},
+
+	checkCollisions:function(dt){
+		//laser collisions
+			this.lasers.forEach(function(laser){
+				if(laser.power == 0)
+					return;
+				var obj; //the chosen object
+				var tValOfObj = Number.MAX_VALUE;
+				var xInv = laser.endX<laser.startX;
+				var yInv = laser.endY<laser.startY;
+				var start = [(xInv) ? laser.endX : laser.startX, (yInv) ? laser.endY : laser.startY];
+				var end = [(xInv) ? laser.startX : laser.endX, (yInv) ? laser.startY : laser.endY];
+				var laserVertices = [
+					[laser.startX, laser.startY],
+					[laser.endX, laser.endY],
+					[laser.previousLaser.endX,laser.previousLaser.endY],
+					[laser.previousLaser.startX, laser.previousLaser.startY]
+				];
+				//laser-asteroid
+					for(var c = 0;c<this.asteroids.objs.length;c++){
+						var thisObj = this.asteroids.objs[c];
+						if(thisObj.x + thisObj.destructible.radius<start[0] || thisObj.x-thisObj.destructible.radius>end[0] || thisObj.y + thisObj.destructible.radius<start[1] || thisObj.y-thisObj.destructible.radius>end[1])
+							continue;
+						var thisDistance = distanceFromPointToLine(thisObj.x,thisObj.y,laser.startX,laser.startY,laser.endX,laser.endY);
+						if(thisDistance[0]<thisObj.destructible.radius && thisDistance[1]<tValOfObj){
+							obj = thisObj;
+							tValOfObj = thisDistance[1];
+						}
+					}
+				//laser-ship
+					for(var c = -1;c<this.otherShips.length;c++){
+						var thisObj = ((c==-1) ? this.ship : this.otherShips[c]); //lol
+						if(thisObj == laser.owner)
+							continue;
+						if(thisObj.x + thisObj.destructible.radius<start[0] || thisObj.x-thisObj.destructible.radius>end[0] || thisObj.y + thisObj.destructible.radius<start[1] || thisObj.y-thisObj.destructible.radius>end[1])
+							continue;
+						var thisDistance = distanceFromPointToLine(thisObj.x,thisObj.y,laser.startX,laser.startY,laser.endX,laser.endY);
+
+						if(thisDistance[1]<tValOfObj && polygonCapsuleSAT(laserVertices, {center1:[thisObj.x, thisObj.y], center2:[thisObj.prevX, thisObj.prevY], radius:thisObj.destructible.radius})){
+							obj = thisObj;
+							tValOfObj = thisDistance[1];
+						}
+					}
+
+				//resolve collision
+					if(obj)
+					{
+						obj.destructible.shield.current-=laser.power*dt*(1-tValOfObj);
+						if(obj.destructible.shield.current<0)
+						{
+							obj.destructible.hp+=obj.destructible.shield.current;
+							obj.destructible.shield.current = 0;
+						}
+						//console.log(obj+' hp: '+obj.destructible.hp);
+						var laserDir = [laser.endX-laser.startX,laser.endY-laser.startY];
+						var newEnd = [laser.startX+tValOfObj*laserDir[0],laser.startY+tValOfObj*laserDir[1]];
+						laser.endX = newEnd[0];
+						laser.endY = newEnd[1];
+					}
+			},this);
+
+		//asteroid collisions
+			for(var c = -1;c<this.otherShips.length;c++){
+				var ship = ((c==-1)? this.ship:this.otherShips[c]);
+				for(var n = 0;n<this.asteroids.objs.length;n++){
+					var asteroid = this.asteroids.objs[n];
+					var distance = (ship.x-asteroid.x)*(ship.x-asteroid.x) + (ship.y-asteroid.y)*(ship.y-asteroid.y);
+					var overlap = (ship.destructible.radius+asteroid.radius)*(ship.destructible.radius+asteroid.radius) - distance;
+					if(overlap>=0) //only the player's ship collides with asteroids, since I don't have time to get the AI to avoid them
+					{
+						if(this.frameCount==0)
+							asteroid.destructible.hp=-1;
+						else{
+							var objectSpeed = Math.sqrt(ship.velocityX*ship.velocityX+ship.velocityY*ship.velocityY);
+							ship.destructible.shield.current-=((c == -1)?.1:.01)*dt*objectSpeed;
+							asteroid.destructible.hp-=.2*dt*objectSpeed;
+							if(ship.destructible.shield.current<0)
+							{
+								ship.destructible.hp+=ship.destructible.shield.current;
+								ship.destructible.shield.current = 0;
+							}
+							ship.velocityX*=(1-2*dt);
+							ship.velocityY*=(1-2*dt);
+						}
+					}
+				}
+			}
+	},	
+
+	cullDestructibles: function(destructibles, grid, tolerancePercent){
+		var gridDimensions = grid.gridLines * grid.gridSpacing;
+		var tolerances = [gridDimensions * tolerancePercent, gridDimensions * tolerancePercent];
+
+		for(var c = 0;c<destructibles.length;c++){
+			var position = [destructibles[c].x, destructibles[c].y];
+			if(!this.isPositionInGrid(position, grid, tolerances))
+				destructibles.splice(c--,1);
+		}
+	},
+
+	clearDestructibles:function(destructibles){
+		for(var c = 0;c<destructibles.length;c++){
+			if(destructibles[c].destructible.hp<=0)
+				destructibles.splice(c--,1);
+		}
+	},
+
+	clearShips:function(ships){
+		for(var c = 0;c<ships.length;c++){
+			if(ships[c].destructible.hp<=0)
+				ships.splice(c--,1);
+		}
+	},
+
+	frame:function(){
+		this.animationID = requestAnimationFrame(this.frame.bind(this));
+		var dt = this.calculateDeltaTime();
+		if(dt>this.timeStep*4)
+			dt = this.timeStep;
+		this.accumulator+=dt;
+		while(this.accumulator>=this.timeStep){
+			if(!((this.gameState == this.GAME_STATES.PLAYING || this.gameState == this.GAME_STATES.TUTORIAL) && this.paused))
+				this.update(this.timeStep);
+			this.accumulator-= this.timeStep;
+		}
+		this.draw();
+	},
+
+	//the game loop
+	update: function(dt){
+	 	//clear values
+		this.clearLasers(this.lasers);
+		for(var c =-1;c<this.otherShips.length;c++){
+			var ship = (c==-1) ? this.ship : this.otherShips[c];
+			this.shipClearThrusters(ship);
+			this.shipClearPowerTarget(ship);
+		}
+		this.clearDestructibles(this.asteroids.objs);
+		this.clearDestructibles(this.otherShips); 
+		this.clearDestructibles(this.projectiles);
+		this.cullDestructibles(this.projectiles, this.grid, .3);
+
+	 	if(this.otherShipCount<this.maxOtherShips)
+	 	{
+			this.otherShipCount+=this.otherShipCount-this.otherShips.length;
+			for(;this.otherShips.length<this.otherShipCount;){ //lol
+				this.otherShips.push(this.createShip({},this.grid));
+				this.otherShips[this.otherShips.length-1].ai = this.createComponentShipAI();
+			}
+	 	}
+
+		if(this.otherShips.length==0 && this.gameState==this.GAME_STATES.PLAYING)
+		{
+			this.gameState = this.GAME_STATES.WIN;
+			this.maxOtherShips*=2;
+			this.thrusterSound.volume = 0;
+		}
+		else if(this.gameState == this.GAME_STATES.PLAYING && this.ship.destructible.hp<=0)
+		{
+			this.gameState = this.GAME_STATES.LOSE;
+			this.thrusterSound.volume = 0;
+		}
+		else if(this.gameState == this.GAME_STATES.PLAYING || this.gameState==this.GAME_STATES.TUTORIAL){				
+
+			this.otherShips.forEach(function(ship){
+				this.shipAI(ship,this.ship,dt);
+			},this);
+
+			this.shipKeyboardControl(this.ship,dt);
+
+		 	//camera zoom controls
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_UP] && this.camera.zoom<=this.camera.maxZoom)
+				this.camera.zoom*=1.05;
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_DOWN] && this.camera.zoom>=this.camera.minZoom)
+				this.camera.zoom*=.95;
+			if(myMouse.wheel)
+				this.camera.zoom*=1+(myMouse.wheel/500);
+			if(this.camera.zoom>this.camera.maxZoom)
+				this.camera.zoom = this.camera.maxZoom;
+			else if(this.camera.zoom<this.camera.minZoom)
+				this.camera.zoom = this.camera.minZoom;
+
+		 	//update ship, center main camera on ship
+			this.updateShip(this.ship,dt);
+			this.otherShips.forEach(function(ship){
+				this.updateShip(ship,dt);
+			},this);
+
+			for(var i = 0; i<this.projectiles.length; i++){
+				this.updateProjectile(this.projectiles[i], dt);
+			}
+
+			this.checkCollisions(dt);	
+
+			if(this.gameState == this.GAME_STATES.TUTORIAL && myKeys.keydown[myKeys.KEYBOARD.KEY_ENTER]){
+				this.resetGame();
+				this.gameState = this.GAME_STATES.PLAYING;
+			}			
+		}
+		else if(this.gameState == this.GAME_STATES.TITLE && myKeys.keydown[myKeys.KEYBOARD.KEY_ENTER])
+		{
+			this.gameState = this.GAME_STATES.TUTORIAL;
+			myKeys.keydown[myKeys.KEYBOARD.KEY_ENTER] = false;
+			//this.resetGame();
+		}
+		else if((this.gameState == this.GAME_STATES.WIN || this.gameState == this.GAME_STATES.LOSE) && myKeys.keydown[myKeys.KEYBOARD.KEY_R])
+			this.resetGame();
+
+	 	//camera shenanigans
+		this.camera.x = lerp(this.camera.x,this.ship.x+this.ship.velocityX/10,12*dt);// this.ship.forwardVectorX*(this.camera.height/6)*(1/this.camera.zoom);
+		this.camera.y = lerp(this.camera.y,this.ship.y+this.ship.velocityY/10,12*dt);// this.ship.forwardVectorY*(this.camera.height/6)*(1/this.camera.zoom);
+		var rotDiff = this.ship.rotation+this.ship.rotationalVelocity/10 - this.camera.rotation;
+		if(rotDiff>180)
+			rotDiff-=360;
+		else if(rotDiff<-180)
+			rotDiff+=360;
+		this.camera.rotation += lerp(0,rotDiff,12*dt);
+		if(this.camera.rotation>180)
+			this.camera.rotation-=360;
+		else if(this.camera.rotation<-180)
+			this.camera.rotation+=360;
+		this.starCamera.x = this.camera.x;
+	 	this.starCamera.y = this.camera.y;
+	 	this.starCamera.rotation = this.camera.rotation;
+	 	this.gridCamera.x = this.camera.x;
+	 	this.gridCamera.y = this.camera.y;
+	 	this.gridCamera.rotation = this.camera.rotation;
+	 	var cameraDistance = 1/this.camera.zoom;
+	 	this.starCamera.zoom = 1/(cameraDistance+10000);
+	 	this.gridCamera.zoom = 1/(cameraDistance+5);
+
+		//this needs to be done
+		resetMouse();
+
+		if(this.thrusterSound && (this.gameState == this.GAME_STATES.PLAYING || this.gameState == this.GAME_STATES.TUTORIAL))
+			this.thrusterSound.volume = (this.paused)?0:this.ship.thrusters.noiseLevel*2*(1-(1-this.camera.zoom)/this.soundLevel);
+
+		//because we might use the frame count for something at some point
+		this.frameCount++;
+	},
+
+	draw:function(){
+
+		//console.log('drawing');
+		//pause screen
+	 	if((this.gameState == this.GAME_STATES.PLAYING || this.gameState == this.GAME_STATES.TUTORIAL) && this.paused){
+	 		//dt = 0;
+	 		this.drawPauseScreen(this.camera);
+	 		this.drawLockedGraphic(this.camera);
+	 		//this.drawPauseScreen(this.worldCamera);
+	 		return;
+	 	}
+		
+
+		//clear cameras
+		this.clearCamera(this.camera);
+		this.clearCamera(this.starCamera);
+		//this.clearCamera(this.minimapCamera);
+
+		//draw grids then asteroids then ships
+		if(this.drawStarField)
+			this.drawAsteroids(this.stars,this.starCamera);
+		
+		
+		if(this.gameState == this.GAME_STATES.PLAYING || this.gameState == this.GAME_STATES.TUTORIAL)
+		{
+			this.drawGrid(this.gridCamera);
+			this.drawAsteroidsOverlay(this.asteroids,this.camera,this.gridCamera);
+			for(var n = this.otherShips.length-1;n>=-1;n--){
+				var ship = (n==-1)?this.ship:this.otherShips[n];
+				this.drawShipOverlay(ship,this.camera,this.gridCamera);
+			}
+			this.drawProjectiles(this.projectiles, this.camera);
+			this.drawLasers(this.lasers, this.camera);
+			for(var c = this.otherShips.length-1;c>=-1;c--){
+				var ship = (c==-1)?this.ship:this.otherShips[c];
+				this.drawShip(ship,this.camera);
+			}
+			
+			this.drawAsteroids(this.asteroids,this.camera, this.gridCamera);
+			this.drawHUD(this.camera);
+			this.drawMinimap(this.minimapCamera);
+			if(this.gameState == this.GAME_STATES.TUTORIAL)
+				this.drawTutorialGraphics(this.camera);
+		}
+		else if(this.gameState == this.GAME_STATES.TITLE)
+		{
+			this.drawAsteroids(this.asteroids,this.camera,this.gridCamera);
+			this.drawTitleScreen(this.camera);
+		}
+		else if(this.gameState == this.GAME_STATES.WIN){
+			this.drawGrid(this.gridCamera);
+			this.drawAsteroids(this.asteroids,this.camera,this.gridCamera);
+			this.drawWinScreen(this.camera);
+		}
+		else if(this.gameState == this.GAME_STATES.LOSE){
+			this.drawGrid(this.gridCamera);
+			this.drawAsteroids(this.asteroids,this.camera,this.gridCamera);
+			this.drawLoseScreen(this.camera);
+		}
+		
+		//FPS text
+		if (this.debug){
+			//this.fillText(this.camera.ctx,'fps: '+Math.floor(1/dt),15,15,"8pt Orbitron",'white');
+		}
+
+		this.drawLockedGraphic(this.camera);
 	},
 
 	drawShipOverlay:function(ship,camera,gridCamera){
@@ -734,8 +1403,8 @@ app.main = {
 				return;
 			var start = worldPointToCameraSpace(laser.startX,laser.startY,camera);
 			var end = worldPointToCameraSpace(laser.endX,laser.endY,camera);
-			var startPrev = worldPointToCameraSpace(laser.previousLaser.startX,laser.previousLaser.startY,camera);
-			var endPrev = worldPointToCameraSpace(laser.previousLaser.endX,laser.previousLaser.endY,camera);
+			//var startPrev = worldPointToCameraSpace(laser.previousLaser.startX,laser.previousLaser.startY,camera);
+			//var endPrev = worldPointToCameraSpace(laser.previousLaser.endX,laser.previousLaser.endY,camera);
 			var angle = angleBetweenVectors(end[0]-start[0],end[1]-start[1],1,0);
 			var rightVector = rotate(0,0,1,0,angle+90	);
 			var width = (laser.power/laser.efficiency)*camera.zoom;
@@ -761,6 +1430,23 @@ app.main = {
 				ctx.restore();
 			}
 		},this);
+	},
+
+	drawProjectiles: function(projectiles, camera){
+		var ctx = camera.ctx;
+		projectiles.forEach(function(prj){
+			var start = worldPointToCameraSpace(prj.prevX, prj.prevY, camera);
+			var end = worldPointToCameraSpace(prj.x, prj.y, camera);
+
+			ctx.save();
+			ctx.beginPath();
+			ctx.moveTo(start[0], start[1]);
+			ctx.lineTo(end[0], end[1]);
+			ctx.strokeStyle = prj.color;
+			ctx.strokeWidth = ((prj.destructible.radius>5)? prj.destructible.radius : 5) * camera.zoom;
+			ctx.stroke();
+			ctx.restore();
+		});
 	},
 
 	drawAsteroidsOverlay:function(asteroids, camera, gridCamera){
@@ -840,593 +1526,6 @@ app.main = {
 			ctx.fill();
 			ctx.restore();
 		};
-	},
-
-	updateShip: function(ship,dt){
-		//store position at previous update for swept area construction
-			ship.prevX = ship.x;
-			ship.prevY = ship.y;
-
-		//initialize acceleration values
-			var accelerationX = 0;
-			var accelerationY = 0;
-			var rotationalAcceleration = 0;
-
-			var normalizedForwardVector = rotate(0,0,0,-1,-ship.rotation);
-			var normalizedRightVector = rotate(0,0,0,-1,-ship.rotation-90);
-			ship.forwardVectorX = normalizedForwardVector[0],
-			ship.forwardVectorY = normalizedForwardVector[1];
-			ship.rightVectorX = normalizedRightVector[0];
-			ship.rightVectorY = normalizedRightVector[1];
-
-		//add acceleration from each thruster
-			//medial
-				var strength = ship.thrusters.medial.targetStrength;
-
-				//clamp target strength to the thruster's max
-					var maxStrength = ship.thrusters.medial.maxStrength;
-					strength = clamp(-maxStrength,strength,maxStrength);
-				//lerp current thruster strength to target strength at the power ramp rate, then set current strength and the target strength to the lerped value
-					var thrusterDelta = lerp(ship.thrusters.medial.currentStrength,strength,ship.thrusters.medial.powerRampPercentage*dt) - ship.thrusters.medial.currentStrength;
-					if(thrusterDelta * ship.thrusters.medial.currentStrength > 0)
-						thrusterDelta = clamp(-ship.thrusters.medial.powerRampLimit * dt, thrusterDelta, ship.thrusters.medial.powerRampLimit * dt);
-					strength = ship.thrusters.medial.currentStrength = ship.thrusters.medial.currentStrength + thrusterDelta;
-					strength = clamp(-maxStrength,strength,maxStrength); //this is in case of really low dt values
-
-				//add forward vector times strength to acceleration
-					accelerationX += normalizedForwardVector[0]*strength;
-					accelerationY += normalizedForwardVector[1]*strength;
-
-			//lateral
-				var strength = ship.thrusters.lateral.targetStrength;
-
-				//clamp strength
-					var maxStrength = ship.thrusters.lateral.maxStrength;
-					strength = clamp(-maxStrength,strength,maxStrength);
-				//lerp current thruster strength to target strength at the power ramp rate, then set current strength and the target strength to the lerped value
-					var thrusterDelta = lerp(ship.thrusters.lateral.currentStrength,strength,ship.thrusters.lateral.powerRampPercentage*dt) - ship.thrusters.lateral.currentStrength;
-					if(thrusterDelta * ship.thrusters.lateral.currentStrength > 0)
-						thrusterDelta = clamp(-ship.thrusters.lateral.powerRampLimit * dt, thrusterDelta, ship.thrusters.lateral.powerRampLimit * dt);
-					strength = ship.thrusters.lateral.currentStrength = ship.thrusters.lateral.currentStrength + thrusterDelta;
-					strength = clamp(-maxStrength,strength,maxStrength);
-
-				//add right vector times strength to acceleration
-					accelerationX += normalizedRightVector[0]*strength;
-					accelerationY += normalizedRightVector[1]*strength;
-
-			//rotational
-				var strength = ship.thrusters.rotational.targetStrength;
-
-				//clamp strength
-					var maxStrength = ship.thrusters.rotational.maxStrength;
-					strength = clamp(-maxStrength,strength,maxStrength);
-				//lerp current thruster strength to target strength at the power ramp rate, then set current strength and the target strength to the lerped value
-					var thrusterDelta = lerp(ship.thrusters.rotational.currentStrength,strength,ship.thrusters.rotational.powerRampPercentage*dt) - ship.thrusters.rotational.currentStrength;
-					if(thrusterDelta * ship.thrusters.rotational.currentStrength > 0)
-						thrusterDelta = clamp(-ship.thrusters.rotational.powerRampLimit * dt, thrusterDelta, ship.thrusters.rotational.powerRampLimit * dt);
-					strength = ship.thrusters.rotational.currentStrength = ship.thrusters.rotational.currentStrength + thrusterDelta;
-					strength = clamp(-maxStrength,strength,maxStrength);
-
-				//this one we can set directly
-					rotationalAcceleration = -strength;
-
-		//accelerate
-			ship.velocityX+=accelerationX*dt;
-			ship.velocityY+=accelerationY*dt;
-			ship.rotationalVelocity+=rotationalAcceleration*dt;
-
-		//calculate velocity components for the stabilizers
-			ship.medialVelocity = -scalarComponentOf1InDirectionOf2(ship.velocityX,ship.velocityY,normalizedForwardVector[0],normalizedForwardVector[1]); //get magnitude of projection of velocity onto the forward vector
-			ship.lateralVelocity = -scalarComponentOf1InDirectionOf2(ship.velocityX,ship.velocityY,normalizedRightVector[0],normalizedRightVector[1]); //et magnitude of velocity's projection onto the right vector
-
-		//move
-			ship.x+=ship.velocityX*dt;
-			ship.y+=ship.velocityY*dt;
-			ship.rotation+=ship.rotationalVelocity*dt;
-			if(ship.rotation>180)
-				ship.rotation-=360;
-			else if(ship.rotation<-180)
-				ship.rotation+=360;
-
-		//create laser objects
-			var laserVector = [0,-ship.laser.range];
-			laserVector = rotate(0,0,laserVector[0],laserVector[1],-ship.rotation+Math.random()*ship.laser.spread-ship.laser.spread/2);
-			if(ship.laser.previousLaser)
-				ship.laser.previousLaser.previousLaser = null; //avoiding a memory leak - without this the lasers will chain backwards in time continuously
-			ship.laser.previousLaser = this.createLaser(this.lasers,ship.x+normalizedForwardVector[0]*(30),ship.y+normalizedForwardVector[1]*30,ship.x+laserVector[0],ship.y+laserVector[1],ship.laser.color,ship.laser.currentPower, ship.laser.efficiency, ship.laser.previousLaser, ship);
-			ship.laser.currentPower-=ship.laser.maxPower*(1-ship.laser.coherence)*dt*1000;
-			if(ship.laser.currentPower<0)
-				ship.laser.currentPower=0;
-
-		//refresh shields
-			if(ship.destructible.shield.current<ship.destructible.shield.max)
-			{
-				ship.destructible.shield.current+=ship.destructible.shield.recharge*dt;
-				if(ship.destructible.shield.current>ship.destructible.shield.max)
-					ship.destructible.shield.current = ship.destructible.shield.max;
-			}
-
-		//update power system
-			//scale all relevant values down from the augmented to their normal using the old power values
-				var thrusterPower = this.getPowerForComponent(ship.powerSystem, this.SHIP_COMPONENTS.THRUSTERS);
-				var laserPower = this.getPowerForComponent(ship.powerSystem, this.SHIP_COMPONENTS.LASERS);
-				var shieldPower = this.getPowerForComponent(ship.powerSystem, this.SHIP_COMPONENTS.SHIELDS);
-				//thrusters
-					ship.thrusters.medial.maxStrength/=(1+thrusterPower);
-					ship.thrusters.lateral.maxStrength/=(1+thrusterPower);
-					ship.thrusters.rotational.maxStrength/=(1+thrusterPower);
-					ship.stabilizer.clamps.medial/=(1+thrusterPower);
-					ship.stabilizer.clamps.lateral/=(1+thrusterPower);
-					ship.stabilizer.clamps.rotational/=(1+thrusterPower);
-				//lasers
-					ship.laser.maxPower/=(1+laserPower);
-				//shields
-					ship.destructible.shield.current/=(1+shieldPower);
-					ship.destructible.shield.max/=(1+shieldPower);
-					ship.destructible.shield.recharge/=(1+shieldPower);
-
-			//update the power values
-				this.scalePowerTarget(ship.powerSystem);
-				ship.powerSystem.current = lerp3d(ship.powerSystem.current,ship.powerSystem.target,ship.powerSystem.transferRate*dt);
-
-			//scale back up to augmented with the new power values
-				thrusterPower = this.getPowerForComponent(ship.powerSystem, this.SHIP_COMPONENTS.THRUSTERS);
-				laserPower = this.getPowerForComponent(ship.powerSystem, this.SHIP_COMPONENTS.LASERS);
-				shieldPower = this.getPowerForComponent(ship.powerSystem, this.SHIP_COMPONENTS.SHIELDS);
-				//thrusters
-					ship.thrusters.medial.maxStrength*=(1+thrusterPower);
-					ship.thrusters.lateral.maxStrength*=(1+thrusterPower);
-					ship.thrusters.rotational.maxStrength*=(1+thrusterPower);
-					ship.stabilizer.clamps.medial*=(1+thrusterPower);
-					ship.stabilizer.clamps.lateral*=(1+thrusterPower);
-					ship.stabilizer.clamps.rotational*=(1+thrusterPower);
-				//lasers
-					ship.laser.maxPower*=(1+laserPower);
-				//shields
-					ship.destructible.shield.current*=(1+shieldPower);
-					ship.destructible.shield.max*=(1+shieldPower);
-					ship.destructible.shield.recharge*=(1+shieldPower);
-
-		//thruster percentage for the sound effect
-			var thrusterTotal = Math.abs(ship.thrusters.medial.currentStrength)+Math.abs(ship.thrusters.lateral.currentStrength)+Math.abs(ship.thrusters.rotational.currentStrength);
-			var thrusterEfficiencyTotal = ship.thrusters.medial.efficiency+ship.thrusters.lateral.efficiency+ship.thrusters.rotational.efficiency;
-			ship.thrusters.noiseLevel = (thrusterTotal/thrusterEfficiencyTotal);
-	},
-
-	//clears the active thruster values
-	shipClearThrusters:function(ship){
-		ship.thrusters.medial.targetStrength = 0;
-		ship.thrusters.lateral.targetStrength = 0;
-		ship.thrusters.rotational.targetStrength = 0;
-	},
-
-	shipClearPowerTarget:function(ship){
-		ship.powerSystem.target = [0,0,0];
-	},
-
-	//add given strength to main thruster
-	shipMedialThrusters:function(ship, strength){
-		ship.thrusters.medial.targetStrength += strength;
-	},
-
-	//add strength to side thruster
-	shipRotationalThrusters: function(ship, strength){
-		ship.thrusters.rotational.targetStrength += strength;
-	},
-
-	//add strength to lateral thruster
-	shipLateralThrusters:function(ship, strength){
-		ship.thrusters.lateral.targetStrength += strength;
-	},
-
-	//rotational stabilizer
-	shipRotationalStabilizers:function(ship,dt){
-		//if the side thruster isn't active, or is active in the opposite direction of our rotation
-		if(ship.thrusters.rotational.targetStrength*ship.rotationalVelocity>=0 && Math.abs(ship.rotationalVelocity) > ship.stabilizer.precision/6)
-			//add correctional strength in the opposite direction of our rotation
-			this.shipRotationalThrusters(ship,ship.rotationalVelocity*ship.stabilizer.strength*dt); //we check the direction because the stabilizers can apply more thrust than the player
-		//or, if we've exceeded our clamp speed and are trying to keep accelerating in that direction
-		else if (ship.stabilizer.clamps.enabled && Math.abs(ship.rotationalVelocity)>=ship.stabilizer.clamps.rotational && ship.thrusters.rotational.targetStrength*ship.rotationalVelocity<0)
-			//shut off the thruster
-			ship.thrusters.rotational.targetStrength = 0;
-	},
-
-	//medial stabilizer
-	shipMedialStabilizers:function(ship,dt){
-		//if the main thruster isn't active, or is working against our velocity
-		if(ship.thrusters.medial.targetStrength*ship.medialVelocity>=0 && Math.abs(ship.medialVelocity) > ship.stabilizer.precision)
-			//add corrective strength
-			this.shipMedialThrusters(ship,ship.medialVelocity*ship.stabilizer.strength*dt);
-		//or, if we're past our clamp and trying to keep going
-		else if (ship.stabilizer.clamps.enabled && Math.abs(ship.medialVelocity)>=ship.stabilizer.clamps.medial && ship.thrusters.medial.targetStrength*ship.medialVelocity<0)
-			//shut off the thruster
-			ship.thrusters.medial.targetStrength = 0;
-	},
-
-	//lateral stabilizer
-	shipLateralStabilizers:function(ship,dt){
-		//see above
-		if(ship.thrusters.lateral.targetStrength*ship.lateralVelocity>=0 && Math.abs(ship.lateralVelocity) > ship.stabilizer.precision)
-			this.shipLateralThrusters(ship,ship.lateralVelocity*ship.stabilizer.strength*dt);
-		else if (ship.stabilizer.clamps.enabled && Math.abs(ship.lateralVelocity)>=ship.stabilizer.clamps.lateral && ship.thrusters.lateral.targetStrength*ship.lateralVelocity<0)
-			ship.thrusters.lateral.targetStrength = 0;
-	},
-
-	shipFireLaser:function(ship){
-		var now = Date.now();
-		//if the cool down is up
-		if(now>ship.laser.lastFireTime+ship.laser.cd*1000){
-			ship.laser.lastFireTime = now;
-			ship.laser.currentPower = ship.laser.maxPower;	
-			if(this.sounds.laser.loaded)
-			{
-				var laserSound = createjs.Sound.play(this.sounds.laser.id,{interrupt: createjs.Sound.INTERRUPT_ANY});
-				laserSound.volume = .5 * (1-(1-this.camera.zoom)/this.soundLevel);	
-			}
-		}
-	},
-
-	shipAI:function(ship, target,dt){
-		var vectorToTarget = [target.x-ship.x,target.y-ship.y];
-		var relativeAngleToTarget = angleBetweenVectors(ship.forwardVectorX,ship.forwardVectorY,vectorToTarget[0],vectorToTarget[1]);
-
-		if(relativeAngleToTarget>0)
-			this.shipRotationalThrusters(ship,-relativeAngleToTarget * dt * ship.ai.accuracy * ship.thrusters.rotational.maxStrength/ship.stabilizer.thrustRatio);
-		else if (relativeAngleToTarget<0)
-			this.shipRotationalThrusters(ship,-relativeAngleToTarget * dt * ship.ai.accuracy * ship.thrusters.rotational.maxStrength/ship.stabilizer.thrustRatio);
-
-		var distanceSqr = vectorMagnitudeSqr(vectorToTarget[0],vectorToTarget[1]);
-
-		if(relativeAngleToTarget<ship.ai.fireSpread/2 && relativeAngleToTarget>-ship.ai.fireSpread/2  && distanceSqr<(ship.laser.range*ship.laser.range))
-			this.shipFireLaser(ship);
-
-		if(distanceSqr > ship.ai.followMax*ship.ai.followMax)
-			this.shipMedialThrusters(ship,ship.thrusters.medial.maxStrength/ship.stabilizer.thrustRatio);
-		else if(distanceSqr<ship.ai.followMin*ship.ai.followMin)
-			this.shipMedialThrusters(ship,-ship.thrusters.medial.maxStrength/ship.stabilizer.thrustRatio);
-
-		var vectorFromTarget = [-vectorToTarget[0],-vectorToTarget[1]];
-		var relativeAngleToMe = angleBetweenVectors(target.forwardVectorX,target.forwardVectorY,vectorFromTarget[0],vectorFromTarget[1]);
-		//console.log(Math.floor(relativeAngleToMe));
-
-		if(distanceSqr<2*(target.laser.range*target.laser.range) && relativeAngleToMe<90 && relativeAngleToMe>0)
-			this.shipLateralThrusters(ship, -ship.thrusters.lateral.maxStrength/ship.stabilizer.thrustRatio);
-		else if(distanceSqr<2*(target.laser.range*target.laser.range) && relativeAngleToMe>-90 &&relativeAngleToMe<0)
-			this.shipLateralThrusters(ship, ship.thrusters.lateral.maxStrength/ship.stabilizer.thrustRatio);
-
-		this.shipMedialStabilizers(ship,dt);
-		this.shipLateralStabilizers(ship,dt);
-		this.shipRotationalStabilizers(ship,dt);
-	},
-
-	shipKeyboardControl(ship, dt){
-		//set ship thruster values
-		 	//assisted controls
-			//medial motion
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_W])
-				this.shipMedialThrusters(ship,ship.thrusters.medial.maxStrength/ship.stabilizer.thrustRatio);
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_S])
-				this.shipMedialThrusters(ship,-ship.thrusters.medial.maxStrength/ship.stabilizer.thrustRatio);
-			if(ship.stabilizer.enabled)
-				this.shipMedialStabilizers(ship,dt);
-			//lateral motion
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_A])
-				this.shipLateralThrusters(ship,-ship.thrusters.lateral.maxStrength/ship.stabilizer.thrustRatio);
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_D])
-				this.shipLateralThrusters(ship,ship.thrusters.lateral.maxStrength/ship.stabilizer.thrustRatio);
-			if(ship.stabilizer.enabled)
-				this.shipLateralStabilizers(ship,dt);
-			//rotational motion - mouse			
-			this.shipRotationalThrusters(ship,-myMouse.direction*myMouse.sensitivity*ship.thrusters.rotational.maxStrength/ship.stabilizer.thrustRatio);
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_LEFT])
-				this.shipRotationalThrusters(ship,ship.thrusters.rotational.maxStrength/ship.stabilizer.thrustRatio);
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_RIGHT])
-				this.shipRotationalThrusters(ship,-ship.thrusters.rotational.maxStrength/ship.stabilizer.thrustRatio);
-			if(ship.stabilizer.enabled)
-				this.shipRotationalStabilizers(ship,dt);
-			//lasers
-			if(myMouse.mousedown[myMouse.BUTTONS.LEFT] || myKeys.keydown[myKeys.KEYBOARD.KEY_SPACE])
-				this.shipFireLaser(ship);
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_SHIFT])
-				ship.powerSystem.target[this.SHIP_COMPONENTS.THRUSTERS] = 1;
-			if(myMouse.mousedown[myMouse.BUTTONS.RIGHT])
-				ship.powerSystem.target[this.SHIP_COMPONENTS.LASERS] = 1;
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_ALT])
-				ship.powerSystem.target[this.SHIP_COMPONENTS.SHIELDS] = 1;
-	},
-
-	clearLasers:function(lasers){
-		lasers.length=0;
-	},
-
-	checkCollisions:function(dt){
-		//laser collisions
-			this.lasers.forEach(function(laser){
-				if(laser.power == 0)
-					return;
-				var obj; //the chosen object
-				var tValOfObj = Number.MAX_VALUE;
-				var xInv = laser.endX<laser.startX;
-				var yInv = laser.endY<laser.startY;
-				var start = [(xInv) ? laser.endX : laser.startX, (yInv) ? laser.endY : laser.startY];
-				var end = [(xInv) ? laser.startX : laser.endX, (yInv) ? laser.startY : laser.endY];
-				var laserVertices = [
-					[laser.startX, laser.startY],
-					[laser.endX, laser.endY],
-					[laser.previousLaser.endX,laser.previousLaser.endY],
-					[laser.previousLaser.startX, laser.previousLaser.startY]
-				];
-				//laser-asteroid
-					for(var c = 0;c<this.asteroids.objs.length;c++){
-						var thisObj = this.asteroids.objs[c];
-						if(thisObj.x + thisObj.destructible.radius<start[0] || thisObj.x-thisObj.destructible.radius>end[0] || thisObj.y + thisObj.destructible.radius<start[1] || thisObj.y-thisObj.destructible.radius>end[1])
-							continue;
-						var thisDistance = distanceFromPointToLine(thisObj.x,thisObj.y,laser.startX,laser.startY,laser.endX,laser.endY);
-						if(thisDistance[0]<thisObj.destructible.radius && thisDistance[1]<tValOfObj){
-							obj = thisObj;
-							tValOfObj = thisDistance[1];
-						}
-					}
-				//laser-ship
-					for(var c = -1;c<this.otherShips.length;c++){
-						var thisObj = ((c==-1) ? this.ship : this.otherShips[c]); //lol
-						if(thisObj == laser.owner)
-							continue;
-						if(thisObj.x + thisObj.destructible.radius<start[0] || thisObj.x-thisObj.destructible.radius>end[0] || thisObj.y + thisObj.destructible.radius<start[1] || thisObj.y-thisObj.destructible.radius>end[1])
-							continue;
-						var thisDistance = distanceFromPointToLine(thisObj.x,thisObj.y,laser.startX,laser.startY,laser.endX,laser.endY);
-
-						if(thisDistance[1]<tValOfObj && polygonCapsuleSAT(laserVertices, {center1:[thisObj.x, thisObj.y], center2:[thisObj.prevX, thisObj.prevY], radius:thisObj.destructible.radius})){
-							obj = thisObj;
-							tValOfObj = thisDistance[1];
-						}
-					}
-
-				//resolve collision
-					if(obj)
-					{
-						obj.destructible.shield.current-=laser.power*dt*(1-tValOfObj);
-						if(obj.destructible.shield.current<0)
-						{
-							obj.destructible.hp+=obj.destructible.shield.current;
-							obj.destructible.shield.current = 0;
-						}
-						//console.log(obj+' hp: '+obj.destructible.hp);
-						var laserDir = [laser.endX-laser.startX,laser.endY-laser.startY];
-						var newEnd = [laser.startX+tValOfObj*laserDir[0],laser.startY+tValOfObj*laserDir[1]];
-						laser.endX = newEnd[0];
-						laser.endY = newEnd[1];
-					}
-			},this);
-
-		//asteroid collisions
-			for(var c = -1;c<this.otherShips.length;c++){
-				var ship = ((c==-1)? this.ship:this.otherShips[c]);
-				for(var n = 0;n<this.asteroids.objs.length;n++){
-					var asteroid = this.asteroids.objs[n];
-					var distance = (ship.x-asteroid.x)*(ship.x-asteroid.x) + (ship.y-asteroid.y)*(ship.y-asteroid.y);
-					var overlap = (ship.destructible.radius+asteroid.radius)*(ship.destructible.radius+asteroid.radius) - distance;
-					if(overlap>=0) //only the player's ship collides with asteroids, since I don't have time to get the AI to avoid them
-					{
-						if(this.frameCount==0)
-							asteroid.destructible.hp=-1;
-						else{
-							var objectSpeed = Math.sqrt(ship.velocityX*ship.velocityX+ship.velocityY*ship.velocityY);
-							ship.destructible.shield.current-=((c == -1)?.1:.01)*dt*objectSpeed;
-							asteroid.destructible.hp-=.2*dt*objectSpeed;
-							if(ship.destructible.shield.current<0)
-							{
-								ship.destructible.hp+=ship.destructible.shield.current;
-								ship.destructible.shield.current = 0;
-							}
-							ship.velocityX*=(1-2*dt);
-							ship.velocityY*=(1-2*dt);
-						}
-					}
-				}
-			}
-	},	
-
-	clearDestructibles:function(destructibles){
-		for(var c = 0;c<destructibles.length;c++){
-			if(destructibles[c].destructible.hp<=0)
-				destructibles.splice(c--,1);
-		}
-	},
-
-	clearShips:function(ships){
-		for(var c = 0;c<ships.length;c++){
-			if(ships[c].destructible.hp<=0)
-				ships.splice(c--,1);
-		}
-	},
-
-	frame:function(){
-		this.animationID = requestAnimationFrame(this.frame.bind(this));
-		var dt = this.calculateDeltaTime();
-		if(dt>this.timeStep*4)
-			dt = this.timeStep;
-		this.accumulator+=dt;
-		while(this.accumulator>=this.timeStep){
-			if(!((this.gameState == this.GAME_STATES.PLAYING || this.gameState == this.GAME_STATES.TUTORIAL) && this.paused))
-				this.update(this.timeStep);
-			this.accumulator-= this.timeStep;
-		}
-		this.draw();
-	},
-
-	//the game loop
-	update: function(dt){
-	 	//clear values
-		this.clearLasers(this.lasers);
-		for(var c =-1;c<this.otherShips.length;c++){
-			var ship = (c==-1) ? this.ship : this.otherShips[c];
-			this.shipClearThrusters(ship);
-			this.shipClearPowerTarget(ship);
-		}
-		this.clearDestructibles(this.asteroids.objs);
-		this.clearDestructibles(this.otherShips); 
-
-	 	if(this.otherShipCount<this.maxOtherShips)
-	 	{
-			this.otherShipCount+=this.otherShipCount-this.otherShips.length;
-			for(;this.otherShips.length<this.otherShipCount;){ //lol
-				this.otherShips.push(this.createShip({},this.grid));
-				this.otherShips[this.otherShips.length-1].ai = this.createComponentShipAI();
-			}
-	 	}
-
-		if(this.otherShips.length==0 && this.gameState==this.GAME_STATES.PLAYING)
-		{
-			this.gameState = this.GAME_STATES.WIN;
-			this.maxOtherShips*=2;
-			this.thrusterSound.volume = 0;
-		}
-		else if(this.gameState == this.GAME_STATES.PLAYING && this.ship.destructible.hp<=0)
-		{
-			this.gameState = this.GAME_STATES.LOSE;
-			this.thrusterSound.volume = 0;
-		}
-		else if(this.gameState == this.GAME_STATES.PLAYING || this.gameState==this.GAME_STATES.TUTORIAL){				
-
-			this.otherShips.forEach(function(ship){
-				this.shipAI(ship,this.ship,dt);
-			},this);
-
-			this.shipKeyboardControl(this.ship,dt);
-
-		 	//camera zoom controls
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_UP] && this.camera.zoom<=this.camera.maxZoom)
-				this.camera.zoom*=1.05;
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_DOWN] && this.camera.zoom>=this.camera.minZoom)
-				this.camera.zoom*=.95;
-			if(myMouse.wheel)
-				this.camera.zoom*=1+(myMouse.wheel/500);
-			if(this.camera.zoom>this.camera.maxZoom)
-				this.camera.zoom = this.camera.maxZoom;
-			else if(this.camera.zoom<this.camera.minZoom)
-				this.camera.zoom = this.camera.minZoom;
-
-		 	//update ship, center main camera on ship
-			this.updateShip(this.ship,dt);
-			this.otherShips.forEach(function(ship){
-				this.updateShip(ship,dt);
-			},this);
-
-			this.checkCollisions(dt);	
-
-			if(this.gameState == this.GAME_STATES.TUTORIAL && myKeys.keydown[myKeys.KEYBOARD.KEY_ENTER]){
-				this.resetGame();
-				this.gameState = this.GAME_STATES.PLAYING;
-			}			
-		}
-		else if(this.gameState == this.GAME_STATES.TITLE && myKeys.keydown[myKeys.KEYBOARD.KEY_ENTER])
-		{
-			this.gameState = this.GAME_STATES.TUTORIAL;
-			myKeys.keydown[myKeys.KEYBOARD.KEY_ENTER] = false;
-			//this.resetGame();
-		}
-		else if((this.gameState == this.GAME_STATES.WIN || this.gameState == this.GAME_STATES.LOSE) && myKeys.keydown[myKeys.KEYBOARD.KEY_R])
-			this.resetGame();
-
-	 	//camera shenanigans
-		this.camera.x = lerp(this.camera.x,this.ship.x+this.ship.velocityX/10,12*dt);// this.ship.forwardVectorX*(this.camera.height/6)*(1/this.camera.zoom);
-		this.camera.y = lerp(this.camera.y,this.ship.y+this.ship.velocityY/10,12*dt);// this.ship.forwardVectorY*(this.camera.height/6)*(1/this.camera.zoom);
-		var rotDiff = this.ship.rotation+this.ship.rotationalVelocity/10 - this.camera.rotation;
-		if(rotDiff>180)
-			rotDiff-=360;
-		else if(rotDiff<-180)
-			rotDiff+=360;
-		this.camera.rotation += lerp(0,rotDiff,12*dt);
-		if(this.camera.rotation>180)
-			this.camera.rotation-=360;
-		else if(this.camera.rotation<-180)
-			this.camera.rotation+=360;
-		this.starCamera.x = this.camera.x;
-	 	this.starCamera.y = this.camera.y;
-	 	this.starCamera.rotation = this.camera.rotation;
-	 	this.gridCamera.x = this.camera.x;
-	 	this.gridCamera.y = this.camera.y;
-	 	this.gridCamera.rotation = this.camera.rotation;
-	 	var cameraDistance = 1/this.camera.zoom;
-	 	this.starCamera.zoom = 1/(cameraDistance+10000);
-	 	this.gridCamera.zoom = 1/(cameraDistance+5);
-
-		//this needs to be done
-		resetMouse();
-
-		if(this.thrusterSound && (this.gameState == this.GAME_STATES.PLAYING || this.gameState == this.GAME_STATES.TUTORIAL))
-			this.thrusterSound.volume = (this.paused)?0:this.ship.thrusters.noiseLevel*2*(1-(1-this.camera.zoom)/this.soundLevel);
-
-		//because we might use the frame count for something at some point
-		this.frameCount++;
-	},
-
-	draw:function(){
-
-		//console.log('drawing');
-		//pause screen
-	 	if((this.gameState == this.GAME_STATES.PLAYING || this.gameState == this.GAME_STATES.TUTORIAL) && this.paused){
-	 		//dt = 0;
-	 		this.drawPauseScreen(this.camera);
-	 		this.drawLockedGraphic(this.camera);
-	 		//this.drawPauseScreen(this.worldCamera);
-	 		return;
-	 	}
-		
-
-		//clear cameras
-		this.clearCamera(this.camera);
-		this.clearCamera(this.starCamera);
-		//this.clearCamera(this.minimapCamera);
-
-		//draw grids then asteroids then ships
-		if(this.drawStarField)
-			this.drawAsteroids(this.stars,this.starCamera);
-		
-		
-		if(this.gameState == this.GAME_STATES.PLAYING || this.gameState == this.GAME_STATES.TUTORIAL)
-		{
-			this.drawGrid(this.gridCamera);
-			this.drawAsteroidsOverlay(this.asteroids,this.camera,this.gridCamera);
-			for(var n = this.otherShips.length-1;n>=-1;n--){
-				var ship = (n==-1)?this.ship:this.otherShips[n];
-				this.drawShipOverlay(ship,this.camera,this.gridCamera);
-			}
-			this.drawLasers(this.lasers, this.camera);
-			for(var c = this.otherShips.length-1;c>=-1;c--){
-				var ship = (c==-1)?this.ship:this.otherShips[c];
-				this.drawShip(ship,this.camera);
-			}
-			
-			this.drawAsteroids(this.asteroids,this.camera, this.gridCamera);
-			this.drawHUD(this.camera);
-			this.drawMinimap(this.minimapCamera);
-			if(this.gameState == this.GAME_STATES.TUTORIAL)
-				this.drawTutorialGraphics(this.camera);
-		}
-		else if(this.gameState == this.GAME_STATES.TITLE)
-		{
-			this.drawAsteroids(this.asteroids,this.camera,this.gridCamera);
-			this.drawTitleScreen(this.camera);
-		}
-		else if(this.gameState == this.GAME_STATES.WIN){
-			this.drawGrid(this.gridCamera);
-			this.drawAsteroids(this.asteroids,this.camera,this.gridCamera);
-			this.drawWinScreen(this.camera);
-		}
-		else if(this.gameState == this.GAME_STATES.LOSE){
-			this.drawGrid(this.gridCamera);
-			this.drawAsteroids(this.asteroids,this.camera,this.gridCamera);
-			this.drawLoseScreen(this.camera);
-		}
-		
-		//FPS text
-		if (this.debug){
-			//this.fillText(this.camera.ctx,'fps: '+Math.floor(1/dt),15,15,"8pt Orbitron",'white');
-		}
-
-		this.drawLockedGraphic(this.camera);
 	},
 
 	drawHUD: function(camera){

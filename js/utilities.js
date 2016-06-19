@@ -223,54 +223,129 @@ function raySphereIntersect(s,e,c,r){
 
 function polygonCapsuleSAT(polygon, capsule)
 {
-	function capsuleAxisCheck(vertices, capsule, axis){
-		var normalizedAxis = normalizeVector(axis[0], axis[1]);
-		var max1;
-		var min1;
-		var maxCapsule;
-		var minCapsule;
-		//project each vec3 in the first object onto the axis, saving min and max values
-		for (var c = 0; c < vertices.length; c++) {
-			var vert = vertices[c];
-			var projectedVert = vert[0]*normalizedAxis[0]+vert[1]*normalizedAxis[1];// / glm::length(vert);
-			if (c == 0 || projectedVert > max1)
-				max1 = projectedVert;
-			if (c == 0 || projectedVert < min1)
-				min1 = projectedVert;
-		}
-		var projectedCenters = [capsule.center1[0]*normalizedAxis[0] + capsule.center1[1]*normalizedAxis[1], capsule.center2[0]*normalizedAxis[0] + capsule.center2[1]*normalizedAxis[1]];
-		if(projectedCenters[0]>projectedCenters[1]){
-			maxCapsule = projectedCenters[0];
-			minCapsule = projectedCenters[1];
-		}
-		else{
-			maxCapsule = projectedCenters[1];
-			minCapsule = projectedCenters[0];
-		}
-		maxCapsule+=capsule.radius;
-		minCapsule-=capsule.radius;
+	var axisCheck = polygonCapsuleAxisCheck;
 
-		return !(max1 < minCapsule || maxCapsule < min1);
-	}
-
+	//loop through polygon verts and do axis checks
 	for(var i = 0;i<polygon.length;i++){
 		var nextPoint = (i==polygon.length-1) ? polygon[0] : polygon[i + 1];
-		var normalAxis = [-(nextPoint[1] - polygon[i][1]), nextPoint[0] - polygon[i][0]];
-		var centerAxis1 = [capsule.center1[0] - polygon[i][0], capsule.center1[1] - polygon[i][1]];
-		var centerAxis2 = [capsule.center2[0] - polygon[i][0], capsule.center2[1] - polygon[i][1]];
-		if(!capsuleAxisCheck(polygon, capsule, centerAxis1) || !capsuleAxisCheck(polygon, capsule, centerAxis2))
+		var normalAxis = [-(nextPoint[1] - polygon[i][1]), nextPoint[0] - polygon[i][0]]; //normal to axis between current point and next point
+		var centerAxis1 = [capsule.center1[0] - polygon[i][0], capsule.center1[1] - polygon[i][1]]; //axis between current point and capsule center1
+		var centerAxis2 = [capsule.center2[0] - polygon[i][0], capsule.center2[1] - polygon[i][1]]; //axis between current point and capsule center2
+		if(!axisCheck(polygon, capsule, centerAxis1) || !axisCheck(polygon, capsule, centerAxis2))
 			return false;
-		else if(normalAxis == [0,0])
+		else if(normalAxis == [0,0]) //don't check the normal if it's 0,0 - this can happen when vertices overlap
 			continue;
-		else if(!capsuleAxisCheck(polygon, capsule, normalAxis))
+		else if(!axisCheck(polygon, capsule, normalAxis))
 			return false;
 	}
 
+	//get axis between centers, and the normal to that axis
 	var capsuleAxisNormal = [-(capsule.center2[1] - capsule.center1[1]), capsule.center2[0] - capsule.center1[0]];
-	if(!capsuleAxisCheck(polygon, capsule, capsuleAxisNormal))
+	var capsuleAxis = [capsule.center2[0] - capsule.center1[0], capsule.center2[1] - capsule.center1[1]];
+	//check those as well
+	if(!axisCheck(polygon, capsule, capsuleAxisNormal) || !axisCheck(polygon, capsule, capsuleAxis))
+		return false;
+
+	//if we made it this far there are no separating axes
+	return true;
+}
+
+function polygonCapsuleAxisCheck(vertices, capsule, axis){
+	var normalizedAxis = normalizeVector(axis[0], axis[1]);
+	var max1;
+	var min1;
+	var maxCapsule;
+	var minCapsule;
+	//loop through verts. project onto the axis and find the min/max
+	for (var c = 0; c < vertices.length; c++) {
+		var vert = vertices[c];
+		var projectedVert = vert[0]*normalizedAxis[0]+vert[1]*normalizedAxis[1];
+		if (c == 0 || projectedVert > max1)
+			max1 = projectedVert;
+		if (c == 0 || projectedVert < min1)
+			min1 = projectedVert;
+	}
+	//project capsule centers onto the axis
+	var projectedCenters = [capsule.center1[0]*normalizedAxis[0] + capsule.center1[1]*normalizedAxis[1], capsule.center2[0]*normalizedAxis[0] + capsule.center2[1]*normalizedAxis[1]];
+	//find min and max
+	if(projectedCenters[0]>projectedCenters[1]){
+		maxCapsule = projectedCenters[0];
+		minCapsule = projectedCenters[1];
+	}
+	else{
+		maxCapsule = projectedCenters[1];
+		minCapsule = projectedCenters[0];
+	}
+	//it's a capsule, so add radius
+	maxCapsule+=capsule.radius;
+	minCapsule-=capsule.radius;
+
+	//return bool indicating whether they overlap
+	return !(max1 < minCapsule || maxCapsule < min1);
+}
+
+function capsuleCapsuleSAT(capsule1, capsule2){
+	var axisCheck = capsuleCapsuleAxisCheck;
+
+	//check first capsule's center axis
+	var capsule1Axis = [capsule1.center2[0] - capsule1.center1[0], capsule1.center2[1] - capsule1.center1[1]];
+	if(!axisCheck(capsule1, capsule2, capsule1Axis))
+		return false;
+
+	//check first capsule's normal axis
+	var capsule1Normal = [-capsule1Axis[1], capsule1Axis[0]];
+	if(!axisCheck(capsule1, capsule2, capsule1Normal))
+		return false;
+
+	//same for second capsule
+	var capsule2Axis = [capsule2.center2[0] - capsule2.center1[0], capsule2.center2[1] - capsule2.center1[1]];
+	if(!axisCheck(capsule1, capsule2, capsule2Axis))
+		return false;
+
+	var capsule2Normal = [-capsule2Axis[1], capsule2Axis[0]];
+	if(!axisCheck(capsule1, capsule2, capsule2Normal))
 		return false;
 
 	return true;
+}
+
+function capsuleCapsuleAxisCheck(capsule1, capsule2, axis){
+	var normalizedAxis = normalizeVector(axis[0], axis[1]);
+	var maxCapsule1;
+	var minCapsule1;
+	var maxCapsule2;
+	var minCapsule2;
+	
+	//project capsule1's centers onto the axis
+	var projectedCenters1 = [capsule1.center1[0]*normalizedAxis[0] + capsule1.center1[1]*normalizedAxis[1], capsule1.center2[0]*normalizedAxis[0] + capsule1.center2[1]*normalizedAxis[1]];
+	//find min and max
+	if(projectedCenters1[0]>projectedCenters1[1]){
+		maxCapsule1 = projectedCenters1[0];
+		minCapsule1 = projectedCenters1[1];
+	}
+	else{
+		maxCapsule1 = projectedCenters1[1];
+		minCapsule1 = projectedCenters1[0];
+	}
+	//add radius, because capsule
+	maxCapsule1+=capsule1.radius;
+	minCapsule1-=capsule1.radius;
+	
+	//do the same for capsule2
+	var projectedCenters2 = [capsule2.center1[0]*normalizedAxis[0] + capsule2.center1[1]*normalizedAxis[1], capsule2.center2[0]*normalizedAxis[0] + capsule2.center2[1]*normalizedAxis[1]];
+	if(projectedCenters2[0]>projectedCenters2[1]){
+		maxCapsule2 = projectedCenters2[0];
+		minCapsule2 = projectedCenters2[1];
+	}
+	else{
+		maxCapsule2 = projectedCenters2[1];
+		minCapsule2 = projectedCenters2[0];
+	}
+	maxCapsule2+=capsule2.radius;
+	minCapsule2-=capsule2.radius;
+
+	//return whether they overlap
+	return !(max1 < minCapsule || maxCapsule < min1);
 }
 
 //http://stackoverflow.com/questions/9614109/how-to-calculate-an-angle-from-points
