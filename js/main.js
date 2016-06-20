@@ -123,7 +123,7 @@ app.main = {
 	},
 	baseStarCameraZoom:.0001,
 
-    // methods
+    //initialize the stuff
 	init : function() {
 		// initialize properties
 			var canvas = this.canvas = document.querySelector('#canvas1');
@@ -168,6 +168,7 @@ app.main = {
 		};
 	},
 
+	//returns a bool indicating whether the given position is within the given grid plus tolerances (in pixels)
 	isPositionInGrid: function(position, grid, tolerances){
 		if(!tolerances)
 			tolerances = [0,0];
@@ -333,13 +334,14 @@ app.main = {
 		};
 	},
 
+	//constructor for cannon component
 	createComponentCannon:function(objectParams){
 		if(!objectParams)
 			objectParams = {};
 		return{
 			firing:false,
 			lastFireTime:0,
-			cd:(objectParams.cd)?objectParams.cd:.1,
+			cd:(objectParams.cd)?objectParams.cd:.02,
 			power:(objectParams.power)?objectParams.power:24000,
 
 		};
@@ -381,6 +383,7 @@ app.main = {
 		};
 	},
 
+	//constructor for viewport component
 	createComponentViewport:function(objectParams){
 		if(!objectParams)
 			objectParams = {};
@@ -392,6 +395,7 @@ app.main = {
 		};
 	},
 
+	//constructor for laser object
 	createLaser:function(lasers, startX,startY,endX,endY,color, power,efficiency, previousLaser, owner){
 		var lsr = {
 			startX:startX,
@@ -408,6 +412,7 @@ app.main = {
 		return lsr;
 	},
 
+	//constructor for projectile object
 	createProjectile:function(projectiles, startX, startY, velX, velY, destructible, color, owner){
 		var prj = {
 			x:startX,
@@ -423,6 +428,7 @@ app.main = {
 		projectiles.push(prj);
 	},
 
+	//scales target values of the given power system such that they sum to 1
 	scalePowerTarget:function(ps){
 		var sum = 0;
 		for(var c = 0;c<ps.target.length;c++)
@@ -438,11 +444,12 @@ app.main = {
 			ps.target[c] = ps.target[c]/sum;
 	},
 
+	//returns the current value of the given component ID (from component enum) in the given power system after applying a transformation function
 	getPowerForComponent:function(ps,component){
 		if(component>=ps.current.length || component<0)
 			return 0;
 		var components = ps.current.length;
-		return clamp(0,(ps.current[component]-(1/components))/(2*(1/components)),1);
+		return clamp(0,(ps.current[component]-(1/components))/(2*(1/components)),1); //this is the transformation function
 	},
 
 	//draws the grid in the given camera
@@ -534,13 +541,14 @@ app.main = {
 		}
 	},
 
+	//generates a field of stars - same as above, but without the destructibles
 	generateStarField:function(stars){
 		var lower = -10000000;
 		var upper = 10000000;
 		var maxRadius = 8000;
 		var minRadius = 2000;
 		for(var c=0;c<500;c++){
-			var group = Math.floor(Math.random()*this.asteroids.colors.length);
+			var group = Math.floor(Math.random()*this.stars.colors.length);
 			stars.objs.push({
 				x: Math.random()*(upper-lower)+lower,
 				y: Math.random()*(upper-lower)+lower,
@@ -550,6 +558,7 @@ app.main = {
 		}
 	},
 
+	//advances a projectile according to its velocity
 	updateProjectile: function(prj, dt){
 		prj.prevX = prj.x;
 		prj.prevY = prj.y;
@@ -557,6 +566,7 @@ app.main = {
 		prj.y += prj.velocityY * dt;
 	},
 
+	//advances the given ship forward in time by dT
 	updateShip: function(ship,dt){
 		//store position at previous update for swept area construction
 			ship.prevX = ship.x;
@@ -657,8 +667,8 @@ app.main = {
 			if(ship.cannon.firing){
 				var prjVelocity = [ship.forwardVectorX * ship.cannon.power, ship.forwardVectorY * ship.cannon.power];
 				var prjDestructible = {
-					hp:10,
-					radius:2
+					hp:.1,
+					radius:.5
 				};
 				this.createProjectile(this.projectiles, ship.x+normalizedForwardVector[0]*(30), ship.y+normalizedForwardVector[1]*30, prjVelocity[0] + ship.velocityX, prjVelocity[1] + ship.velocityY, this.createComponentDestructible(prjDestructible), 'yellow', ship);
 				ship.cannon.firing = false;
@@ -812,7 +822,7 @@ app.main = {
 		var distanceSqr = vectorMagnitudeSqr(vectorToTarget[0],vectorToTarget[1]);
 
 		if(relativeAngleToTarget<ship.ai.fireSpread/2 && relativeAngleToTarget>-ship.ai.fireSpread/2  && distanceSqr<(ship.laser.range*ship.laser.range))
-			this.shipFireCannon(ship);
+			this.shipFireLaser(ship);
 
 		if(distanceSqr > ship.ai.followMax*ship.ai.followMax)
 			this.shipMedialThrusters(ship,ship.thrusters.medial.maxStrength/ship.stabilizer.thrustRatio);
@@ -938,21 +948,46 @@ app.main = {
 			},this);
 
 		//projectile collisions
-			this.projectiles.forEach(function(prj){
+			for(var n = 0; n<this.projectiles.length; n++){
+				var prj = this.projectiles[n];
 				var prjCapsule = {center1:[prj.x,prj.y], center2:[prj.prevX, prj.prevY], radius:prj.destructible.radius};
 				//projectile-ship
 					for(var c = -1;c<this.otherShips.length;c++){
 						var thisObj = ((c==-1) ? this.ship : this.otherShips[c]); //lol
 						if(thisObj == prj.owner)
 							continue;
-						//if()
-						//	continue;
+						var distanceSqr = Math.abs((prj.x - thisObj.x)*(prj.x - thisObj.x) + (prj.y - thisObj.y)*(prj.y - thisObj.y));
+						if(distanceSqr>5*(prj.destructible.radius+thisObj.destructible.radius)*(prj.destructible.radius+thisObj.destructible.radius))
+							continue;
 						if(capsuleCapsuleSAT({center1:[thisObj.x,thisObj.y], center2:[thisObj.prevX, thisObj.prevY], radius:thisObj.destructible.radius}, prjCapsule))
 						{
-							prj.destructible.hp = 0;
+							var velocityDifference = [prj.velocityX - thisObj.velocityX, prj.velocityY - thisObj.velocityY];
+							var magnitude = Math.sqrt(velocityDifference[0] * velocityDifference[0] + velocityDifference[1] * velocityDifference[1]);
+							var damage = magnitude * prj.destructible.maxHp * prj.destructible.radius/thisObj.destructible.radius;
+							prj.destructible.hp-=damage;
+							thisObj.destructible.shield.current-=damage;
+							if(thisObj.destructible.shield.current<0)
+							{
+								thisObj.destructible.hp+=thisObj.destructible.shield.current;
+								thisObj.destructible.shield.current = 0;
+							}
+							console.log(damage+' damage, '+magnitude+' magnitude');
 						}
 					}
-			}, this);
+
+				//projectile-asteroid
+					for(var c = 0; c<this.asteroids.objs.length; c++){
+						var thisObj = this.asteroids.objs[c];
+						var distanceSqr = Math.abs((prj.x - thisObj.x)*(prj.x - thisObj.x) + (prj.y - thisObj.y)*(prj.y - thisObj.y));
+						if(distanceSqr<=(prj.destructible.radius+thisObj.destructible.radius)*(prj.destructible.radius+thisObj.destructible.radius))
+						{
+							var magnitude = Math.sqrt(prj.velocityX * prj.velocityX + prj.velocityY * prj.velocityY);
+							var damage = magnitude * prj.destructible.maxHp * prj.destructible.radius/thisObj.destructible.radius;
+							prj.destructible.hp-=damage;
+							thisObj.destructible.hp-=damage;
+						}
+					}
+			}
 
 		//asteroid collisions
 			for(var c = -1;c<this.otherShips.length;c++){
@@ -961,13 +996,13 @@ app.main = {
 					var asteroid = this.asteroids.objs[n];
 					var distance = (ship.x-asteroid.x)*(ship.x-asteroid.x) + (ship.y-asteroid.y)*(ship.y-asteroid.y);
 					var overlap = (ship.destructible.radius+asteroid.radius)*(ship.destructible.radius+asteroid.radius) - distance;
-					if(overlap>=0) //only the player's ship collides with asteroids, since I don't have time to get the AI to avoid them
+					if(overlap>=0)
 					{
 						if(this.frameCount==0)
 							asteroid.destructible.hp=-1;
 						else{
 							var objectSpeed = Math.sqrt(ship.velocityX*ship.velocityX+ship.velocityY*ship.velocityY);
-							ship.destructible.shield.current-=((c == -1)?.1:.01)*dt*objectSpeed;
+							ship.destructible.shield.current-=((c == -1)?.1:.01)*dt*objectSpeed; //player takes 10 times as much damage as the AI
 							asteroid.destructible.hp-=.2*dt*objectSpeed;
 							if(ship.destructible.shield.current<0)
 							{
@@ -982,6 +1017,7 @@ app.main = {
 			}
 	},	
 
+	//destroys any members of the given destructible array that are outside the given grid by more than the tolerance
 	cullDestructibles: function(destructibles, grid, tolerancePercent){
 		var gridDimensions = grid.gridLines * grid.gridSpacing;
 		var tolerances = [gridDimensions * tolerancePercent, gridDimensions * tolerancePercent];
@@ -993,6 +1029,7 @@ app.main = {
 		}
 	},
 
+	//destroys any members of the given destructible array that have zero or less hp
 	clearDestructibles:function(destructibles){
 		for(var c = 0;c<destructibles.length;c++){
 			if(destructibles[c].destructible.hp<=0)
@@ -1000,6 +1037,7 @@ app.main = {
 		}
 	},
 
+	//destroys all ships
 	clearShips:function(ships){
 		for(var c = 0;c<ships.length;c++){
 			if(ships[c].destructible.hp<=0)
@@ -1007,6 +1045,7 @@ app.main = {
 		}
 	},
 
+	//the main game function - called once per frame
 	frame:function(){
 		this.animationID = requestAnimationFrame(this.frame.bind(this));
 		var dt = this.calculateDeltaTime();
@@ -1021,7 +1060,7 @@ app.main = {
 		this.draw();
 	},
 
-	//the game loop
+	//one game tick
 	update: function(dt){
 	 	//clear values
 		this.clearLasers(this.lasers);
@@ -1134,6 +1173,7 @@ app.main = {
 		this.frameCount++;
 	},
 
+	//renders everything
 	draw:function(){
 
 		//console.log('drawing');
@@ -1202,6 +1242,7 @@ app.main = {
 		this.drawLockedGraphic(this.camera);
 	},
 
+	//draws the projected overlay (shields, health, laser range) for the given ship using the two given cameras (one for the gameplay plane and one for the projected plane)
 	drawShipOverlay:function(ship,camera,gridCamera){
 		var ctx = camera.ctx;
 		
@@ -1245,6 +1286,7 @@ app.main = {
 		ctx.restore();
 	},
 
+	//draws the give ship's minimap representation to the given camera
 	drawShipMinimap:function(ship,camera){
 		var ctx = camera.ctx;
 		ctx.save();
@@ -1418,6 +1460,7 @@ app.main = {
 			ctx.restore();
 	},
 
+	//draws all laser objects in the given array to the given camera
 	drawLasers:function(lasers,camera){
 		var ctx = camera.ctx;
 		lasers.forEach(function(laser){
@@ -1454,11 +1497,15 @@ app.main = {
 		},this);
 	},
 
+	//draws all projectile objects in the given array to the given camera
 	drawProjectiles: function(projectiles, camera){
 		var ctx = camera.ctx;
 		projectiles.forEach(function(prj){
 			var start = worldPointToCameraSpace(prj.prevX, prj.prevY, camera);
 			var end = worldPointToCameraSpace(prj.x, prj.y, camera);
+
+			if(start[0] > camera.width+prj.destructible.radius || start[0] < 0 - prj.destructible.radius || start[1] > camera.height + prj.destructible.radius || start[1] < 0 - prj.destructible.radius)
+				return;
 
 			ctx.save();
 			ctx.beginPath();
@@ -1471,6 +1518,7 @@ app.main = {
 		});
 	},
 
+	//draws the projected overlay for all asteroids in the given array to the given main and projected cameras
 	drawAsteroidsOverlay:function(asteroids, camera, gridCamera){
 		var start = [0,0];
 		var end = [camera.width,camera.height];
@@ -1528,28 +1576,7 @@ app.main = {
 		};
 	},
 
-	//draws asteroids from the given asteroids array to the given camera
-	drawStars: function(stars,camera){
-		var start = [0,0];
-		var end = [camera.width,camera.height];
-		var ctx = camera.ctx;
-		for(var c = 0;c<stars.length;c++){
-			var star = stars[c];
-			ctx.save();
-			var finalPosition = worldPointToCameraSpace(star.x,star.y,camera); //get asteroid's position in camera space
-			if(finalPosition[0] + star.radius*camera.zoom<start[0] || finalPosition[0]-star.radius*camera.zoom>end[0] || finalPosition[1] + star.radius*camera.zoom<start[1] || finalPosition[1]-star.radius*camera.zoom>end[1])
-					continue;
-			ctx.translate(finalPosition[0],finalPosition[1]); //translate to that position
-			ctx.scale(camera.zoom,camera.zoom); //scale to zoom
-			ctx.beginPath();
-			ctx.arc(0,0,star.radius,0,Math.PI*2);
-			ctx.globalAlpha = .5;
-			ctx.fillStyle = star.color;
-			ctx.fill();
-			ctx.restore();
-		};
-	},
-
+	//draws the heads-up display to the given camera
 	drawHUD: function(camera){
 		var ctx = camera.ctx;
 		ctx.save(); // NEW
@@ -1582,6 +1609,8 @@ app.main = {
 		ctx.restore(); // NEW
 	},
 
+	//draws the minimap to the given camera
+	//note that the minimap camera has a viewport
 	drawMinimap:function(camera){
 		var ctx = camera.ctx;
 		var viewportStart = [camera.width*camera.viewport.startX,camera.height*camera.viewport.startY];
@@ -1664,6 +1693,7 @@ app.main = {
 		ctx.restore();
 	},
 
+	//draws the "click me" graphic
 	drawLockedGraphic:function(camera){
 		if(locked)
 			return;
@@ -1690,7 +1720,7 @@ app.main = {
 		this.fillText(ctx,"TAB switches between assisted and manual controls",camera.width/10,9*camera.height/12,"10pt Orbitron",'white');
 		this.fillText(ctx,"P pauses, F turns off the star-field graphics (they can be a resource hog)",camera.width/10,10*camera.height/12,"10pt Orbitron",'white');
 		this.fillText(ctx,"Play around for a bit, then press ENTER to start the game. Your goal is to destroy all enemy ships",camera.width/10,11*camera.height/12,"10pt Orbitron",'white');
-		this.fill
+		//this.fill
 	},
 
 	pauseGame:function(){
