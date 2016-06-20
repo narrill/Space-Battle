@@ -338,15 +338,42 @@ app.main = {
 
 	//constructor for cannon component
 	createComponentCannon:function(objectParams){
-		if(!objectParams)
-			objectParams = {};
-		return{
+		var cn = {
 			firing:false,
 			lastFireTime:0,
-			cd:(objectParams.cd)?objectParams.cd:.02,
-			power:(objectParams.power)?objectParams.power:24000,
-
+			cd:.02,
+			power:24000,
+			ammo:this.createComponentAmmo()
 		};
+
+		var defaults = {
+		};
+
+		deepObjectMerge(cn,defaults);
+		if(objectParams) deepObjectMerge(cn,objectParams);
+
+		return cn;
+	},
+
+	createComponentAmmo:function(objectParams){
+		var am = {
+			destructible:this.createComponentDestructible(),
+			color:'yellow',
+			tracerInterval:5,
+			tracerSeed:0
+		};
+
+		var defaults = {
+			destructible:{
+				hp:.1,
+				radius:.5
+			}
+		};
+
+		deepObjectMerge(am, defaults);
+		if(objectParams) deepObjectMerge(am, objectParams);
+
+		return am;
 	},
 
 	//constructor for the destructible component - stores hp, shields, and collider radius
@@ -415,7 +442,7 @@ app.main = {
 	},
 
 	//constructor for projectile object
-	createProjectile:function(projectiles, startX, startY, velX, velY, destructible, color, owner){
+	createProjectile:function(projectiles, startX, startY, velX, velY, destructible, color, owner, visible){
 		var prj = {
 			x:startX,
 			y:startY,
@@ -425,7 +452,8 @@ app.main = {
 			velocityY:velY,
 			destructible:destructible,
 			color:color,
-			owner:owner
+			owner:owner,
+			visible: visible
 		};
 		projectiles.push(prj);
 	},
@@ -668,12 +696,10 @@ app.main = {
 		//create projectiles
 			if(ship.cannon.firing){
 				var prjVelocity = [ship.forwardVectorX * ship.cannon.power, ship.forwardVectorY * ship.cannon.power];
-				var prjDestructible = {
-					hp:.1,
-					radius:.5
-				};
-				this.createProjectile(this.projectiles, ship.x+normalizedForwardVector[0]*(30), ship.y+normalizedForwardVector[1]*30, prjVelocity[0] + ship.velocityX, prjVelocity[1] + ship.velocityY, this.createComponentDestructible(prjDestructible), 'yellow', ship);
+				var ammo = ship.cannon.ammo;
+				this.createProjectile(this.projectiles, ship.x+normalizedForwardVector[0]*(30), ship.y+normalizedForwardVector[1]*30, prjVelocity[0] + ship.velocityX, prjVelocity[1] + ship.velocityY, this.createComponentDestructible(ammo.destructible), ammo.color, ship, ammo.tracerSeed%ammo.tracerInterval==0);
 				ship.cannon.firing = false;
+				ammo.tracerSeed++;
 			}
 
 		//refresh shields
@@ -1530,12 +1556,15 @@ app.main = {
 	//draws all projectile objects in the given array to the given camera
 	drawProjectiles: function(projectiles, camera){
 		var ctx = camera.ctx;
-		projectiles.forEach(function(prj){
+		for(var c = 0;c< projectiles.length;c++){
+			var prj = projectiles[c];
+			if(!prj.visible)
+				continue;
 			var start = worldPointToCameraSpace(prj.prevX, prj.prevY, camera);
 			var end = worldPointToCameraSpace(prj.x, prj.y, camera);
 
 			if(start[0] > camera.width+prj.destructible.radius || start[0] < 0 - prj.destructible.radius || start[1] > camera.height + prj.destructible.radius || start[1] < 0 - prj.destructible.radius)
-				return;
+				continue;
 
 			ctx.save();
 			ctx.beginPath();
@@ -1545,7 +1574,7 @@ app.main = {
 			ctx.strokeWidth = ((prj.destructible.radius>5)? prj.destructible.radius : 5) * camera.zoom;
 			ctx.stroke();
 			ctx.restore();
-		});
+		}
 	},
 
 	//draws the projected overlay for all asteroids in the given array to the given main and projected cameras

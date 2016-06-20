@@ -416,4 +416,29 @@ Array.prototype.randomElement = function(){
 	return this[Math.floor(Math.random() * this.length)];
 }
 
+function deepObjectMerge(target, src){
+	//loop through source's attributes
+	for(var key in src){
+		//if the attribute is up the prototype chain, skip it
+		if(!src.hasOwnProperty(key))
+			continue;
+		//if the current attribute is an object in the source
+		if(src[key] instanceof Object && !(src[key] instanceof Array))
+		{
+			//if the current attribute isn't in the target, or isn't an object in the target
+			if(!target[key] || !(target[key] instanceof Object && !(target[key] instanceof Array)))
+				target[key] = {}; //make it an empty object
+			//then deep merge the two
+			deepObjectMerge(target[key],src[key]);
+		}
+		//if current attribute isn't an object in the source
+		else
+		{
+			//if current attribute is an array in the source, give target a copy of it
+			//target[key] = (Array.isArray(src[key])) ? src[key].slice() : src[key];
 
+			//we'll worry about referencing bugs later
+			target[key] = src[key];
+		}
+	}
+}
