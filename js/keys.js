@@ -99,6 +99,8 @@ window.addEventListener("keyup",function(e){
 		app.main.drawStarField = !app.main.drawStarField;
 	else if (e.keyCode == myKeys.KEYBOARD.KEY_P)
 		app.main.paused = !app.main.paused;
+	else if(e.keyCode == myKeys.KEYBOARD.KEY_E)
+		app.main.playerWeaponToggle = !app.main.playerWeaponToggle;
 });
 
 window.addEventListener("mouseup",requestLock);

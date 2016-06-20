@@ -393,7 +393,18 @@ function lerp3d(from,to,percent){
 }
 
 function lerpNd(from, to, percent){
-	
+	if(!Array.isArray(from))
+		from = [from];
+	if(!Array.isArray(to))
+		to = [to];
+	if(from.length!=to.length)
+		return from;
+	var returnVal = [];
+
+	for(var c = 0;c<from.length;c++)
+		returnVal.push((from[c] * (1.0 - percent)) + (to[c] * percent));
+
+	return returnVal;
 }
 
 function clamp(min, value, max){

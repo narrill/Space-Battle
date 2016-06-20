@@ -38,7 +38,8 @@ app.main = {
 	SHIP_COMPONENTS:{
 		THRUSTERS:0,
 		LASERS:1,
-		SHIELDS:2
+		SHIELDS:2,
+		CANNON:3
 	},
    	lastTime: 0, // used by calculateDeltaTime() 
     debug: true,
@@ -122,6 +123,7 @@ app.main = {
 		]
 	},
 	baseStarCameraZoom:.0001,
+	playerWeaponToggle:false,
 
     //initialize the stuff
 	init : function() {
@@ -703,7 +705,7 @@ app.main = {
 
 			//update the power values
 				this.scalePowerTarget(ship.powerSystem);
-				ship.powerSystem.current = lerp3d(ship.powerSystem.current,ship.powerSystem.target,ship.powerSystem.transferRate*dt);
+				ship.powerSystem.current = lerpNd(ship.powerSystem.current,ship.powerSystem.target,ship.powerSystem.transferRate*dt);
 
 			//scale back up to augmented with the new power values
 				thrusterPower = this.getPowerForComponent(ship.powerSystem, this.SHIP_COMPONENTS.THRUSTERS);
@@ -821,8 +823,13 @@ app.main = {
 
 		var distanceSqr = vectorMagnitudeSqr(vectorToTarget[0],vectorToTarget[1]);
 
-		if(relativeAngleToTarget<ship.ai.fireSpread/2 && relativeAngleToTarget>-ship.ai.fireSpread/2  && distanceSqr<(ship.laser.range*ship.laser.range))
-			this.shipFireLaser(ship);
+		if(relativeAngleToTarget<ship.ai.fireSpread/2 && relativeAngleToTarget>-ship.ai.fireSpread/2)
+		{
+			if(distanceSqr<(ship.laser.range*ship.laser.range))
+				this.shipFireLaser(ship);
+			else
+				this.shipFireCannon(ship);
+		}
 
 		if(distanceSqr > ship.ai.followMax*ship.ai.followMax)
 			this.shipMedialThrusters(ship,ship.thrusters.medial.maxStrength/ship.stabilizer.thrustRatio);
@@ -843,40 +850,45 @@ app.main = {
 		this.shipRotationalStabilizers(ship,dt);
 	},
 
-	shipKeyboardControl(ship, dt){
+	shipKeyboardControl:function(ship, dt){
 		//set ship thruster values
-		 	//assisted controls
 			//medial motion
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_W])
-				this.shipMedialThrusters(ship,ship.thrusters.medial.maxStrength/ship.stabilizer.thrustRatio);
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_S])
-				this.shipMedialThrusters(ship,-ship.thrusters.medial.maxStrength/ship.stabilizer.thrustRatio);
-			if(ship.stabilizer.enabled)
-				this.shipMedialStabilizers(ship,dt);
+				if(myKeys.keydown[myKeys.KEYBOARD.KEY_W])
+					this.shipMedialThrusters(ship,ship.thrusters.medial.maxStrength/ship.stabilizer.thrustRatio);
+				if(myKeys.keydown[myKeys.KEYBOARD.KEY_S])
+					this.shipMedialThrusters(ship,-ship.thrusters.medial.maxStrength/ship.stabilizer.thrustRatio);
+				if(ship.stabilizer.enabled)
+					this.shipMedialStabilizers(ship,dt);
 			//lateral motion
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_A])
-				this.shipLateralThrusters(ship,-ship.thrusters.lateral.maxStrength/ship.stabilizer.thrustRatio);
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_D])
-				this.shipLateralThrusters(ship,ship.thrusters.lateral.maxStrength/ship.stabilizer.thrustRatio);
-			if(ship.stabilizer.enabled)
-				this.shipLateralStabilizers(ship,dt);
+				if(myKeys.keydown[myKeys.KEYBOARD.KEY_A])
+					this.shipLateralThrusters(ship,-ship.thrusters.lateral.maxStrength/ship.stabilizer.thrustRatio);
+				if(myKeys.keydown[myKeys.KEYBOARD.KEY_D])
+					this.shipLateralThrusters(ship,ship.thrusters.lateral.maxStrength/ship.stabilizer.thrustRatio);
+				if(ship.stabilizer.enabled)
+					this.shipLateralStabilizers(ship,dt);
 			//rotational motion - mouse			
-			this.shipRotationalThrusters(ship,-myMouse.direction*myMouse.sensitivity*ship.thrusters.rotational.maxStrength/ship.stabilizer.thrustRatio);
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_LEFT])
-				this.shipRotationalThrusters(ship,ship.thrusters.rotational.maxStrength/ship.stabilizer.thrustRatio);
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_RIGHT])
-				this.shipRotationalThrusters(ship,-ship.thrusters.rotational.maxStrength/ship.stabilizer.thrustRatio);
-			if(ship.stabilizer.enabled)
-				this.shipRotationalStabilizers(ship,dt);
+				this.shipRotationalThrusters(ship,-myMouse.direction*myMouse.sensitivity*ship.thrusters.rotational.maxStrength/ship.stabilizer.thrustRatio);
+				if(myKeys.keydown[myKeys.KEYBOARD.KEY_LEFT])
+					this.shipRotationalThrusters(ship,ship.thrusters.rotational.maxStrength/ship.stabilizer.thrustRatio);
+				if(myKeys.keydown[myKeys.KEYBOARD.KEY_RIGHT])
+					this.shipRotationalThrusters(ship,-ship.thrusters.rotational.maxStrength/ship.stabilizer.thrustRatio);
+				if(ship.stabilizer.enabled)
+					this.shipRotationalStabilizers(ship,dt);
 			//lasers
-			if(myMouse.mousedown[myMouse.BUTTONS.LEFT] || myKeys.keydown[myKeys.KEYBOARD.KEY_SPACE])
-				this.shipFireCannon(ship);
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_SHIFT])
-				ship.powerSystem.target[this.SHIP_COMPONENTS.THRUSTERS] = 1;
-			if(myMouse.mousedown[myMouse.BUTTONS.RIGHT])
-				ship.powerSystem.target[this.SHIP_COMPONENTS.LASERS] = 1;
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_ALT])
-				ship.powerSystem.target[this.SHIP_COMPONENTS.SHIELDS] = 1;
+				if(myMouse.mousedown[myMouse.BUTTONS.LEFT] || myKeys.keydown[myKeys.KEYBOARD.KEY_SPACE])
+				{
+					if(this.playerWeaponToggle)
+						this.shipFireLaser(ship);
+					else
+						this.shipFireCannon(ship);
+				}
+			//power system
+				if(myKeys.keydown[myKeys.KEYBOARD.KEY_SHIFT])
+					ship.powerSystem.target[this.SHIP_COMPONENTS.THRUSTERS] = 1;
+				if(myMouse.mousedown[myMouse.BUTTONS.RIGHT])
+					ship.powerSystem.target[this.SHIP_COMPONENTS.LASERS] = 1;
+				if(myKeys.keydown[myKeys.KEYBOARD.KEY_ALT])
+					ship.powerSystem.target[this.SHIP_COMPONENTS.SHIELDS] = 1;
 	},
 
 	clearLasers:function(lasers){
@@ -927,6 +939,21 @@ app.main = {
 						if(thisDistance[1]<tValOfObj && polygonCapsuleSAT(laserVertices, {center1:[thisObj.x, thisObj.y], center2:[thisObj.prevX, thisObj.prevY], radius:thisObj.destructible.radius})){
 							obj = thisObj;
 							tValOfObj = thisDistance[1];
+						}
+					}
+				//laser-projectile
+					for(var c = 0;c<this.projectiles.length;c++){
+						var thisObj = this.projectiles[c];
+						if(thisObj == laser.owner)
+							continue;
+						if(thisObj.x + thisObj.destructible.radius<start[0] || thisObj.x-thisObj.destructible.radius>end[0] || thisObj.y + thisObj.destructible.radius<start[1] || thisObj.y-thisObj.destructible.radius>end[1])
+							continue;
+						var thisDistance = distanceFromPointToLine(thisObj.x,thisObj.y,laser.startX,laser.startY,laser.endX,laser.endY);
+
+						if(thisDistance[1]<tValOfObj && polygonCapsuleSAT(laserVertices, {center1:[thisObj.x, thisObj.y], center2:[thisObj.prevX, thisObj.prevY], radius:thisObj.destructible.radius})){
+							obj = thisObj;
+							tValOfObj = thisDistance[1];
+							console.log('laser-projectile collision');
 						}
 					}
 
@@ -1058,6 +1085,12 @@ app.main = {
 			this.accumulator-= this.timeStep;
 		}
 		this.draw();
+
+		//FPS text
+		if (this.debug){
+			this.fillText(this.camera.ctx,'fps: '+Math.floor(1/dt),15,15,"8pt Orbitron",'white');
+			this.fillText(this.camera.ctx,'prjs: '+this.projectiles.length,15,30,"8pt Orbitron",'white');
+		}
 	},
 
 	//one game tick
@@ -1234,10 +1267,7 @@ app.main = {
 			this.drawLoseScreen(this.camera);
 		}
 		
-		//FPS text
-		if (this.debug){
-			//this.fillText(this.camera.ctx,'fps: '+Math.floor(1/dt),15,15,"8pt Orbitron",'white');
-		}
+		
 
 		this.drawLockedGraphic(this.camera);
 	},
