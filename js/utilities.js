@@ -417,6 +417,8 @@ Array.prototype.randomElement = function(){
 }
 
 function deepObjectMerge(target, src){
+	if(!src)
+		return target;
 	//loop through source's attributes
 	for(var key in src){
 		//if the attribute is up the prototype chain, skip it
@@ -441,4 +443,23 @@ function deepObjectMerge(target, src){
 			target[key] = src[key];
 		}
 	}
+
+	return target;
+}
+
+function veryShallowObjectMerge(target, src){
+	if(!src)
+		return target;
+	//loop through source's attributes
+	for(var key in src){
+		//if the attribute is up the prototype chain, skip it
+		if(!src.hasOwnProperty(key))
+			continue;
+		//if the current attribute is an object in the source
+		if(src[key] instanceof Object && !(src[key] instanceof Array))
+			continue;
+		target[key] = src[key];
+	}
+
+	return target;
 }

@@ -209,13 +209,13 @@ app.main = {
 	//constructor for ship objects
 	createShip:function(objectParams, grid){
 		var gridPosition = this.randomGridPosition(grid);
-		return {
+		var ship = {
 			//position/rotation
-			x:(objectParams.x)?objectParams.x : gridPosition.x,
-			y:(objectParams.x)?objectParams.y : gridPosition.y,
-			rotation:(objectParams.rotation)?objectParams.rotation : 0,
-			prevX: (objectParams.x)?objectParams.x : gridPosition.x,
-			prevY: (objectParams.x)?objectParams.y : gridPosition.y,
+			x:gridPosition.x,
+			y:gridPosition.y,
+			rotation:0,
+			prevX: gridPosition.x,
+			prevY: gridPosition.y,
 			//velocities
 			velocityX:0, //in absolute form, used for movement
 			velocityY:0,
@@ -226,7 +226,7 @@ app.main = {
 			rightVectorY:0,
 			medialVelocity:0, //component form, used by stabilizers
 			lateralVelocity:0,
-			destructible:this.createComponentDestructible((objectParams.destructible)?objectParams.destructible : {
+			destructible:this.createComponentDestructible(deepObjectMerge({
 				hp:100,
 				radius:25,
 				shield:{
@@ -234,17 +234,22 @@ app.main = {
 					recharge:3,
 					efficiency:8
 				}
-			}),
-			thrusters:this.createComponentThrusterSystem(objectParams.thrusters),
-			stabilizer:this.createComponentStabilizer(objectParams.stabilizer),
-			powerSystem:this.createComponentPowerSystem(objectParams.powerSystem),
+			}, objectParams.destructible)),
+			thrusters:this.createComponentThrusterSystem(deepObjectMerge({},objectParams.thrusters)),
+			stabilizer:this.createComponentStabilizer(deepObjectMerge({},objectParams.stabilizer)),
+			powerSystem:this.createComponentPowerSystem(deepObjectMerge({},objectParams.powerSystem)),
 			//colors
-			color:(objectParams.color)?objectParams.color : getRandomBrightColor(),
+			color:getRandomBrightColor(),
 			//used for controlling laser fire rate
 			//lastLaserTime:0,
-			laser:this.createComponentLaser((objectParams.laser)),
-			cannon:this.createComponentCannon(objectParams.cannon)
+			laser:this.createComponentLaser(deepObjectMerge({},objectParams.laser)),
+			cannon:this.createComponentCannon(deepObjectMerge({},objectParams.cannon))
 		};
+
+		//deepObjectMerge(ship, defaults);
+		if(objectParams) veryShallowObjectMerge(ship, objectParams);
+
+		return ship;
 	},
 
 	//constructor for the thruster system component
@@ -338,40 +343,35 @@ app.main = {
 
 	//constructor for cannon component
 	createComponentCannon:function(objectParams){
+		if(!objectParams)
+			objectParams = {};
 		var cn = {
 			firing:false,
 			lastFireTime:0,
 			cd:.02,
 			power:24000,
-			ammo:this.createComponentAmmo()
+			ammo:this.createComponentAmmo(deepObjectMerge({},objectParams.ammo))
 		};
 
-		var defaults = {
-		};
-
-		deepObjectMerge(cn,defaults);
-		if(objectParams) deepObjectMerge(cn,objectParams);
+		veryShallowObjectMerge(cn, objectParams);
 
 		return cn;
 	},
 
 	createComponentAmmo:function(objectParams){
+		if(!objectParams)
+			objectParams = {};
 		var am = {
-			destructible:this.createComponentDestructible(),
+			destructible:this.createComponentDestructible(deepObjectMerge({
+				hp:.1,
+				radius:.5
+			},objectParams.destructible)),
 			color:'yellow',
 			tracerInterval:5,
 			tracerSeed:0
 		};
 
-		var defaults = {
-			destructible:{
-				hp:.1,
-				radius:.5
-			}
-		};
-
-		deepObjectMerge(am, defaults);
-		if(objectParams) deepObjectMerge(am, objectParams);
+		veryShallowObjectMerge(am, objectParams);
 
 		return am;
 	},
