@@ -17,19 +17,27 @@ window.onload = function(){
 	var audioPath = 'sounds/';
 	var sounds = [
 		{id:"laser",src:"laser.mp3"},
-		{id:"bgm",src:"space rudder.mp3"}
-		//{id:"thruster",src:"thruster.mp3"}
+		{id:"bgm",src:"space rudder.mp3"},
+		{id:"thruster",src:"thruster.mp3"},
+		{id:"gunshot1",src:"gunshot1.mp3"},
+		{id:"gunshot2",src:"gunshot2.mp3"},
+		{id:"gunshot3",src:"gunshot3.mp3"},
+		{id:"gunshot4",src:"gunshot4.mp3"}
 	];
-	var thrusterSound = [{id:"thruster",src:"thruster.mp3"}];
+	//var thrusterSound = [{id:"thruster",src:"thruster.mp3"}];
 	app.main.sounds = {
 		laser:{id:'laser',loaded:false},
 		thruster:{id:'thruster',loaded:false},
-		bgm:{id:'bgm',loaded:false}
+		bgm:{id:'bgm',loaded:false},
+		gunshot1:{id:'gunshot1',loaded:false},
+		gunshot2:{id:'gunshot2',loaded:false},
+		gunshot3:{id:'gunshot3',loaded:false},
+		gunshot4:{id:'gunshot4',loaded:false}
 	};
 	createjs.Sound.alternateExtensions = ["mp3"];
 	createjs.Sound.addEventListener("fileload",handleLoad);
-	createjs.Sound.registerSounds(sounds,audioPath,1);
-	createjs.Sound.registerSounds(thrusterSound,audioPath,1);
+	createjs.Sound.registerSounds(sounds,audioPath,100);
+	//createjs.Sound.registerSounds(thrusterSound,audioPath,1);
 	app.main.init();
 	pointerInit();
 }

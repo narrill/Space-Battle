@@ -14,6 +14,10 @@ function getRandom(min, max) {
   	return Math.random() * (max - min) + min;
 }
 
+function getRandomIntInclusive(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
 
 function makeColor(red, green, blue, alpha){
 	var color='rgba('+red+','+green+','+blue+', '+alpha+')';

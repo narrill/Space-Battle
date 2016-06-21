@@ -208,14 +208,16 @@ app.main = {
 
 	//constructor for ship objects
 	createShip:function(objectParams, grid){
+		if(!objectParams)
+			objectParams = {};
 		var gridPosition = this.randomGridPosition(grid);
 		var ship = {
 			//position/rotation
 			x:gridPosition.x,
 			y:gridPosition.y,
 			rotation:0,
-			prevX: gridPosition.x,
-			prevY: gridPosition.y,
+			prevX: (objectParams.x)?objectParams.x: gridPosition.x,
+			prevY: (objectParams.y)?objectParams.y: gridPosition.y,
 			//velocities
 			velocityX:0, //in absolute form, used for movement
 			velocityY:0,
@@ -247,7 +249,7 @@ app.main = {
 		};
 
 		//deepObjectMerge(ship, defaults);
-		if(objectParams) veryShallowObjectMerge(ship, objectParams);
+		veryShallowObjectMerge(ship, objectParams);
 
 		return ship;
 	},
@@ -256,89 +258,112 @@ app.main = {
 	createComponentThrusterSystem:function(objectParams){
 		if(!objectParams)
 			objectParams = {};
-		return {
-			color:(objectParams.color)? objectParams.color: getRandomBrightColor(),
+		var ts = {
+			color:getRandomBrightColor(),
 			noiseLevel:0,
-			medial:this.createComponentThruster((objectParams.medial)?objectParams.medial:{
+			medial:this.createComponentThruster(deepObjectMerge({
 				maxStrength:3000,
 				efficiency:1000
-			}),
-			lateral:this.createComponentThruster((objectParams.lateral)?objectParams.lateral:{
+			},objectParams.medial)),
+			lateral:this.createComponentThruster(deepObjectMerge({
 				maxStrength:2000,
 				efficiency:1000
-			}),
-			rotational:this.createComponentThruster((objectParams.rotational)?objectParams.rotational:{
+			}, objectParams.lateral)),
+			rotational:this.createComponentThruster(deepObjectMerge({
 				maxStrength:750,
 				efficiency:1000
-			})
+			}, objectParams.rotational))
 		};
+
+		veryShallowObjectMerge(ts, objectParams);
+
+		return ts;
 	},
 
 	//constructor for the thruster component
 	createComponentThruster:function(objectParams){
 		if(!objectParams)
 			objectParams = {};
-		return {
+		var t = {
 			currentStrength:0,
 			targetStrength:0,
-			maxStrength: (objectParams.maxStrength)?objectParams.maxStrength:1000,
-			efficiency: (objectParams.efficiency) ? objectParams.efficiency:1000,
-			powerRampPercentage: (objectParams.powerRampPercentage)? objectParams.powerRampPercentage: 20,
-			powerRampLimit: (objectParams.powerRampLimit) ? objectParams.powerRampLimit : 6000
+			maxStrength: 1000,
+			efficiency: 1000,
+			powerRampPercentage: 20,
+			powerRampLimit: 6000
 		};
+
+		veryShallowObjectMerge(t, objectParams);
+
+		return t;
 	},
 
 	//constructor for the power system component
 	createComponentPowerSystem:function(objectParams){
 		if(!objectParams)
 			objectParams = {};
-		return{
+		var ps = {
 			current:[0,0,0],
 			target:[0,0,0],
 			transferRate:6
 		};
+
+		veryShallowObjectMerge(ps, objectParams);
+
+		return ps;
 	},
 
 	//constructor for the stabilizer component
 	createComponentStabilizer:function(objectParams){
 		if(!objectParams)
 			objectParams = {};
-		return{
-			enabled: (objectParams.enabled)? objectParams.enabled:true,
-			strength: (objectParams.strength)? objectParams.strength:1200,
-			thrustRatio: (objectParams.thrustRatio)?objectParams.thrustRatio:1.5,
-			precision: (objectParams.precision) ? objectParams.precision : 30,
-			clamps: this.createComponentStabilizerClamps(objectParams.clamps)
+		var stab = {
+			enabled: true,
+			strength: 1200,
+			thrustRatio: 1.5,
+			precision: 30,
+			clamps: this.createComponentStabilizerClamps(deepObjectMerge({},objectParams.clamps))
 		};
+
+		veryShallowObjectMerge(stab, objectParams);
+
+		return stab;
 	},
 
 	//constructor for the stabilizer clamps sub-component
 	createComponentStabilizerClamps:function(objectParams){
 		if(!objectParams)
 			objectParams = {};
-		return{
-			enabled: (objectParams.enabled)? objectParams.enabled:true,
-			medial:(objectParams.medial)?objectParams.medial:3000,
-			lateral:(objectParams.lateral)?objectParams.lateral:2000,
-			rotational:(objectParams.rotational)?objectParams.rotational:90
+		var clamps = {
+			enabled: true,
+			medial:3000,
+			lateral:2000,
+			rotational:90
 		};
+
+		veryShallowObjectMerge(clamps, objectParams);
+		return clamps;
 	},
 
 	//constructor for the laser component
 	createComponentLaser:function(objectParams){
 		if(!objectParams)
 			objectParams = {};
-		return{
+		var lsr = {
 			lastFireTime:0,
-			cd:(objectParams.cd)?objectParams.cd:.3,
-			range:(objectParams.range)?objectParams.range:10000,
-			color:(objectParams.color)?objectParams.color:getRandomBrightColor(),
+			cd:.3,
+			range:10000,
+			color:getRandomBrightColor(),
 			currentPower:0,
-			coherence:(objectParams.coherence)?objectParams.coherence:.995,
-			maxPower:(objectParams.maxPower)?objectParams.maxPower:6000,
-			efficiency:(objectParams.efficiency)?objectParams.efficiency:200,
-			spread:(objectParams.spread)?objectParams.spread:0
+			coherence:.995,
+			maxPower:6000,
+			efficiency:200,
+			spread:0
 		};
+
+		veryShallowObjectMerge(lsr, objectParams);
+
+		return lsr;
 	},
 
 	//constructor for cannon component
@@ -380,48 +405,56 @@ app.main = {
 	createComponentDestructible:function(objectParams){
 		if(!objectParams)
 			objectParams = {};
-		return{
-			hp:(objectParams.hp)?objectParams.hp:500,
-			maxHp: (objectParams.hp)?objectParams.hp:500,
-			radius:(objectParams.radius)?objectParams.radius:500,
-			shield:this.createComponentDestructibleShield(objectParams.shield),
+		var ds = {
+			hp:500,
+			maxHp: (objectParams.hp)?objectParams.hp: 500,
+			radius:500,
+			shield:this.createComponentDestructibleShield(deepObjectMerge({}, objectParams.shield)),
 		};
+
+		veryShallowObjectMerge(ds, objectParams);
+
+		return ds;
 	},
 
 	//constructor for the shield sub-component
 	createComponentDestructibleShield:function(objectParams){
 		if(!objectParams)
 			objectParams = {};
-		return{
-			current:(objectParams.max)?objectParams.max:0,
-			max:(objectParams.max)?objectParams.max:0,
-			efficiency:(objectParams.efficiency)?objectParams.efficiency:0,
-			recharge:(objectParams.recharge)?objectParams.recharge:0
+		var sh = {
+			current:(objectParams.max)?objectParams.max: 0,
+			max:0,
+			efficiency:0,
+			recharge:0
 		};
+
+		veryShallowObjectMerge(sh, objectParams);
+
+		return sh;
 	},
 
 	//constructor for the AI component
 	createComponentShipAI:function(objectParams){
 		if(!objectParams)
 			objectParams = {};
-		return{
-			followMin:(objectParams.followMin)?objectParams.followMin:2500,
-			followMax:(objectParams.followMax)?objectParams.followMax:3000,
+		return veryShallowObjectMerge({
+			followMin:2500,
+			followMax:3000,
 			accuracy:.5,
 			fireSpread:5
-		};
+		}, objectParams);
 	},
 
 	//constructor for viewport component
 	createComponentViewport:function(objectParams){
 		if(!objectParams)
 			objectParams = {};
-		return{
-			startX:(objectParams.startX)?objectParams.startX:0,
-			startY:(objectParams.startY)?objectParams.startY:0,
-			endX:(objectParams.endX)?objectParams.endX:1,
-			endY:(objectParams.endY)?objectParams.endY:1
-		};
+		return veryShallowObjectMerge({
+			startX:0,
+			startY:0,
+			endX:1,
+			endY:1
+		}, objectParams);
 	},
 
 	//constructor for laser object
@@ -835,6 +868,12 @@ app.main = {
 		if(now>ship.cannon.lastFireTime+ship.cannon.cd*1000){
 			ship.cannon.lastFireTime = now;
 			ship.cannon.firing = true;
+			var shot = 'gunshot'+getRandomIntInclusive(1,4);
+			if(this.sounds[shot].loaded)
+			{
+				var gunshotSound = createjs.Sound.play(this.sounds[shot].id,{interrupt: createjs.Sound.INTERRUPT_LATE});
+				gunshotSound.volume = .5 * (1-(1-this.camera.zoom)/this.soundLevel);	
+			}
 		}
 	},
 
@@ -1571,7 +1610,8 @@ app.main = {
 			ctx.moveTo(start[0], start[1]);
 			ctx.lineTo(end[0], end[1]);
 			ctx.strokeStyle = prj.color;
-			ctx.strokeWidth = ((prj.destructible.radius>5)? prj.destructible.radius : 5) * camera.zoom;
+			var width = prj.destructible.radius*camera.zoom;
+			ctx.lineWidth = (width>1)?width:1;
 			ctx.stroke();
 			ctx.restore();
 		}
