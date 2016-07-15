@@ -221,13 +221,16 @@ app.main = {
 			//velocities
 			velocityX:0, //in absolute form, used for movement
 			velocityY:0,
+			accelerationX:0,
+			accelerationY:0,
 			rotationalVelocity:0,
-			forwardVectorX:0,
-			forwardVectorY:0,
-			rightVectorX:0,
-			rightVectorY:0,
-			medialVelocity:0, //component form, used by stabilizers
-			lateralVelocity:0,
+			rotationalAcceleration:0,
+			forwardVectorX:undefined,
+			forwardVectorY:undefined,
+			rightVectorX:undefined,
+			rightVectorY:undefined,
+			medialVelocity:undefined, //component form, used by stabilizers
+			lateralVelocity:undefined,
 			destructible:this.createComponentDestructible(deepObjectMerge({
 				hp:100,
 				radius:25,
@@ -629,27 +632,51 @@ app.main = {
 		prj.y += prj.velocityY * dt;
 	},
 
-	//advances the given ship forward in time by dT
-	updateShip: function(ship,dt){
-		//store position at previous update for swept area construction
-			ship.prevX = ship.x;
-			ship.prevY = ship.y;
+	getForwardVector:function(obj){
+		if(!obj.forwardVectorX || !obj.forwardVectorY)
+		{
+			var normalizedForwardVector = rotate(0,0,0,-1,-obj.rotation);
+			obj.forwardVectorX = normalizedForwardVector[0],
+			obj.forwardVectorY = normalizedForwardVector[1];
+		}
 
-		//initialize acceleration values
-			var accelerationX = 0;
-			var accelerationY = 0;
-			var rotationalAcceleration = 0;
+		return [obj.forwardVectorX,obj.forwardVectorY];
+	},
 
-			var normalizedForwardVector = rotate(0,0,0,-1,-ship.rotation);
-			var normalizedRightVector = rotate(0,0,0,-1,-ship.rotation-90);
-			ship.forwardVectorX = normalizedForwardVector[0],
-			ship.forwardVectorY = normalizedForwardVector[1];
-			ship.rightVectorX = normalizedRightVector[0];
-			ship.rightVectorY = normalizedRightVector[1];
+	getRightVector:function(obj){
+		if(!obj.rightVectorX || !obj.rightVectorY)
+		{
+			var normalizedRightVector = rotate(0,0,0,-1,-obj.rotation-90);
+			obj.rightVectorX = normalizedRightVector[0];
+			obj.rightVectorY = normalizedRightVector[1];
+		}
 
+		return [obj.rightVectorX,obj.rightVectorY];
+	},
+
+	getMedialVelocity:function(obj){
+		if(!obj.medialVelocity)
+		{
+			var forwardVector = this.getForwardVector(obj);
+			obj.medialVelocity = -scalarComponentOf1InDirectionOf2(obj.velocityX,obj.velocityY,forwardVector[0],forwardVector[1]); //get magnitude of projection of velocity onto the forward vector
+		}
+
+		return obj.medialVelocity;
+	},
+
+	getLateralVelocity:function(obj){
+		if(!obj.lateralVelocity){
+			var rightVector = this.getRightVector(obj);
+			obj.lateralVelocity = -scalarComponentOf1InDirectionOf2(obj.velocityX,obj.velocityY,rightVector[0],rightVector[1]); //et magnitude of velocity's projection onto the right vector
+		}
+		return obj.lateralVelocity;
+	},
+
+	updateThrusterSystem:function(ship,dt){
 		//add acceleration from each thruster
 			//medial
 				var strength = ship.thrusters.medial.targetStrength;
+				ship.thrusters.medial.targetStrength = 0; //clear target
 
 				//clamp target strength to the thruster's max
 					var maxStrength = ship.thrusters.medial.maxStrength;
@@ -662,11 +689,13 @@ app.main = {
 					strength = clamp(-maxStrength,strength,maxStrength); //this is in case of really low dt values
 
 				//add forward vector times strength to acceleration
-					accelerationX += normalizedForwardVector[0]*strength;
-					accelerationY += normalizedForwardVector[1]*strength;
+					var forwardVector = this.getForwardVector(ship);
+					ship.accelerationX += forwardVector[0]*strength;
+					ship.accelerationY += forwardVector[1]*strength;
 
 			//lateral
 				var strength = ship.thrusters.lateral.targetStrength;
+				ship.thrusters.lateral.targetStrength = 0; //clear target
 
 				//clamp strength
 					var maxStrength = ship.thrusters.lateral.maxStrength;
@@ -679,11 +708,13 @@ app.main = {
 					strength = clamp(-maxStrength,strength,maxStrength);
 
 				//add right vector times strength to acceleration
-					accelerationX += normalizedRightVector[0]*strength;
-					accelerationY += normalizedRightVector[1]*strength;
+					var rightVector = this.getRightVector(ship);
+					ship.accelerationX += rightVector[0]*strength;
+					ship.accelerationY += rightVector[1]*strength;
 
 			//rotational
 				var strength = ship.thrusters.rotational.targetStrength;
+				ship.thrusters.rotational.targetStrength = 0; //clear target
 
 				//clamp strength
 					var maxStrength = ship.thrusters.rotational.maxStrength;
@@ -696,93 +727,7 @@ app.main = {
 					strength = clamp(-maxStrength,strength,maxStrength);
 
 				//this one we can set directly
-					rotationalAcceleration = -strength;
-
-		//accelerate
-			ship.velocityX+=accelerationX*dt;
-			ship.velocityY+=accelerationY*dt;
-			ship.rotationalVelocity+=rotationalAcceleration*dt;
-
-		//calculate velocity components for the stabilizers
-			ship.medialVelocity = -scalarComponentOf1InDirectionOf2(ship.velocityX,ship.velocityY,normalizedForwardVector[0],normalizedForwardVector[1]); //get magnitude of projection of velocity onto the forward vector
-			ship.lateralVelocity = -scalarComponentOf1InDirectionOf2(ship.velocityX,ship.velocityY,normalizedRightVector[0],normalizedRightVector[1]); //et magnitude of velocity's projection onto the right vector
-
-		//move
-			ship.x+=ship.velocityX*dt;
-			ship.y+=ship.velocityY*dt;
-			ship.rotation+=ship.rotationalVelocity*dt;
-			if(ship.rotation>180)
-				ship.rotation-=360;
-			else if(ship.rotation<-180)
-				ship.rotation+=360;
-
-		//create laser objects
-			var laserVector = [0,-ship.laser.range];
-			laserVector = rotate(0,0,laserVector[0],laserVector[1],-ship.rotation+Math.random()*ship.laser.spread-ship.laser.spread/2);
-			if(ship.laser.previousLaser)
-				ship.laser.previousLaser.previousLaser = null; //avoiding a memory leak - without this the lasers will chain backwards in time continuously
-			ship.laser.previousLaser = this.createLaser(this.lasers,ship.x+normalizedForwardVector[0]*(30),ship.y+normalizedForwardVector[1]*30,ship.x+laserVector[0],ship.y+laserVector[1],ship.laser.color,ship.laser.currentPower, ship.laser.efficiency, ship.laser.previousLaser, ship);
-			ship.laser.currentPower-=ship.laser.maxPower*(1-ship.laser.coherence)*dt*1000;
-			if(ship.laser.currentPower<0)
-				ship.laser.currentPower=0;
-
-		//create projectiles
-			if(ship.cannon.firing){
-				var prjVelocity = [ship.forwardVectorX * ship.cannon.power, ship.forwardVectorY * ship.cannon.power];
-				var ammo = ship.cannon.ammo;
-				this.createProjectile(this.projectiles, ship.x+normalizedForwardVector[0]*(30), ship.y+normalizedForwardVector[1]*30, prjVelocity[0] + ship.velocityX, prjVelocity[1] + ship.velocityY, this.createComponentDestructible(ammo.destructible), ammo.color, ship, ammo.tracerSeed%ammo.tracerInterval==0);
-				ship.cannon.firing = false;
-				ammo.tracerSeed++;
-			}
-
-		//refresh shields
-			if(ship.destructible.shield.current<ship.destructible.shield.max)
-			{
-				ship.destructible.shield.current+=ship.destructible.shield.recharge*dt;
-				if(ship.destructible.shield.current>ship.destructible.shield.max)
-					ship.destructible.shield.current = ship.destructible.shield.max;
-			}
-
-		//update power system
-			//scale all relevant values down from the augmented to their normal using the old power values
-				var thrusterPower = this.getPowerForComponent(ship.powerSystem, this.SHIP_COMPONENTS.THRUSTERS);
-				var laserPower = this.getPowerForComponent(ship.powerSystem, this.SHIP_COMPONENTS.LASERS);
-				var shieldPower = this.getPowerForComponent(ship.powerSystem, this.SHIP_COMPONENTS.SHIELDS);
-				//thrusters
-					ship.thrusters.medial.maxStrength/=(1+thrusterPower);
-					ship.thrusters.lateral.maxStrength/=(1+thrusterPower);
-					ship.thrusters.rotational.maxStrength/=(1+thrusterPower);
-					ship.stabilizer.clamps.medial/=(1+thrusterPower);
-					ship.stabilizer.clamps.lateral/=(1+thrusterPower);
-					ship.stabilizer.clamps.rotational/=(1+thrusterPower);
-				//lasers
-					ship.laser.maxPower/=(1+laserPower);
-				//shields
-					ship.destructible.shield.current/=(1+shieldPower);
-					ship.destructible.shield.max/=(1+shieldPower);
-					ship.destructible.shield.recharge/=(1+shieldPower);
-
-			//update the power values
-				this.scalePowerTarget(ship.powerSystem);
-				ship.powerSystem.current = lerpNd(ship.powerSystem.current,ship.powerSystem.target,ship.powerSystem.transferRate*dt);
-
-			//scale back up to augmented with the new power values
-				thrusterPower = this.getPowerForComponent(ship.powerSystem, this.SHIP_COMPONENTS.THRUSTERS);
-				laserPower = this.getPowerForComponent(ship.powerSystem, this.SHIP_COMPONENTS.LASERS);
-				shieldPower = this.getPowerForComponent(ship.powerSystem, this.SHIP_COMPONENTS.SHIELDS);
-				//thrusters
-					ship.thrusters.medial.maxStrength*=(1+thrusterPower);
-					ship.thrusters.lateral.maxStrength*=(1+thrusterPower);
-					ship.thrusters.rotational.maxStrength*=(1+thrusterPower);
-					ship.stabilizer.clamps.medial*=(1+thrusterPower);
-					ship.stabilizer.clamps.lateral*=(1+thrusterPower);
-					ship.stabilizer.clamps.rotational*=(1+thrusterPower);
-				//lasers
-					ship.laser.maxPower*=(1+laserPower);
-				//shields
-					ship.destructible.shield.current*=(1+shieldPower);
-					ship.destructible.shield.max*=(1+shieldPower);
-					ship.destructible.shield.recharge*=(1+shieldPower);
+					ship.rotationalAcceleration = -strength;
 
 		//thruster percentage for the sound effect
 			var thrusterTotal = Math.abs(ship.thrusters.medial.currentStrength)+Math.abs(ship.thrusters.lateral.currentStrength)+Math.abs(ship.thrusters.rotational.currentStrength);
@@ -790,15 +735,128 @@ app.main = {
 			ship.thrusters.noiseLevel = (thrusterTotal/thrusterEfficiencyTotal);
 	},
 
-	//clears the active thruster values
-	shipClearThrusters:function(ship){
-		ship.thrusters.medial.targetStrength = 0;
-		ship.thrusters.lateral.targetStrength = 0;
-		ship.thrusters.rotational.targetStrength = 0;
+	updateMobile:function(obj, dt){
+		//accelerate
+			obj.velocityX+=obj.accelerationX*dt;
+			obj.velocityY+=obj.accelerationY*dt;
+			obj.rotationalVelocity+=obj.rotationalAcceleration*dt;
+
+		//reset acceleration values
+			obj.accelerationX = 0;
+			obj.accelerationY = 0;
+			obj.rotationalAcceleration = 0;
+			obj.medialVelocity = undefined;
+			obj.lateralVelocity = undefined;
+
+		//move
+			//store position at previous update for swept area construction
+				obj.prevX = obj.x;
+				obj.prevY = obj.y;
+			obj.x+=obj.velocityX*dt;
+			obj.y+=obj.velocityY*dt;
+			obj.rotation+=obj.rotationalVelocity*dt;
+			obj.forwardVectorX = undefined;
+			obj.forwardVectorY = undefined;
+			obj.rightVectorX = undefined;
+			obj.rightVectorY = undefined;
+			if(obj.rotation>180)
+				obj.rotation-=360;
+			else if(obj.rotation<-180)
+				obj.rotation+=360;
 	},
 
-	shipClearPowerTarget:function(ship){
-		ship.powerSystem.target = [0,0,0];
+	updateLaserComponent:function(obj,dt){
+		var forwardVector = this.getForwardVector(obj);
+		//create laser objects
+			var laserVector = [0,-obj.laser.range];
+			laserVector = rotate(0,0,laserVector[0],laserVector[1],-obj.rotation+Math.random()*obj.laser.spread-obj.laser.spread/2);
+			if(obj.laser.previousLaser)
+				obj.laser.previousLaser.previousLaser = null; //avoiding a memory leak - without this the lasers will chain backwards in time continuously
+			obj.laser.previousLaser = this.createLaser(this.lasers,obj.x+forwardVector[0]*(30),obj.y+forwardVector[1]*30,obj.x+laserVector[0],obj.y+laserVector[1],obj.laser.color,obj.laser.currentPower, obj.laser.efficiency, obj.laser.previousLaser, obj);
+			obj.laser.currentPower-=obj.laser.maxPower*(1-obj.laser.coherence)*dt*1000;
+			if(obj.laser.currentPower<0)
+				obj.laser.currentPower=0;
+	},
+
+	updateCannonComponent:function(obj,dt){
+		var forwardVector = this.getForwardVector(obj);
+		//create projectiles
+			if(obj.cannon.firing){
+				//var forwardVector = this.getForwardVector(obj);
+				var prjVelocity = [forwardVector[0] * obj.cannon.power, forwardVector[1] * obj.cannon.power];
+				var ammo = obj.cannon.ammo;
+				this.createProjectile(this.projectiles, obj.x+forwardVector[0]*(30), obj.y+forwardVector[1]*30, prjVelocity[0] + obj.velocityX, prjVelocity[1] + obj.velocityY, this.createComponentDestructible(ammo.destructible), ammo.color, obj, ammo.tracerSeed%ammo.tracerInterval==0);
+				obj.cannon.firing = false;
+				ammo.tracerSeed++;
+			}
+	},
+
+	updateShieldComponent:function(obj,dt){
+		//refresh shields
+			if(obj.destructible.shield.current<obj.destructible.shield.max)
+			{
+				obj.destructible.shield.current+=obj.destructible.shield.recharge*dt;
+				if(obj.destructible.shield.current>obj.destructible.shield.max)
+					obj.destructible.shield.current = obj.destructible.shield.max;
+			}
+	},
+
+	updatePowerSystem:function(obj,dt){
+		//update power system
+			//scale all relevant values down from the augmented to their normal using the old power values
+				var thrusterPower = this.getPowerForComponent(obj.powerSystem, this.SHIP_COMPONENTS.THRUSTERS);
+				var laserPower = this.getPowerForComponent(obj.powerSystem, this.SHIP_COMPONENTS.LASERS);
+				var shieldPower = this.getPowerForComponent(obj.powerSystem, this.SHIP_COMPONENTS.SHIELDS);
+				//thrusters
+					obj.thrusters.medial.maxStrength/=(1+thrusterPower);
+					obj.thrusters.lateral.maxStrength/=(1+thrusterPower);
+					obj.thrusters.rotational.maxStrength/=(1+thrusterPower);
+					obj.stabilizer.clamps.medial/=(1+thrusterPower);
+					obj.stabilizer.clamps.lateral/=(1+thrusterPower);
+					obj.stabilizer.clamps.rotational/=(1+thrusterPower);
+				//lasers
+					obj.laser.maxPower/=(1+laserPower);
+				//shields
+					obj.destructible.shield.current/=(1+shieldPower);
+					obj.destructible.shield.max/=(1+shieldPower);
+					obj.destructible.shield.recharge/=(1+shieldPower);
+
+			//update the power values
+				this.scalePowerTarget(obj.powerSystem);
+				obj.powerSystem.current = lerpNd(obj.powerSystem.current,obj.powerSystem.target,obj.powerSystem.transferRate*dt);
+
+				//clear power target
+				for(var c = 0; c<obj.powerSystem.target.length;c++){
+					obj.powerSystem.target[c] = 0;
+				}
+
+			//scale back up to augmented with the new power values
+				thrusterPower = this.getPowerForComponent(obj.powerSystem, this.SHIP_COMPONENTS.THRUSTERS);
+				laserPower = this.getPowerForComponent(obj.powerSystem, this.SHIP_COMPONENTS.LASERS);
+				shieldPower = this.getPowerForComponent(obj.powerSystem, this.SHIP_COMPONENTS.SHIELDS);
+				//thrusters
+					obj.thrusters.medial.maxStrength*=(1+thrusterPower);
+					obj.thrusters.lateral.maxStrength*=(1+thrusterPower);
+					obj.thrusters.rotational.maxStrength*=(1+thrusterPower);
+					obj.stabilizer.clamps.medial*=(1+thrusterPower);
+					obj.stabilizer.clamps.lateral*=(1+thrusterPower);
+					obj.stabilizer.clamps.rotational*=(1+thrusterPower);
+				//lasers
+					obj.laser.maxPower*=(1+laserPower);
+				//shields
+					obj.destructible.shield.current*=(1+shieldPower);
+					obj.destructible.shield.max*=(1+shieldPower);
+					obj.destructible.shield.recharge*=(1+shieldPower);
+	},
+
+	//advances the given ship forward in time by dT
+	updateShip: function(ship,dt){
+		this.updateThrusterSystem(ship, dt);
+		this.updateMobile(ship,dt);
+		this.updateLaserComponent(ship,dt);
+		this.updateCannonComponent(ship,dt);
+		this.updateShieldComponent(ship,dt);
+		this.updatePowerSystem(ship,dt);		
 	},
 
 	//add given strength to main thruster
@@ -831,11 +889,12 @@ app.main = {
 	//medial stabilizer
 	shipMedialStabilizers:function(ship,dt){
 		//if the main thruster isn't active, or is working against our velocity
-		if(ship.thrusters.medial.targetStrength*ship.medialVelocity>=0 && Math.abs(ship.medialVelocity) > ship.stabilizer.precision)
+		var medialVelocity = this.getMedialVelocity(ship);
+		if(ship.thrusters.medial.targetStrength*medialVelocity>=0 && Math.abs(medialVelocity) > ship.stabilizer.precision)
 			//add corrective strength
-			this.shipMedialThrusters(ship,ship.medialVelocity*ship.stabilizer.strength*dt);
+			this.shipMedialThrusters(ship,medialVelocity*ship.stabilizer.strength*dt);
 		//or, if we're past our clamp and trying to keep going
-		else if (ship.stabilizer.clamps.enabled && Math.abs(ship.medialVelocity)>=ship.stabilizer.clamps.medial && ship.thrusters.medial.targetStrength*ship.medialVelocity<0)
+		else if (ship.stabilizer.clamps.enabled && Math.abs(medialVelocity)>=ship.stabilizer.clamps.medial && ship.thrusters.medial.targetStrength*medialVelocity<0)
 			//shut off the thruster
 			ship.thrusters.medial.targetStrength = 0;
 	},
@@ -843,9 +902,10 @@ app.main = {
 	//lateral stabilizer
 	shipLateralStabilizers:function(ship,dt){
 		//see above
-		if(ship.thrusters.lateral.targetStrength*ship.lateralVelocity>=0 && Math.abs(ship.lateralVelocity) > ship.stabilizer.precision)
-			this.shipLateralThrusters(ship,ship.lateralVelocity*ship.stabilizer.strength*dt);
-		else if (ship.stabilizer.clamps.enabled && Math.abs(ship.lateralVelocity)>=ship.stabilizer.clamps.lateral && ship.thrusters.lateral.targetStrength*ship.lateralVelocity<0)
+		var lateralVelocity = this.getLateralVelocity(ship);
+		if(ship.thrusters.lateral.targetStrength*lateralVelocity>=0 && Math.abs(lateralVelocity) > ship.stabilizer.precision)
+			this.shipLateralThrusters(ship,lateralVelocity*ship.stabilizer.strength*dt);
+		else if (ship.stabilizer.clamps.enabled && Math.abs(lateralVelocity)>=ship.stabilizer.clamps.lateral && ship.thrusters.lateral.targetStrength*lateralVelocity<0)
 			ship.thrusters.lateral.targetStrength = 0;
 	},
 
@@ -868,18 +928,19 @@ app.main = {
 		if(now>ship.cannon.lastFireTime+ship.cannon.cd*1000){
 			ship.cannon.lastFireTime = now;
 			ship.cannon.firing = true;
-			var shot = 'gunshot'+getRandomIntInclusive(1,4);
+			/*var shot = 'gunshot'+getRandomIntInclusive(1,4);
 			if(this.sounds[shot].loaded)
 			{
 				var gunshotSound = createjs.Sound.play(this.sounds[shot].id,{interrupt: createjs.Sound.INTERRUPT_LATE});
 				gunshotSound.volume = .5 * (1-(1-this.camera.zoom)/this.soundLevel);	
-			}
+			}*/
 		}
 	},
 
 	shipAI:function(ship, target,dt){
 		var vectorToTarget = [target.x-ship.x,target.y-ship.y];
-		var relativeAngleToTarget = angleBetweenVectors(ship.forwardVectorX,ship.forwardVectorY,vectorToTarget[0],vectorToTarget[1]);
+		var forwardVector = this.getForwardVector(ship);
+		var relativeAngleToTarget = angleBetweenVectors(forwardVector[0],forwardVector[1],vectorToTarget[0],vectorToTarget[1]);
 
 		if(relativeAngleToTarget>0)
 			this.shipRotationalThrusters(ship,-relativeAngleToTarget * dt * ship.ai.accuracy * ship.thrusters.rotational.maxStrength/ship.stabilizer.thrustRatio);
@@ -1164,8 +1225,8 @@ app.main = {
 		this.clearLasers(this.lasers);
 		for(var c =-1;c<this.otherShips.length;c++){
 			var ship = (c==-1) ? this.ship : this.otherShips[c];
-			this.shipClearThrusters(ship);
-			this.shipClearPowerTarget(ship);
+			//this.shipClearThrusters(ship);
+			//this.shipClearPowerTarget(ship);
 		}
 		this.clearDestructibles(this.asteroids.objs);
 		this.clearDestructibles(this.otherShips); 

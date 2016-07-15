@@ -6,6 +6,7 @@ var canvas;
 var locked = false;
 function pointerInit(){
 	canvas = app.main.canvas;
+	canvas.addEventListener("mouseup",requestLock);
 	// Hook pointer lock state change events
 	document.addEventListener('pointerlockchange', changeCallback, false);
 	document.addEventListener('mozpointerlockchange', changeCallback, false);
@@ -103,8 +104,6 @@ window.addEventListener("keyup",function(e){
 		app.main.playerWeaponToggle = !app.main.playerWeaponToggle;
 });
 
-window.addEventListener("mouseup",requestLock);
-
 function requestLock(){
 	console.log('request');
 	// Ask the browser to lock the pointer
@@ -144,7 +143,7 @@ function changeCallback(){
 		window.removeEventListener("mousedown",mouseDown,false);
 		window.removeEventListener("mouseup",mouseUp,false);
 		window.removeEventListener("mousewheel",mouseWheel,false);
-		window.addEventListener("mouseup",requestLock,false);
+		canvas.addEventListener("mouseup",requestLock,false);
 		document.removeEventListener("mousemove", moveCallback, false);
 		//this.unlockHook(this.canvas);
 		canvas.onclick = function(){
