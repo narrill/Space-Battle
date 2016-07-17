@@ -47,6 +47,7 @@ app.main = {
 	animationID:0,
 	frameCount:0,
 	runningTime:0,
+	updatables:[],
 	ship:{},
 	otherShips:[],
 	otherShipCount:0,
@@ -253,6 +254,10 @@ app.main = {
 
 		//deepObjectMerge(ship, defaults);
 		veryShallowObjectMerge(ship, objectParams);
+
+		this.populateUpdaters(ship);
+
+		this.updatables.push(ship);
 
 		return ship;
 	},
@@ -518,6 +523,25 @@ app.main = {
 		return clamp(0,(ps.current[component]-(1/components))/(2*(1/components)),1); //this is the transformation function
 	},
 
+	populateUpdaters:function(obj){
+		var updaters = [];
+
+		if(obj.hasOwnProperty("velocityX") && obj.hasOwnProperty("velocityY"))
+			updaters.push(this.updateMobile);
+		if(obj.thrusters)
+			updaters.push(this.updateThrusterSystem);
+		if(obj.laser)
+			updaters.push(this.updateLaserComponent);
+		if(obj.cannon)
+			updaters.push(this.updateCannonComponent);
+		if(obj.destructible && obj.destructible.shield.recharge>0)
+			updaters.push(this.updateShieldComponent);
+		if(obj.powerSystem)
+			updaters.push(this.updatePowerSystem);
+
+		obj.updaters = updaters;
+	},
+
 	//draws the grid in the given camera
 	drawGrid:function(camera, minimap){
 		var ctx = camera.ctx;
@@ -625,12 +649,12 @@ app.main = {
 	},
 
 	//advances a projectile according to its velocity
-	updateProjectile: function(prj, dt){
+	/*updateProjectile: function(prj, dt){
 		prj.prevX = prj.x;
 		prj.prevY = prj.y;
 		prj.x += prj.velocityX * dt;
 		prj.y += prj.velocityY * dt;
-	},
+	},*/
 
 	getForwardVector:function(obj){
 		if(!obj.forwardVectorX || !obj.forwardVectorY)
@@ -737,16 +761,18 @@ app.main = {
 
 	updateMobile:function(obj, dt){
 		//accelerate
-			obj.velocityX+=obj.accelerationX*dt;
-			obj.velocityY+=obj.accelerationY*dt;
-			obj.rotationalVelocity+=obj.rotationalAcceleration*dt;
-
-		//reset acceleration values
-			obj.accelerationX = 0;
-			obj.accelerationY = 0;
-			obj.rotationalAcceleration = 0;
-			obj.medialVelocity = undefined;
-			obj.lateralVelocity = undefined;
+			if(obj.hasOwnProperty("accelerationX") && obj.hasOwnProperty("accelerationY")){			
+				obj.velocityX+=obj.accelerationX*dt;
+				obj.accelerationX = 0;
+				obj.velocityY+=obj.accelerationY*dt;
+				obj.accelerationY = 0;
+				if(obj.hasOwnProperty("rotationalVelocity") && obj.hasOwnProperty("rotationalAcceleration")){
+					obj.rotationalVelocity+=obj.rotationalAcceleration*dt;
+					obj.rotationalAcceleration = 0;
+				}
+				obj.medialVelocity = undefined;
+				obj.lateralVelocity = undefined;
+			}
 
 		//move
 			//store position at previous update for swept area construction
@@ -754,15 +780,18 @@ app.main = {
 				obj.prevY = obj.y;
 			obj.x+=obj.velocityX*dt;
 			obj.y+=obj.velocityY*dt;
-			obj.rotation+=obj.rotationalVelocity*dt;
+			if(obj.hasOwnProperty("rotation")){
+				obj.rotation+=obj.rotationalVelocity*dt;
+				if(obj.rotation>180)
+					obj.rotation-=360;
+				else if(obj.rotation<-180)
+					obj.rotation+=360;
+			}
 			obj.forwardVectorX = undefined;
 			obj.forwardVectorY = undefined;
 			obj.rightVectorX = undefined;
 			obj.rightVectorY = undefined;
-			if(obj.rotation>180)
-				obj.rotation-=360;
-			else if(obj.rotation<-180)
-				obj.rotation+=360;
+			
 	},
 
 	updateLaserComponent:function(obj,dt){
@@ -849,14 +878,11 @@ app.main = {
 					obj.destructible.shield.recharge*=(1+shieldPower);
 	},
 
-	//advances the given ship forward in time by dT
-	updateShip: function(ship,dt){
-		this.updateThrusterSystem(ship, dt);
-		this.updateMobile(ship,dt);
-		this.updateLaserComponent(ship,dt);
-		this.updateCannonComponent(ship,dt);
-		this.updateShieldComponent(ship,dt);
-		this.updatePowerSystem(ship,dt);		
+	updateUpdatable:function(obj,dt){
+		var test = this;
+		for(var c = 0;c<obj.updaters.length;c++){
+			obj.updaters[c].bind(this)(obj,dt);
+		}
 	},
 
 	//add given strength to main thruster
@@ -1223,13 +1249,9 @@ app.main = {
 	update: function(dt){
 	 	//clear values
 		this.clearLasers(this.lasers);
-		for(var c =-1;c<this.otherShips.length;c++){
-			var ship = (c==-1) ? this.ship : this.otherShips[c];
-			//this.shipClearThrusters(ship);
-			//this.shipClearPowerTarget(ship);
-		}
 		this.clearDestructibles(this.asteroids.objs);
 		this.clearDestructibles(this.otherShips); 
+		this.clearDestructibles(this.updatables);
 		this.clearDestructibles(this.projectiles);
 		this.cullDestructibles(this.projectiles, this.grid, .3);
 
@@ -1274,13 +1296,14 @@ app.main = {
 				this.camera.zoom = this.camera.minZoom;
 
 		 	//update ship, center main camera on ship
-			this.updateShip(this.ship,dt);
+			//this.updateShip(this.ship,dt);
+			this.updateUpdatable(this.ship,dt);
 			this.otherShips.forEach(function(ship){
-				this.updateShip(ship,dt);
+				this.updateUpdatable(ship,dt);
 			},this);
 
 			for(var i = 0; i<this.projectiles.length; i++){
-				this.updateProjectile(this.projectiles[i], dt);
+				this.updateMobile(this.projectiles[i], dt);
 			}
 
 			this.checkCollisions(dt);	
@@ -1885,6 +1908,7 @@ app.main = {
 
 	pauseGame:function(){
 		this.paused = true;
+		this.thrusterSound.volume = 0;
 		cancelAnimationFrame(this.animationID);
 		this.frame.bind(this)();
 	},

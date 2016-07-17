@@ -467,3 +467,19 @@ function veryShallowObjectMerge(target, src){
 
 	return target;
 }
+
+var mapFunctions = {
+	worldToGridSpace:function(worldPos, map, gridPrecision){
+		return [(worldPos[0]- map.position[0])/gridPrecision, (worldPos[1]- map.position[1])/gridPrecision];
+	},
+	gridToWorldSpace:function(gridPos, map, gridPrecision){
+		return [(gridPos[0]*gridPrecision)+map.position]
+	},
+	/*worldPosTo1DGridIndex:function(worldPos, map, gridPrecision){
+		var gridPos = [(worldPos[0]- map.position[0])/gridPrecision, (worldPos[1]- map.position[1])/gridPrecision];
+		return Math.floor(gridPos[1]) * map.size
+	},*/
+	PosTo1DIndex:function(){
+		
+	}
+};

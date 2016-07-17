@@ -99,7 +99,11 @@ window.addEventListener("keyup",function(e){
 	else if(e.keyCode == myKeys.KEYBOARD.KEY_F)
 		app.main.drawStarField = !app.main.drawStarField;
 	else if (e.keyCode == myKeys.KEYBOARD.KEY_P)
-		app.main.paused = !app.main.paused;
+	{
+		//app.main.paused = !app.main.paused;
+		if(app.main.paused) app.main.resumeGame();
+		else app.main.pauseGame();
+	}
 	else if(e.keyCode == myKeys.KEYBOARD.KEY_E)
 		app.main.playerWeaponToggle = !app.main.playerWeaponToggle;
 });
