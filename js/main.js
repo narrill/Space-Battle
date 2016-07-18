@@ -131,7 +131,7 @@ app.main = {
 		// initialize properties
 			var canvas = this.canvas = document.querySelector('#canvas1');
 			this.generateStarField.bind(this, this.stars)();
-			this.ship = this.createShip({},this.grid);
+			this.ship = this.createShip(ships.cheetah,this.grid);
 			this.camera = this.createCamera(canvas,{x:this.ship.x,y:this.ship.y,rotation:this.ship.rotation,zoom:.5,minZoom:.025,maxZoom:5});
 			this.camera.globalCompositeOperation = 'hard-light';
 			this.starCamera = this.createCamera(canvas);
@@ -147,13 +147,13 @@ app.main = {
 	resetGame:function(){
 		this.clearProjectiles(this.projectiles);
 		this.ship = {};
-		this.ship = this.createShip({},this.grid);
+		this.ship = this.createShip({laser:{}},this.grid);
 		this.makeAsteroids.bind(this,this.asteroids,this.grid)();
 		this.otherShips = [];
 		this.otherShipCount = 1;
 		for(var c = 0;c<this.otherShipCount;c++)
 		{
-			this.otherShips.push(this.createShip({},this.grid));
+			this.otherShips.push(this.createShip((Math.round(Math.random())) ? ships.gull : ships.cheetah,this.grid));
 			this.otherShips[c].ai = this.createComponentShipAI();
 		}
 		this.gameState = this.GAME_STATES.PLAYING;
@@ -217,8 +217,8 @@ app.main = {
 			x:gridPosition.x,
 			y:gridPosition.y,
 			rotation:0,
-			prevX: (objectParams.x)?objectParams.x: gridPosition.x,
-			prevY: (objectParams.y)?objectParams.y: gridPosition.y,
+			prevX: (objectParams.hasOwnProperty("x"))?objectParams.x: gridPosition.x,
+			prevY: (objectParams.hasOwnProperty("y"))?objectParams.y: gridPosition.y,
 			//velocities
 			velocityX:0, //in absolute form, used for movement
 			velocityY:0,
@@ -246,11 +246,15 @@ app.main = {
 			powerSystem:this.createComponentPowerSystem(deepObjectMerge({},objectParams.powerSystem)),
 			//colors
 			color:getRandomBrightColor(),
-			//used for controlling laser fire rate
-			//lastLaserTime:0,
-			laser:this.createComponentLaser(deepObjectMerge({},objectParams.laser)),
-			cannon:this.createComponentCannon(deepObjectMerge({},objectParams.cannon))
+			//model
+			model:(objectParams.hasOwnProperty("model"))?objectParams.model:ships.cheetah.model
 		};
+
+		if(objectParams.hasOwnProperty("laser"))
+			ship.laser = this.createComponentLaser(deepObjectMerge({},objectParams.laser));
+
+		if(objectParams.hasOwnProperty("cannon"))
+			ship.cannon = this.createComponentCannon(deepObjectMerge({},objectParams.cannon));
 
 		//deepObjectMerge(ship, defaults);
 		veryShallowObjectMerge(ship, objectParams);
@@ -329,7 +333,7 @@ app.main = {
 			enabled: true,
 			strength: 1200,
 			thrustRatio: 1.5,
-			precision: 30,
+			precision: 10,
 			clamps: this.createComponentStabilizerClamps(deepObjectMerge({},objectParams.clamps))
 		};
 
@@ -670,7 +674,7 @@ app.main = {
 	getRightVector:function(obj){
 		if(!obj.rightVectorX || !obj.rightVectorY)
 		{
-			var normalizedRightVector = rotate(0,0,0,-1,-obj.rotation-90);
+			var normalizedRightVector = rotate(0,0,0,-1,-obj.rotation+90);
 			obj.rightVectorX = normalizedRightVector[0];
 			obj.rightVectorY = normalizedRightVector[1];
 		}
@@ -713,9 +717,9 @@ app.main = {
 					strength = clamp(-maxStrength,strength,maxStrength); //this is in case of really low dt values
 
 				//add forward vector times strength to acceleration
-					var forwardVector = this.getForwardVector(ship);
-					ship.accelerationX += forwardVector[0]*strength;
-					ship.accelerationY += forwardVector[1]*strength;
+					var fv = this.getForwardVector(ship);
+					ship.accelerationX += fv[0]*strength;
+					ship.accelerationY += fv[1]*strength;
 
 			//lateral
 				var strength = ship.thrusters.lateral.targetStrength;
@@ -732,9 +736,9 @@ app.main = {
 					strength = clamp(-maxStrength,strength,maxStrength);
 
 				//add right vector times strength to acceleration
-					var rightVector = this.getRightVector(ship);
-					ship.accelerationX += rightVector[0]*strength;
-					ship.accelerationY += rightVector[1]*strength;
+					var rv = this.getRightVector(ship);
+					ship.accelerationX += rv[0]*strength;
+					ship.accelerationY += rv[1]*strength;
 
 			//rotational
 				var strength = ship.thrusters.rotational.targetStrength;
@@ -844,7 +848,8 @@ app.main = {
 					obj.stabilizer.clamps.lateral/=(1+thrusterPower);
 					obj.stabilizer.clamps.rotational/=(1+thrusterPower);
 				//lasers
-					obj.laser.maxPower/=(1+laserPower);
+					if(obj.hasOwnProperty("laser"))
+						obj.laser.maxPower/=(1+laserPower);
 				//shields
 					obj.destructible.shield.current/=(1+shieldPower);
 					obj.destructible.shield.max/=(1+shieldPower);
@@ -871,7 +876,8 @@ app.main = {
 					obj.stabilizer.clamps.lateral*=(1+thrusterPower);
 					obj.stabilizer.clamps.rotational*=(1+thrusterPower);
 				//lasers
-					obj.laser.maxPower*=(1+laserPower);
+					if(obj.hasOwnProperty("laser"))
+						obj.laser.maxPower*=(1+laserPower);
 				//shields
 					obj.destructible.shield.current*=(1+shieldPower);
 					obj.destructible.shield.max*=(1+shieldPower);
@@ -975,11 +981,13 @@ app.main = {
 
 		var distanceSqr = vectorMagnitudeSqr(vectorToTarget[0],vectorToTarget[1]);
 
+		var myRange = (ship.hasOwnProperty("laser")) ? ship.laser.range : 10000;
+
 		if(relativeAngleToTarget<ship.ai.fireSpread/2 && relativeAngleToTarget>-ship.ai.fireSpread/2)
 		{
-			if(distanceSqr<(ship.laser.range*ship.laser.range))
+			if(distanceSqr<(myRange*myRange) && ship.hasOwnProperty("laser"))
 				this.shipFireLaser(ship);
-			else
+			else if(ship.hasOwnProperty("cannon"))
 				this.shipFireCannon(ship);
 		}
 
@@ -992,10 +1000,12 @@ app.main = {
 		var relativeAngleToMe = angleBetweenVectors(target.forwardVectorX,target.forwardVectorY,vectorFromTarget[0],vectorFromTarget[1]);
 		//console.log(Math.floor(relativeAngleToMe));
 
-		if(distanceSqr<2*(target.laser.range*target.laser.range) && relativeAngleToMe<90 && relativeAngleToMe>0)
-			this.shipLateralThrusters(ship, -ship.thrusters.lateral.maxStrength/ship.stabilizer.thrustRatio);
-		else if(distanceSqr<2*(target.laser.range*target.laser.range) && relativeAngleToMe>-90 &&relativeAngleToMe<0)
+		var targetRange = (target.hasOwnProperty("laser")) ? target.laser.range : 10000;
+
+		if(distanceSqr<2*(targetRange*targetRange) && relativeAngleToMe<90 && relativeAngleToMe>0)
 			this.shipLateralThrusters(ship, ship.thrusters.lateral.maxStrength/ship.stabilizer.thrustRatio);
+		else if(distanceSqr<2*(targetRange*targetRange) && relativeAngleToMe>-90 &&relativeAngleToMe<0)
+			this.shipLateralThrusters(ship, -ship.thrusters.lateral.maxStrength/ship.stabilizer.thrustRatio);
 
 		this.shipMedialStabilizers(ship,dt);
 		this.shipLateralStabilizers(ship,dt);
@@ -1013,9 +1023,9 @@ app.main = {
 					this.shipMedialStabilizers(ship,dt);
 			//lateral motion
 				if(myKeys.keydown[myKeys.KEYBOARD.KEY_A])
-					this.shipLateralThrusters(ship,-ship.thrusters.lateral.maxStrength/ship.stabilizer.thrustRatio);
-				if(myKeys.keydown[myKeys.KEYBOARD.KEY_D])
 					this.shipLateralThrusters(ship,ship.thrusters.lateral.maxStrength/ship.stabilizer.thrustRatio);
+				if(myKeys.keydown[myKeys.KEYBOARD.KEY_D])
+					this.shipLateralThrusters(ship,-ship.thrusters.lateral.maxStrength/ship.stabilizer.thrustRatio);
 				if(ship.stabilizer.enabled)
 					this.shipLateralStabilizers(ship,dt);
 			//rotational motion - mouse			
@@ -1029,9 +1039,9 @@ app.main = {
 			//lasers
 				if(myMouse.mousedown[myMouse.BUTTONS.LEFT] || myKeys.keydown[myKeys.KEYBOARD.KEY_SPACE])
 				{
-					if(this.playerWeaponToggle)
+					if(this.playerWeaponToggle && ship.hasOwnProperty("laser"))
 						this.shipFireLaser(ship);
-					else
+					else if(ship.hasOwnProperty("cannon"))
 						this.shipFireCannon(ship);
 				}
 			//power system
@@ -1259,7 +1269,7 @@ app.main = {
 	 	{
 			this.otherShipCount+=this.otherShipCount-this.otherShips.length;
 			for(;this.otherShips.length<this.otherShipCount;){ //lol
-				this.otherShips.push(this.createShip({},this.grid));
+				this.otherShips.push(this.createShip((Math.round(Math.random())) ? ships.gull : ships.cheetah,this.grid));
 				this.otherShips[this.otherShips.length-1].ai = this.createComponentShipAI();
 			}
 	 	}
@@ -1433,7 +1443,8 @@ app.main = {
 		ctx.lineTo(shipPosInGridCameraSpace[0],shipPosInGridCameraSpace[1]);
 		ctx.translate(shipPosInGridCameraSpace[0],shipPosInGridCameraSpace[1]);
 		ctx.rotate((ship.rotation-gridCamera.rotation) * (Math.PI / 180));
-		ctx.arc(0,0,ship.laser.range*gridCamera.zoom,-Math.PI/2,Math.PI*2-Math.PI/2);			
+		var range = (ship.hasOwnProperty("laser"))?ship.laser.range:3000;
+		ctx.arc(0,0,range*gridCamera.zoom,-Math.PI/2,Math.PI*2-Math.PI/2);			
 		ctx.rotate(-(ship.rotation-gridCamera.rotation) * (Math.PI / 180));
 		ctx.translate(-shipPosInGridCameraSpace[0],-shipPosInGridCameraSpace[1]);
 		ctx.lineWidth = .5;
@@ -1475,12 +1486,14 @@ app.main = {
 
 		ctx.scale(.5,.5); //scale by zoom value
 
-		ctx.translate(0,7);
+		//ctx.translate(0,7);
 		ctx.beginPath();
-		ctx.moveTo(-20,10);
-		ctx.lineTo(0,0);
-		ctx.lineTo(20,10);
-		ctx.lineTo(0,-30);
+		ctx.moveTo(ship.model.vertices[0][0],ship.model.vertices[0][1]);
+		for(var c = 1;c<ship.model.vertices.length;c++)
+		{
+			var vert = ship.model.vertices[c];
+			ctx.lineTo(vert[0],vert[1]);
+		}
 		ctx.closePath();
 		ctx.fillStyle = ship.color;
 		ctx.fill();
@@ -1489,7 +1502,7 @@ app.main = {
 
 	//draws the given ship in the given camera
 	drawShip: function(ship, camera){
-		var shipArray = (Array.isArray(ship))?ship:[ship];
+		//var shipArray = (Array.isArray(ship))?ship:[ship];
 
 		var shipPosInCameraSpace = worldPointToCameraSpace(ship.x,ship.y,camera); //get ship's position in camera space
 
@@ -1512,9 +1525,10 @@ app.main = {
 		ctx.fill();
 		ctx.restore();*/
 
-		ctx.translate(0,7);
+		//ctx.translate(0,7);
 
 		//Thrusters
+		var width = ship.model.thrusterPoints.width;
 			//forward thrust
 			for(var c = 0;c<=this.thrusterDetail;c++){
 				ctx.fillStyle = shadeRGBColor(ship.thrusters.color,.5*c);
@@ -1523,89 +1537,86 @@ app.main = {
 
 				//Medial Thrusters
 					//forward
+						var trailLength = 40*(ship.thrusters.medial.currentStrength/ship.thrusters.medial.efficiency)*(1-(c/(this.thrusterDetail+1)));
 						if(ship.thrusters.medial.currentStrength>0){
-							//ctx.save();				
-							//ctx.fillStyle = ship.thrusterColor;
-							
-							ctx.moveTo(-15,5);
-							ctx.lineTo(-10,5);
-							ctx.lineTo(-12.5,5+40*(ship.thrusters.medial.currentStrength/ship.thrusters.medial.efficiency)*(1-(c/(this.thrusterDetail+1)))); //furthest point goes outward with thruster strength and scales inward with efficiency
-							ctx.lineTo(-15,5);
-							ctx.moveTo(15,5);
-							ctx.lineTo(10,5);
-							ctx.lineTo(12.5,5+40*(ship.thrusters.medial.currentStrength/ship.thrusters.medial.efficiency)*(1-(c/(this.thrusterDetail+1))));
-							ctx.lineTo(15,5);
-							//ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
-							//ctx.fill();
-							//ctx.restore();
+							for(var n = 0; n<ship.model.thrusterPoints.medial.positive.length;n++)
+							{
+								var tp = ship.model.thrusterPoints.medial.positive[n];
+								ctx.moveTo(tp[0]+rightVector[0]*width/2,tp[1]+rightVector[1]*width/2);
+								ctx.lineTo(tp[0]-rightVector[0]*width/2,tp[1]-rightVector[1]*width/2);
+								ctx.lineTo(tp[0]+upVector[0]*trailLength,tp[1]+upVector[1]*trailLength); //furthest point goes outward with thruster strength and scales inward with efficiency
+								ctx.lineTo(tp[0]+rightVector[0]*width/2,tp[1]+rightVector[1]*width/2);
+							}
 						}
 					//backward
 						else if(ship.thrusters.medial.currentStrength<0){
-							//ctx.save();				
-							//ctx.beginPath();
-							ctx.moveTo(-15,0);
-							ctx.lineTo(-10,0);
-							ctx.lineTo(-12.5,40*(ship.thrusters.medial.currentStrength/ship.thrusters.medial.efficiency)*(1-(c/(this.thrusterDetail+1))));
-							ctx.lineTo(-15,0);
-							ctx.moveTo(15,0);
-							ctx.lineTo(10,0);
-							ctx.lineTo(12.5,40*(ship.thrusters.medial.currentStrength/ship.thrusters.medial.efficiency)*(1-(c/(this.thrusterDetail+1))));
-							ctx.lineTo(15,0);
-							//ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
-							//ctx.fill();
-							//ctx.restore();
+							for(var n = 0; n<ship.model.thrusterPoints.medial.positive.length;n++)
+							{
+								var tp = ship.model.thrusterPoints.medial.negative[n];
+								ctx.moveTo(tp[0]+rightVector[0]*width/2,tp[1]+rightVector[1]*width/2);
+								ctx.lineTo(tp[0]-rightVector[0]*width/2,tp[1]-rightVector[1]*width/2);
+								ctx.lineTo(tp[0]+upVector[0]*trailLength,tp[1]+upVector[1]*trailLength); //furthest point goes outward with thruster strength and scales inward with efficiency
+								ctx.lineTo(tp[0]+rightVector[0]*width/2,tp[1]+rightVector[1]*width/2);
+							}
 						}	
 
 				//rotational thrusters	
+					trailLength = 40*(ship.thrusters.rotational.currentStrength/ship.thrusters.rotational.efficiency)*(1-(c/(this.thrusterDetail+1)));
 					//ccw
 						if(ship.thrusters.rotational.currentStrength>0){
-							//ctx.save();				
-							//ctx.beginPath();
-							ctx.moveTo(5,-10);
-							ctx.lineTo(5,-15);
-							ctx.lineTo(5+40*(ship.thrusters.rotational.currentStrength/ship.thrusters.rotational.efficiency)*(1-(c/(this.thrusterDetail+1))),-12.5);
-							ctx.lineTo(5,-10);
-							//ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
-							//ctx.fill();
-							//ctx.restore();
+							for(var n = 0; n<ship.model.thrusterPoints.rotational.positive.length;n++)
+							{
+								var tp = ship.model.thrusterPoints.rotational.positive[n];
+								ctx.moveTo(tp[0]+upVector[0]*width/2,tp[1]+upVector[1]*width/2);
+								ctx.lineTo(tp[0]-upVector[0]*width/2,tp[1]-upVector[1]*width/2);
+								ctx.lineTo(tp[0]+rightVector[0]*trailLength,tp[1]+rightVector[1]*trailLength); //furthest point goes outward with thruster strength and scales inward with efficiency
+								ctx.lineTo(tp[0]+upVector[0]*width/2,tp[1]+upVector[1]*width/2);
+							}
 						}
 					//cw
 						else if(ship.thrusters.rotational.currentStrength<0){
-							//ctx.save();				
-							//ctx.beginPath();
-							ctx.moveTo(-5,-10);
-							ctx.lineTo(-5,-15);
-							ctx.lineTo(-5+40*(ship.thrusters.rotational.currentStrength/ship.thrusters.rotational.efficiency)*(1-(c/(this.thrusterDetail+1))),-12.5);
-							ctx.lineTo(-5,-10);
-							//ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
-							//ctx.fill();
-							//ctx.restore();
+							for(var n = 0; n<ship.model.thrusterPoints.rotational.negative.length;n++)
+							{
+								var tp = ship.model.thrusterPoints.rotational.negative[n];
+								ctx.moveTo(tp[0]+upVector[0]*width/2,tp[1]+upVector[1]*width/2);
+								ctx.lineTo(tp[0]-upVector[0]*width/2,tp[1]-upVector[1]*width/2);
+								ctx.lineTo(tp[0]+rightVector[0]*trailLength,tp[1]+rightVector[1]*trailLength); //furthest point goes outward with thruster strength and scales inward with efficiency
+								ctx.lineTo(tp[0]+upVector[0]*width/2,tp[1]+upVector[1]*width/2);
+							}
 						}
 
 				//lateral thrusters
+					trailLength = 40*(ship.thrusters.lateral.currentStrength/ship.thrusters.lateral.efficiency)*(1-(c/(this.thrusterDetail+1)));
 					//rightward
 						if(ship.thrusters.lateral.currentStrength>0){
-							//ctx.save();				
-							//ctx.beginPath();
-							ctx.moveTo(-10,0);
-							ctx.lineTo(-10,-5);
-							ctx.lineTo(-10-40*(ship.thrusters.lateral.currentStrength/ship.thrusters.lateral.efficiency)*(1-(c/(this.thrusterDetail+1))),-2.5);
-							ctx.lineTo(-10,0);
-							//ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
-							//ctx.fill();
-							//ctx.restore();
+							for(var n = 0; n<ship.model.thrusterPoints.lateral.positive.length;n++)
+							{
+								var tp = ship.model.thrusterPoints.lateral.positive[n];
+								ctx.moveTo(tp[0]+upVector[0]*width/2,tp[1]+upVector[1]*width/2);
+								ctx.lineTo(tp[0]-upVector[0]*width/2,tp[1]-upVector[1]*width/2);
+								ctx.lineTo(tp[0]+rightVector[0]*trailLength,tp[1]+rightVector[1]*trailLength); //furthest point goes outward with thruster strength and scales inward with efficiency
+								ctx.lineTo(tp[0]+upVector[0]*width/2,tp[1]+upVector[1]*width/2);
+							}
 						}
 					//leftward
-						else if(ship.thrusters.lateral.currentStrength<-0.01){
+						else if(ship.thrusters.lateral.currentStrength<0){
 							//ctx.save();				
 							//ctx.beginPath();
-							ctx.moveTo(10,0);
+							/*ctx.moveTo(10,0);
 							ctx.lineTo(10,-5);
 							ctx.lineTo(10-40*(ship.thrusters.lateral.currentStrength/ship.thrusters.lateral.efficiency)*(1-(c/(this.thrusterDetail+1))),-2.5);
-							ctx.lineTo(10,0);
+							ctx.lineTo(10,0);*/
 							//ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
 							//ctx.fill();
 							//ctx.restore();
+							for(var n = 0; n<ship.model.thrusterPoints.lateral.negative.length;n++)
+							{
+								var tp = ship.model.thrusterPoints.lateral.negative[n];
+								ctx.moveTo(tp[0]+upVector[0]*width/2,tp[1]+upVector[1]*width/2);
+								ctx.lineTo(tp[0]-upVector[0]*width/2,tp[1]-upVector[1]*width/2);
+								ctx.lineTo(tp[0]+rightVector[0]*trailLength,tp[1]+rightVector[1]*trailLength); //furthest point goes outward with thruster strength and scales inward with efficiency
+								ctx.lineTo(tp[0]+upVector[0]*width/2,tp[1]+upVector[1]*width/2);
+							}
 						}
 
 				ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
@@ -1619,20 +1630,31 @@ app.main = {
 			ctx.fillStyle = 'dodgerblue';
 			ctx.beginPath();
 			//ctx.arc(0,-5,30,0,Math.PI*2);
-			ctx.moveTo(-20-1*shieldCoeff,10+1*shieldCoeff);
+			/*ctx.moveTo(-20-1*shieldCoeff,10+1*shieldCoeff);
 			ctx.lineTo(0,0+.5*shieldCoeff);
 			ctx.lineTo(20+1*shieldCoeff,10+1*shieldCoeff);
-			ctx.lineTo(0,-30-1.2*shieldCoeff);
+			ctx.lineTo(0,-30-1.2*shieldCoeff);*/
+			for(var n = 0; n<ship.model.shieldVectors.length; n++){
+				var vert = ship.model.vertices[n];
+				var vec = ship.model.shieldVectors[n];
+				var shieldVert = [vert[0]+vec[0]*shieldCoeff,vert[1]+vec[1]*shieldCoeff];
+				if(n==0)
+					ctx.moveTo(shieldVert[0],shieldVert[1]);
+				else
+					ctx.lineTo(shieldVert[0],shieldVert[1]);
+			}
 			ctx.globalAlpha = ship.destructible.shield.current/ship.destructible.shield.max;
 			ctx.fill();
 			ctx.restore();
 
 		//the rest of the ship
 			ctx.beginPath();
-			ctx.moveTo(-20,10);
-			ctx.lineTo(0,0);
-			ctx.lineTo(20,10);
-			ctx.lineTo(0,-30);
+			ctx.moveTo(ship.model.vertices[0][0],ship.model.vertices[0][1]);
+			for(var c = 1;c<ship.model.vertices.length;c++)
+			{
+				var vert = ship.model.vertices[c];
+				ctx.lineTo(vert[0],vert[1]);
+			}
 			ctx.closePath();
 			ctx.fillStyle = ship.color;
 			ctx.fill();
@@ -1939,3 +1961,104 @@ app.main = {
 		return 1/fps;
 	}
 }; // end app.main
+
+var ships = {
+	cheetah:{
+		model:{
+			vertices:[
+				[-20,17],
+				[0,7],
+				[20,17],
+				[0,-23]
+			],
+
+			shieldVectors:[
+				[-.761939, 0.647648],
+				[0,.5],
+				[.761939, 0.647648],
+				[0,-1]
+			],
+
+			thrusterPoints:{
+				medial:{
+					positive:[[-12.5,12],[12.5,12]],
+					negative:[[-12.5,7],[12.5,7]]
+				},
+				lateral:{
+					positive:[[10,1.5]],
+					negative:[[-10,1.5]]
+				},
+				rotational:{
+					positive:[[5,-8.5]],
+					negative:[[-5,-8.5]]
+				},
+				width:5
+			}
+		},
+		laser:{}
+	},
+
+	gull:{
+		model:{
+			vertices:[
+				[-10,0],
+				[0,20],
+				[10,0],
+				[0,-20]
+			],
+
+			shieldVectors:[
+				[-.5, 0],
+				[0,1],
+				[.5, 0],
+				[0,-1]
+			],
+
+			thrusterPoints:{
+				medial:{
+					positive:[[0,12]],
+					negative:[[0,7]]
+				},
+				lateral:{
+					positive:[[10,0]],
+					negative:[[-10,0]]
+				},
+				rotational:{
+					positive:[[2,-5]],
+					negative:[[-2,-5]]
+				},
+				width:5
+			}
+		},
+		cannon:{}
+	}
+};
+
+/*
+	//Medial Thrusters
+	//lateral thrusters
+	//rightward
+		if(ship.thrusters.lateral.currentStrength>0){
+			//ctx.save();				
+			//ctx.beginPath();
+			ctx.moveTo(-10,0);
+			ctx.lineTo(-10,-5);
+			ctx.lineTo(-10-40*(ship.thrusters.lateral.currentStrength/ship.thrusters.lateral.efficiency)*(1-(c/(this.thrusterDetail+1))),-2.5);
+			ctx.lineTo(-10,0);
+			//ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
+			//ctx.fill();
+			//ctx.restore();
+		}
+	//leftward
+		else if(ship.thrusters.lateral.currentStrength<-0.01){
+			//ctx.save();				
+			//ctx.beginPath();
+			ctx.moveTo(10,0);
+			ctx.lineTo(10,-5);
+			ctx.lineTo(10-40*(ship.thrusters.lateral.currentStrength/ship.thrusters.lateral.efficiency)*(1-(c/(this.thrusterDetail+1))),-2.5);
+			ctx.lineTo(10,0);
+			//ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
+			//ctx.fill();
+			//ctx.restore();
+		}
+*/

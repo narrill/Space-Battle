@@ -483,3 +483,8 @@ var mapFunctions = {
 		
 	}
 };
+
+var upVector = [0,1];
+var downVector = [0,-1];
+var rightVector = [1,0];
+var leftVector = [-1,0];
