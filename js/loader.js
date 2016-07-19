@@ -38,7 +38,7 @@ window.onload = function(){
 	createjs.Sound.addEventListener("fileload",handleLoad);
 	createjs.Sound.registerSounds(sounds,audioPath,100);
 	//createjs.Sound.registerSounds(thrusterSound,audioPath,1);
-	app.main.init();
+	gameFunctions.init(app.main);
 	pointerInit();
 }
 
@@ -55,10 +55,10 @@ function handleLoad(event){
 
 window.onblur = function(){
 	myKeys.keydown = [];
-	app.main.pauseGame();
+	gameFunctions.pauseGame(app.main);
 	//if(app.main.thrusterSound)
 	//	app.main.thrusterSound.volume = 0;
 };
 window.onfocus = function(){
-	app.main.resumeGame();
+	gameFunctions.resumeGame(app.main);
 };

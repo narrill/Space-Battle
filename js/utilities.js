@@ -2,6 +2,89 @@
 		
 "use strict";
 
+var gridFunctions = {
+	//returns a random position within the given grid
+	randomGridPosition:function(grid){
+		var lower = [grid.gridStart[0],grid.gridStart[1]];
+		var upper = [lower[0]+grid.gridLines*grid.gridSpacing,lower[1]+grid.gridLines*grid.gridSpacing];
+		return {
+			//position/rotation
+			x: Math.random() * (upper[0] - lower[0]) + lower[0],
+			y: Math.random() * (upper[1] - lower[1]) + lower[1]
+		};
+	},
+
+	//returns a bool indicating whether the given position is within the given grid plus tolerances (in pixels)
+	isPositionInGrid: function(position, grid, tolerances){
+		if(!tolerances)
+			tolerances = [0,0];
+		var lower = [grid.gridStart[0],grid.gridStart[1]];
+		var upper = [lower[0]+grid.gridLines*grid.gridSpacing,lower[1]+grid.gridLines*grid.gridSpacing];
+
+		return position[0] > lower[0] - tolerances[0] && position[0] < upper[0] + tolerances[0] && position[1] > lower[1] - tolerances[1] && position[1] < upper[1] + tolerances[1];
+	}
+};
+
+var utilities = {
+	getForwardVector:function(obj){
+		if(!obj.forwardVectorX || !obj.forwardVectorY)
+		{
+			var normalizedForwardVector = rotate(0,0,0,-1,-obj.rotation);
+			obj.forwardVectorX = normalizedForwardVector[0],
+			obj.forwardVectorY = normalizedForwardVector[1];
+		}
+
+		return [obj.forwardVectorX,obj.forwardVectorY];
+	},
+
+	getRightVector:function(obj){
+		if(!obj.rightVectorX || !obj.rightVectorY)
+		{
+			var normalizedRightVector = rotate(0,0,0,-1,-obj.rotation+90);
+			obj.rightVectorX = normalizedRightVector[0];
+			obj.rightVectorY = normalizedRightVector[1];
+		}
+
+		return [obj.rightVectorX,obj.rightVectorY];
+	},
+
+	getMedialVelocity:function(obj){
+		if(!obj.medialVelocity)
+		{
+			var forwardVector = utilities.getForwardVector(obj);
+			obj.medialVelocity = -scalarComponentOf1InDirectionOf2(obj.velocityX,obj.velocityY,forwardVector[0],forwardVector[1]); //get magnitude of projection of velocity onto the forward vector
+		}
+
+		return obj.medialVelocity;
+	},
+
+	getLateralVelocity:function(obj){
+		if(!obj.lateralVelocity){
+			var rightVector = utilities.getRightVector(obj);
+			obj.lateralVelocity = -scalarComponentOf1InDirectionOf2(obj.velocityX,obj.velocityY,rightVector[0],rightVector[1]); //et magnitude of velocity's projection onto the right vector
+		}
+		return obj.lateralVelocity;
+	},
+	fillText: function(ctx,string, x, y, css, color, alpha) {
+		ctx.save();
+		// https://developer.mozilla.org/en-US/docs/Web/CSS/font
+		ctx.font = css;
+		ctx.fillStyle = color;
+		if(alpha)
+			ctx.globalAlpha = alpha;
+		ctx.fillText(string, x, y);
+		ctx.restore();
+	},	
+	calculateDeltaTime: function(game){
+		var now,fps;
+		now = (Date.now().valueOf()); //get date as unix timestamp
+		fps = 1000 / (now - game.lastTime);
+		//fps = clamp(fps, 12, 60); //this literally makes this function useless for physics. just, why?
+		game.lastTime = now; 
+		return 1/fps;
+	}
+};
+
 // returns mouse position in local coordinate system of element
 function getMouse(e){
 	var mouse = {} // make an object
