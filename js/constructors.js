@@ -268,7 +268,7 @@ var constructors = {
 	},
 
 	//constructor for laser object
-	createLaser:function(lasers, startX,startY,endX,endY,color, power,efficiency, previousLaser, owner, collisionFunction){
+	createLaser:function(lasers, startX,startY,endX,endY,color, power,efficiency, owner, collisionFunction){
 		var lsr = {
 			startX:startX,
 			startY:startY,
@@ -277,12 +277,30 @@ var constructors = {
 			color:color,
 			power:power,
 			efficiency:efficiency,
-			previousLaser:previousLaser,
+			//previousLaser:previousLaser,
 			owner:owner,
 			collisionFunction:collisionFunction
 		};
-		lasers.push(lsr);
+		//lsr.nextLaser = constructors.createNextLaserObject(lsr)
+		if(lasers) lasers.push(lsr);
 		return lsr;
+	},
+
+	createNextLaserObject:function(laser, dt){
+		var obj = laser.owner;
+		//var anchorPoint = [laser.startX - obj.x, laser.startY - obj.y];
+		var nextEnd = rotate(obj.x, obj.y, laser.endX, laser.endY, -obj.rotationalVelocity*dt);
+		var nextStart = rotate(obj.x, obj.y, laser.startX, laser.startY, -obj.rotationalVelocity*dt);
+		nextStart[0]+=obj.velocityX*dt;
+		nextStart[1]+=obj.velocityY*dt;
+		nextEnd[0]+=obj.velocityX*dt;
+		nextEnd[1]+=obj.velocityY*dt;
+		return {
+			startX:nextStart[0],
+			startY:nextStart[1],
+			endX:nextEnd[0],
+			endY:nextEnd[1]
+		};
 	},
 
 	//constructor for projectile object

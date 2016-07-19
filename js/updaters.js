@@ -81,8 +81,8 @@ var updaters = {
 
 		//move
 			//store position at previous update for swept area construction
-				obj.prevX = obj.x;
-				obj.prevY = obj.y;
+				//obj.prevX = obj.x;
+				//obj.prevY = obj.y;
 			obj.x+=obj.velocityX*dt;
 			obj.y+=obj.velocityY*dt;
 			if(obj.hasOwnProperty("rotation")){
@@ -100,17 +100,35 @@ var updaters = {
 	},
 
 	updateLaserComponent:function(obj,dt){
-		var forwardVector = utilities.getForwardVector(obj);
+		/*var forwardVector = utilities.getForwardVector(obj);
 		//create laser objects
 			var laserVector = [0,-obj.laser.range];
 			laserVector = rotate(0,0,laserVector[0],laserVector[1],-obj.rotation+Math.random()*obj.laser.spread-obj.laser.spread/2);
-			if(obj.laser.previousLaser)
-				obj.laser.previousLaser.previousLaser = null; //avoiding a memory leak - without this the lasers will chain backwards in time continuously
-			obj.laser.previousLaser = constructors.createLaser(obj.game.lasers,obj.x+forwardVector[0]*(30),obj.y+forwardVector[1]*30,obj.x+laserVector[0],obj.y+laserVector[1],obj.laser.color,obj.laser.currentPower, obj.laser.efficiency, obj.laser.previousLaser, obj, collisions[obj.laser.collisionFunction]);
+			obj.laser.nextLaser = constructors.createLaser(obj.game.lasers,obj.x+forwardVector[0]*(30),obj.y+forwardVector[1]*30,obj.x+laserVector[0],obj.y+laserVector[1],obj.laser.color,obj.laser.currentPower, obj.laser.efficiency, obj.laser.nextLaser, obj, collisions[obj.laser.collisionFunction]);
 			obj.laser.currentPower-=obj.laser.maxPower*(1-obj.laser.coherence)*dt*1000;
+			if(obj.laser.currentPower<0)
+				obj.laser.currentPower=0;*/
+
+		var forwardVector = utilities.getForwardVector(obj);
+		//var nextForwardVector = rotate(0,0,forwardVector[0], forwardVector[1], -obj.rotationalVelocity*dt);
+		//create laser objects
+			var spread = Math.random()*obj.laser.spread-obj.laser.spread/2;
+			var laserVector = [0,-obj.laser.range];
+			var currentLaserVector = rotate(0,0,laserVector[0],laserVector[1],-obj.rotation+spread);
+			//var nextLaserVector = rotate(0,0,laserVector[0],laserVector[1],-(obj.rotation+obj.rotationalVelocity*dt)+spread);
+			/*var nextLaser = {
+				startX:obj.x+obj.velocityX*dt+nextForwardVector[0]*30,
+				startY: obj.y+obj.velocityY*dt+nextForwardVector[1]*30,
+				endX:obj.x+obj.velocityX*dt+nextLaserVector[0],
+				endX:obj.x+obj.velocityX*dt+nextLaserVector[1]
+			};*/
+			if(obj.laser.currentPower>0) constructors.createLaser(obj.game.lasers,obj.x+forwardVector[0]*(30),obj.y+forwardVector[1]*30,obj.x+currentLaserVector[0],obj.y+currentLaserVector[1],obj.laser.color,obj.laser.currentPower, obj.laser.efficiency, obj, collisions[obj.laser.collisionFunction]);
+			obj.laser.currentPower -= obj.laser.maxPower*(1-obj.laser.coherence)*dt*1000;
 			if(obj.laser.currentPower<0)
 				obj.laser.currentPower=0;
 	},
+
+	
 
 	updateCannonComponent:function(obj,dt){
 		var forwardVector = utilities.getForwardVector(obj);

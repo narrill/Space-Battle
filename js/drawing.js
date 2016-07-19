@@ -312,8 +312,8 @@ var drawing = {
 				return;
 			var start = worldPointToCameraSpace(laser.startX,laser.startY,camera);
 			var end = worldPointToCameraSpace(laser.endX,laser.endY,camera);
-			//var startPrev = worldPointToCameraSpace(laser.previousLaser.startX,laser.previousLaser.startY,camera);
-			//var endPrev = worldPointToCameraSpace(laser.previousLaser.endX,laser.previousLaser.endY,camera);
+			var startNext = worldPointToCameraSpace(laser.nextLaser.startX,laser.nextLaser.startY,camera);
+			var endNext = worldPointToCameraSpace(laser.nextLaser.endX,laser.nextLaser.endY,camera);
 			var angle = angleBetweenVectors(end[0]-start[0],end[1]-start[1],1,0);
 			var rightVector = rotate(0,0,1,0,angle+90	);
 			var width = (laser.power/laser.efficiency)*camera.zoom;
@@ -329,12 +329,11 @@ var drawing = {
 				ctx.lineTo(end[0],end[1]);
 				ctx.lineTo(start[0]-coeff*width*rightVector[0]/2,start[1]-width*rightVector[1]/2);
 				ctx.arc(start[0],start[1],coeff*width/2,-(angle-90)*(Math.PI/180),(angle-90)*(Math.PI/180)-90,false);
-				//ctx.closePath();
-				//ctx.globalAlpha = 
 				ctx.fillStyle = shadeRGBColor(laser.color,0+c/(laserDetail+1));
-				//ctx.lineCap = 'round';
-				
-				//ctx.lineWidth = width;
+				/*ctx.lineTo(end[0], end[1]);
+				ctx.lineTo(endNext[0], endNext[1]);
+				ctx.lineTo(startNext[0], startNext[1]);
+				ctx.fillStyle = laser.color;*/
 				ctx.fill();
 				ctx.restore();
 			}
@@ -348,8 +347,8 @@ var drawing = {
 			var prj = projectiles[c];
 			if(!prj.visible)
 				continue;
-			var start = worldPointToCameraSpace(prj.prevX, prj.prevY, camera);
-			var end = worldPointToCameraSpace(prj.x, prj.y, camera);
+			var start = worldPointToCameraSpace(prj.x, prj.y, camera);
+			var end = worldPointToCameraSpace(prj.x+prj.velocityX*.012, prj.y+prj.velocityY*.012, camera);
 
 			if(start[0] > camera.width+prj.destructible.radius || start[0] < 0 - prj.destructible.radius || start[1] > camera.height + prj.destructible.radius || start[1] < 0 - prj.destructible.radius)
 				continue;
