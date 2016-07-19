@@ -268,8 +268,8 @@ var constructors = {
 	},
 
 	//constructor for laser object
-	createLaser:function(lasers, startX,startY,endX,endY,color, power,efficiency, owner, collisionFunction){
-		var lsr = {
+	createHitscan:function(hitscans, startX,startY,endX,endY,color, power,efficiency, owner, collisionFunction){
+		var hitscan = {
 			startX:startX,
 			startY:startY,
 			endX:endX,
@@ -282,15 +282,15 @@ var constructors = {
 			collisionFunction:collisionFunction
 		};
 		//lsr.nextLaser = constructors.createNextLaserObject(lsr)
-		if(lasers) lasers.push(lsr);
-		return lsr;
+		if(hitscans) hitscans.push(hitscan);
+		return hitscan;
 	},
 
-	createNextLaserObject:function(laser, dt){
-		var obj = laser.owner;
-		//var anchorPoint = [laser.startX - obj.x, laser.startY - obj.y];
-		var nextEnd = rotate(obj.x, obj.y, laser.endX, laser.endY, -obj.rotationalVelocity*dt);
-		var nextStart = rotate(obj.x, obj.y, laser.startX, laser.startY, -obj.rotationalVelocity*dt);
+	createNextHitscanObject:function(hitscan, dt){
+		var obj = hitscan.owner;
+		//var anchorPoint = [hitscan.startX - obj.x, hitscan.startY - obj.y];
+		var nextEnd = rotate(obj.x, obj.y, hitscan.endX, hitscan.endY, -obj.rotationalVelocity*dt);
+		var nextStart = rotate(obj.x, obj.y, hitscan.startX, hitscan.startY, -obj.rotationalVelocity*dt);
 		nextStart[0]+=obj.velocityX*dt;
 		nextStart[1]+=obj.velocityY*dt;
 		nextEnd[0]+=obj.velocityX*dt;

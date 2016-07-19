@@ -60,7 +60,7 @@ var gameFunctions = {
 	//one game tick
 	update: function(game, dt){
 	 	//clear values
-		clearFunctions.clearLasers(game.lasers);
+		clearFunctions.clearHitscans(game.hitscans);
 		clearFunctions.clearDestructibles(game.asteroids.objs);
 		clearFunctions.clearDestructibles(game.otherShips); 
 		clearFunctions.clearDestructibles(game.updatables);
@@ -198,7 +198,7 @@ var gameFunctions = {
 				drawing.drawShipOverlay(ship,game.camera,game.gridCamera);
 			}
 			drawing.drawProjectiles(game.projectiles, game.camera);
-			drawing.drawLasers(game.lasers, game.camera);
+			drawing.drawHitscans(game.hitscans, game.camera);
 			for(var c = game.otherShips.length-1;c>=-1;c--){
 				var ship = (c==-1)?game.ship:game.otherShips[c];
 				drawing.drawShip(ship,game.camera);
@@ -231,67 +231,67 @@ var gameFunctions = {
 
 	checkCollisions:function(game, dt){
 		//laser collisions
-			game.lasers.forEach(function(laser){
-				if(laser.power == 0)
+			game.hitscans.forEach(function(hitscan){
+				if(hitscan.power == 0)
 					return;
-				laser.nextLaser = constructors.createNextLaserObject(laser, dt);
+				hitscan.nextHitscan = constructors.createNextHitscanObject(hitscan, dt);
 				var obj; //the chosen object
 				var tValOfObj = Number.MAX_VALUE;
-				var xInv = laser.endX<laser.startX;
-				var yInv = laser.endY<laser.startY;
-				var start = [(xInv) ? laser.endX : laser.startX, (yInv) ? laser.endY : laser.startY];
-				var end = [(xInv) ? laser.startX : laser.endX, (yInv) ? laser.startY : laser.endY];
-				var laserVertices = [
-					[laser.startX, laser.startY],
-					[laser.endX, laser.endY],
-					[laser.nextLaser.endX,laser.nextLaser.endY],
-					[laser.nextLaser.startX, laser.nextLaser.startY]
+				var xInv = hitscan.endX<hitscan.startX;
+				var yInv = hitscan.endY<hitscan.startY;
+				var start = [(xInv) ? hitscan.endX : hitscan.startX, (yInv) ? hitscan.endY : hitscan.startY];
+				var end = [(xInv) ? hitscan.startX : hitscan.endX, (yInv) ? hitscan.startY : hitscan.endY];
+				var hitscanVertices = [
+					[hitscan.startX, hitscan.startY],
+					[hitscan.endX, hitscan.endY],
+					[hitscan.nextHitscan.endX,hitscan.nextHitscan.endY],
+					[hitscan.nextHitscan.startX, hitscan.nextHitscan.startY]
 				];
-				//laser-asteroid
+				//hitscan-asteroid
 					for(var c = 0;c<game.asteroids.objs.length;c++){
 						var gameObj = game.asteroids.objs[c];
 						if(gameObj.x + gameObj.destructible.radius<start[0] || gameObj.x-gameObj.destructible.radius>end[0] || gameObj.y + gameObj.destructible.radius<start[1] || gameObj.y-gameObj.destructible.radius>end[1])
 							continue;
-						var gameDistance = distanceFromPointToLine(gameObj.x,gameObj.y,laser.startX,laser.startY,laser.endX,laser.endY);
+						var gameDistance = distanceFromPointToLine(gameObj.x,gameObj.y,hitscan.startX,hitscan.startY,hitscan.endX,hitscan.endY);
 						if(gameDistance[0]<gameObj.destructible.radius && gameDistance[1]<tValOfObj){
 							obj = gameObj;
 							tValOfObj = gameDistance[1];
 						}
 					}
-				//laser-ship
+				//hitscan-ship
 					for(var c = -1;c<game.otherShips.length;c++){
 						var gameObj = ((c==-1) ? game.ship : game.otherShips[c]); //lol
-						if(gameObj == laser.owner)
+						if(gameObj == hitscan.owner)
 							continue;
 						if(gameObj.x + gameObj.destructible.radius<start[0] || gameObj.x-gameObj.destructible.radius>end[0] || gameObj.y + gameObj.destructible.radius<start[1] || gameObj.y-gameObj.destructible.radius>end[1])
 							continue;
-						var gameDistance = distanceFromPointToLine(gameObj.x,gameObj.y,laser.startX,laser.startY,laser.endX,laser.endY);
+						var gameDistance = distanceFromPointToLine(gameObj.x,gameObj.y,hitscan.startX,hitscan.startY,hitscan.endX,hitscan.endY);
 
-						if(gameDistance[1]<tValOfObj && polygonCapsuleSAT(laserVertices, {center1:[gameObj.x, gameObj.y], center2:[gameObj.x+gameObj.velocityX*dt, gameObj.y+gameObj.velocityY*dt], radius:gameObj.destructible.radius})){
+						if(gameDistance[1]<tValOfObj && polygonCapsuleSAT(hitscanVertices, {center1:[gameObj.x, gameObj.y], center2:[gameObj.x+gameObj.velocityX*dt, gameObj.y+gameObj.velocityY*dt], radius:gameObj.destructible.radius})){
 							obj = gameObj;
 							tValOfObj = gameDistance[1];
 						}
 					}
-				//laser-projectile
+				//hitscan-projectile
 					for(var c = 0;c<game.projectiles.length;c++){
 						var gameObj = game.projectiles[c];
 						var gameObjNext = [gameObj.x+gameObj.velocityX*dt, gameObj.y+gameObj.velocityY*dt];
-						if(gameObj == laser.owner)
+						if(gameObj == hitscan.owner)
 							continue;
 						if(gameObj.x + gameObj.destructible.radius<start[0] || gameObj.x-gameObj.destructible.radius>end[0] || gameObj.y + gameObj.destructible.radius<start[1] || gameObj.y-gameObj.destructible.radius>end[1])
 							continue;
-						var gameDistance = distanceFromPointToLine(gameObj.x,gameObj.y,laser.startX,laser.startY,laser.endX,laser.endY);
+						var gameDistance = distanceFromPointToLine(gameObj.x,gameObj.y,hitscan.startX,hitscan.startY,hitscan.endX,hitscan.endY);
 
-						if(gameDistance[1]<tValOfObj && polygonCapsuleSAT(laserVertices, {center1:[gameObj.x, gameObj.y], center2:gameObjNext, radius:gameObj.destructible.radius})){
+						if(gameDistance[1]<tValOfObj && polygonCapsuleSAT(hitscanVertices, {center1:[gameObj.x, gameObj.y], center2:gameObjNext, radius:gameObj.destructible.radius})){
 							obj = gameObj;
 							tValOfObj = gameDistance[1];
-							console.log('laser-projectile collision');
+							console.log('hitscan-projectile collision');
 						}
 					}
 
 				//resolve collision
 					if(obj)
-						laser.collisionFunction(laser, obj, tValOfObj, dt);
+						hitscan.collisionFunction(hitscan, obj, tValOfObj, dt);
 			},game);
 
 		//projectile collisions
@@ -341,7 +341,7 @@ var gameFunctions = {
 					var overlap = (ship.destructible.radius+asteroid.radius)*(ship.destructible.radius+asteroid.radius) - distance;
 					if(overlap>=0)
 					{
-						if(game.frameCount==0)
+						if(game.frameCount<25)
 							asteroid.destructible.hp=-1;
 						else{
 							var objectSpeed = Math.sqrt(ship.velocityX*ship.velocityX+ship.velocityY*ship.velocityY);
@@ -364,7 +364,7 @@ var gameFunctions = {
 	resetGame:function(game){
 		clearFunctions.clearProjectiles(game.projectiles);
 		game.ship = {};
-		game.ship = constructors.createShip(ships.gull,game.grid, game);
+		game.ship = constructors.createShip(ships.cheetah,game.grid, game);
 		constructors.makeAsteroids.bind(game,game.asteroids,game.grid)();
 		game.otherShips = [];
 		game.otherShipCount = 1;

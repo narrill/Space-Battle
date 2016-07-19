@@ -7,7 +7,7 @@
 "use strict";
 
 var thrusterDetail = 3;
-var laserDetail = 3;
+var hitscanDetail = 3;
 
 // if app exists use the existing copy
 // else create a new object literal
@@ -40,7 +40,7 @@ app.main = {
 	otherShips:[],
 	otherShipCount:0,
 	maxOtherShips:10,
-	lasers:[],
+	hitscans:[],
 	projectiles:[],
 	camera:{
 		//position/rotation

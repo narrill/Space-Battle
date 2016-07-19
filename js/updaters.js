@@ -122,7 +122,7 @@ var updaters = {
 				endX:obj.x+obj.velocityX*dt+nextLaserVector[0],
 				endX:obj.x+obj.velocityX*dt+nextLaserVector[1]
 			};*/
-			if(obj.laser.currentPower>0) constructors.createLaser(obj.game.lasers,obj.x+forwardVector[0]*(30),obj.y+forwardVector[1]*30,obj.x+currentLaserVector[0],obj.y+currentLaserVector[1],obj.laser.color,obj.laser.currentPower, obj.laser.efficiency, obj, collisions[obj.laser.collisionFunction]);
+			if(obj.laser.currentPower>0) constructors.createHitscan(obj.game.hitscans,obj.x+forwardVector[0]*(30),obj.y+forwardVector[1]*30,obj.x+currentLaserVector[0],obj.y+currentLaserVector[1],obj.laser.color,obj.laser.currentPower, obj.laser.efficiency, obj, collisions[obj.laser.collisionFunction]);
 			obj.laser.currentPower -= obj.laser.maxPower*(1-obj.laser.coherence)*dt*1000;
 			if(obj.laser.currentPower<0)
 				obj.laser.currentPower=0;
@@ -276,8 +276,8 @@ var clearFunctions = {
 		}
 	},
 
-	clearLasers:function(lasers){
-		lasers.length=0;
+	clearHitscans:function(hitscans){
+		hitscans.length=0;
 	},
 
 	clearProjectiles: function(projectiles){
@@ -288,12 +288,13 @@ var clearFunctions = {
 var collisions = {
 	basicLaserCollision:function(laser, obj, tValOfObj, dt){
 		obj.destructible.shield.current-=laser.power*dt*(1-tValOfObj);
+		//console.log('damage: '+laser.power*dt*(1-tValOfObj));
 		if(obj.destructible.shield.current<0)
 		{
 			obj.destructible.hp+=obj.destructible.shield.current;
 			obj.destructible.shield.current = 0;
 		}
-		//console.log(obj+' hp: '+obj.destructible.hp);
+		console.log('hp: '+Math.round(obj.destructible.hp)+'/'+Math.round(obj.destructible.maxHp)+', damage: '+Math.round(laser.power*dt*(1-tValOfObj)));
 		var laserDir = [laser.endX-laser.startX,laser.endY-laser.startY];
 		var newEnd = [laser.startX+tValOfObj*laserDir[0],laser.startY+tValOfObj*laserDir[1]];
 		laser.endX = newEnd[0];
