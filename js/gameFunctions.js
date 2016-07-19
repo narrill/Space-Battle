@@ -289,19 +289,7 @@ var gameFunctions = {
 
 				//resolve collision
 					if(obj)
-					{
-						obj.destructible.shield.current-=laser.power*dt*(1-tValOfObj);
-						if(obj.destructible.shield.current<0)
-						{
-							obj.destructible.hp+=obj.destructible.shield.current;
-							obj.destructible.shield.current = 0;
-						}
-						//console.log(obj+' hp: '+obj.destructible.hp);
-						var laserDir = [laser.endX-laser.startX,laser.endY-laser.startY];
-						var newEnd = [laser.startX+tValOfObj*laserDir[0],laser.startY+tValOfObj*laserDir[1]];
-						laser.endX = newEnd[0];
-						laser.endY = newEnd[1];
-					}
+						collisions.basicLaserCollision(laser, obj, tValOfObj, dt);
 			},game);
 
 		//projectile collisions
@@ -318,17 +306,8 @@ var gameFunctions = {
 							continue;
 						if(capsuleCapsuleSAT({center1:[gameObj.x,gameObj.y], center2:[gameObj.prevX, gameObj.prevY], radius:gameObj.destructible.radius}, prjCapsule))
 						{
-							var velocityDifference = [prj.velocityX - gameObj.velocityX, prj.velocityY - gameObj.velocityY];
-							var magnitude = Math.sqrt(velocityDifference[0] * velocityDifference[0] + velocityDifference[1] * velocityDifference[1]);
-							var damage = magnitude * prj.destructible.maxHp * prj.destructible.radius/gameObj.destructible.radius;
-							prj.destructible.hp-=damage;
-							gameObj.destructible.shield.current-=damage;
-							if(gameObj.destructible.shield.current<0)
-							{
-								gameObj.destructible.hp+=gameObj.destructible.shield.current;
-								gameObj.destructible.shield.current = 0;
-							}
-							console.log(damage+' damage, '+magnitude+' magnitude');
+							collisions.basicBulletCollision(prj, gameObj, dt);
+							//console.log(damage+' damage, '+magnitude+' magnitude');
 						}
 					}
 
@@ -338,10 +317,11 @@ var gameFunctions = {
 						var distanceSqr = Math.abs((prj.x - gameObj.x)*(prj.x - gameObj.x) + (prj.y - gameObj.y)*(prj.y - gameObj.y));
 						if(distanceSqr<=(prj.destructible.radius+gameObj.destructible.radius)*(prj.destructible.radius+gameObj.destructible.radius))
 						{
-							var magnitude = Math.sqrt(prj.velocityX * prj.velocityX + prj.velocityY * prj.velocityY);
+							/*var magnitude = Math.sqrt(prj.velocityX * prj.velocityX + prj.velocityY * prj.velocityY);
 							var damage = magnitude * prj.destructible.maxHp * prj.destructible.radius/gameObj.destructible.radius;
 							prj.destructible.hp-=damage;
-							gameObj.destructible.hp-=damage;
+							gameObj.destructible.hp-=damage;*/
+							collisions.basicBulletCollision(prj, gameObj, dt);
 						}
 					}
 			}
@@ -378,7 +358,7 @@ var gameFunctions = {
 	resetGame:function(game){
 		clearFunctions.clearProjectiles(game.projectiles);
 		game.ship = {};
-		game.ship = constructors.createShip({laser:{}},game.grid, game);
+		game.ship = constructors.createShip(ships.gull,game.grid, game);
 		constructors.makeAsteroids.bind(game,game.asteroids,game.grid)();
 		game.otherShips = [];
 		game.otherShipCount = 1;

@@ -266,3 +266,33 @@ var clearFunctions = {
 		projectiles.length = 0;
 	},
 };
+
+var collisions = {
+	basicLaserCollision:function(laser, obj, tValOfObj, dt){
+		obj.destructible.shield.current-=laser.power*dt*(1-tValOfObj);
+		if(obj.destructible.shield.current<0)
+		{
+			obj.destructible.hp+=obj.destructible.shield.current;
+			obj.destructible.shield.current = 0;
+		}
+		//console.log(obj+' hp: '+obj.destructible.hp);
+		var laserDir = [laser.endX-laser.startX,laser.endY-laser.startY];
+		var newEnd = [laser.startX+tValOfObj*laserDir[0],laser.startY+tValOfObj*laserDir[1]];
+		laser.endX = newEnd[0];
+		laser.endY = newEnd[1];
+	},
+
+	basicBulletCollision:function(prj, gameObj, dt){
+		var objVel = [(gameObj.velocityX)?gameObj.velocityX:0,(gameObj.velocityY)?gameObj.velocityY:0];
+		var velocityDifference = [prj.velocityX - objVel[0], prj.velocityY - objVel[1]];
+		var magnitude = Math.sqrt(velocityDifference[0] * velocityDifference[0] + velocityDifference[1] * velocityDifference[1]);
+		var damage = magnitude * prj.destructible.maxHp * prj.destructible.radius/gameObj.destructible.radius;
+		prj.destructible.hp-=damage;
+		gameObj.destructible.shield.current-=damage;
+		if(gameObj.destructible.shield.current<0)
+		{
+			gameObj.destructible.hp+=gameObj.destructible.shield.current;
+			gameObj.destructible.shield.current = 0;
+		}
+	}
+};
