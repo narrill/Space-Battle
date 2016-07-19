@@ -90,10 +90,10 @@ var gameFunctions = {
 		else if(game.gameState == enums.GAME_STATES.PLAYING || game.gameState==enums.GAME_STATES.TUTORIAL){				
 
 			game.otherShips.forEach(function(ship){
-				objControls.shipAI(ship,game.ship,dt);
+				objControls.objAI(ship,game.ship,dt);
 			},game);
 
-			objControls.shipKeyboardControl(game.ship,dt);
+			objControls.objKeyboardControl(game.ship,dt);
 
 		 	//camera zoom controls
 			if(myKeys.keydown[myKeys.KEYBOARD.KEY_UP] && game.camera.zoom<=game.camera.maxZoom)
