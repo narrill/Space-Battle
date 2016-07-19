@@ -106,7 +106,7 @@ var updaters = {
 			laserVector = rotate(0,0,laserVector[0],laserVector[1],-obj.rotation+Math.random()*obj.laser.spread-obj.laser.spread/2);
 			if(obj.laser.previousLaser)
 				obj.laser.previousLaser.previousLaser = null; //avoiding a memory leak - without this the lasers will chain backwards in time continuously
-			obj.laser.previousLaser = constructors.createLaser(obj.game.lasers,obj.x+forwardVector[0]*(30),obj.y+forwardVector[1]*30,obj.x+laserVector[0],obj.y+laserVector[1],obj.laser.color,obj.laser.currentPower, obj.laser.efficiency, obj.laser.previousLaser, obj);
+			obj.laser.previousLaser = constructors.createLaser(obj.game.lasers,obj.x+forwardVector[0]*(30),obj.y+forwardVector[1]*30,obj.x+laserVector[0],obj.y+laserVector[1],obj.laser.color,obj.laser.currentPower, obj.laser.efficiency, obj.laser.previousLaser, obj, collisions[obj.laser.collisionFunction]);
 			obj.laser.currentPower-=obj.laser.maxPower*(1-obj.laser.coherence)*dt*1000;
 			if(obj.laser.currentPower<0)
 				obj.laser.currentPower=0;
@@ -119,7 +119,7 @@ var updaters = {
 				//var forwardVector = this.getForwardVector(obj);
 				var prjVelocity = [forwardVector[0] * obj.cannon.power, forwardVector[1] * obj.cannon.power];
 				var ammo = obj.cannon.ammo;
-				constructors.createProjectile(obj.game.projectiles, obj.x+forwardVector[0]*(30), obj.y+forwardVector[1]*30, prjVelocity[0] + obj.velocityX, prjVelocity[1] + obj.velocityY, constructors.createComponentDestructible(ammo.destructible), ammo.color, obj, ammo.tracerSeed%ammo.tracerInterval==0);
+				constructors.createProjectile(obj.game.projectiles, obj.x+forwardVector[0]*(30), obj.y+forwardVector[1]*30, prjVelocity[0] + obj.velocityX, prjVelocity[1] + obj.velocityY, constructors.createComponentDestructible(ammo.destructible), ammo.color, obj, ammo.tracerSeed%ammo.tracerInterval==0, collisions[ammo.collisionFunction]);
 				obj.cannon.firing = false;
 				ammo.tracerSeed++;
 			}

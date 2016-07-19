@@ -166,7 +166,8 @@ var constructors = {
 			coherence:.995,
 			maxPower:6000,
 			efficiency:200,
-			spread:0
+			spread:0,
+			collisionFunction:"basicLaserCollision"
 		};
 
 		veryShallowObjectMerge(lsr, objectParams);
@@ -201,7 +202,8 @@ var constructors = {
 			},objectParams.destructible)),
 			color:'yellow',
 			tracerInterval:5,
-			tracerSeed:0
+			tracerSeed:0,
+			collisionFunction:"basicBulletCollision"
 		};
 
 		veryShallowObjectMerge(am, objectParams);
@@ -266,7 +268,7 @@ var constructors = {
 	},
 
 	//constructor for laser object
-	createLaser:function(lasers, startX,startY,endX,endY,color, power,efficiency, previousLaser, owner){
+	createLaser:function(lasers, startX,startY,endX,endY,color, power,efficiency, previousLaser, owner, collisionFunction){
 		var lsr = {
 			startX:startX,
 			startY:startY,
@@ -276,14 +278,15 @@ var constructors = {
 			power:power,
 			efficiency:efficiency,
 			previousLaser:previousLaser,
-			owner:owner
+			owner:owner,
+			collisionFunction:collisionFunction
 		};
 		lasers.push(lsr);
 		return lsr;
 	},
 
 	//constructor for projectile object
-	createProjectile:function(projectiles, startX, startY, velX, velY, destructible, color, owner, visible){
+	createProjectile:function(projectiles, startX, startY, velX, velY, destructible, color, owner, visible, collisionFunction){
 		var prj = {
 			x:startX,
 			y:startY,
@@ -294,7 +297,8 @@ var constructors = {
 			destructible:destructible,
 			color:color,
 			owner:owner,
-			visible: visible
+			visible: visible,
+			collisionFunction:collisionFunction
 		};
 		projectiles.push(prj);
 	},

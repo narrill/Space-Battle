@@ -289,7 +289,7 @@ var gameFunctions = {
 
 				//resolve collision
 					if(obj)
-						collisions.basicLaserCollision(laser, obj, tValOfObj, dt);
+						laser.collisionFunction(laser, obj, tValOfObj, dt);
 			},game);
 
 		//projectile collisions
@@ -306,7 +306,7 @@ var gameFunctions = {
 							continue;
 						if(capsuleCapsuleSAT({center1:[gameObj.x,gameObj.y], center2:[gameObj.prevX, gameObj.prevY], radius:gameObj.destructible.radius}, prjCapsule))
 						{
-							collisions.basicBulletCollision(prj, gameObj, dt);
+							prj.collisionFunction(prj, gameObj, dt);
 							//console.log(damage+' damage, '+magnitude+' magnitude');
 						}
 					}
@@ -321,7 +321,7 @@ var gameFunctions = {
 							var damage = magnitude * prj.destructible.maxHp * prj.destructible.radius/gameObj.destructible.radius;
 							prj.destructible.hp-=damage;
 							gameObj.destructible.hp-=damage;*/
-							collisions.basicBulletCollision(prj, gameObj, dt);
+							prj.collisionFunction(prj, gameObj, dt);
 						}
 					}
 			}
@@ -358,7 +358,7 @@ var gameFunctions = {
 	resetGame:function(game){
 		clearFunctions.clearProjectiles(game.projectiles);
 		game.ship = {};
-		game.ship = constructors.createShip(ships.gull,game.grid, game);
+		game.ship = constructors.createShip(ships.cheetah,game.grid, game);
 		constructors.makeAsteroids.bind(game,game.asteroids,game.grid)();
 		game.otherShips = [];
 		game.otherShipCount = 1;
