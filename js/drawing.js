@@ -341,14 +341,14 @@ var drawing = {
 	},
 
 	//draws all projectile objects in the given array to the given camera
-	drawProjectiles: function(projectiles, camera){
+	drawProjectiles: function(projectiles, camera, dt){
 		var ctx = camera.ctx;
 		for(var c = 0;c< projectiles.length;c++){
 			var prj = projectiles[c];
 			if(!prj.visible)
 				continue;
 			var start = worldPointToCameraSpace(prj.x, prj.y, camera);
-			var end = worldPointToCameraSpace(prj.x+prj.velocityX*.012, prj.y+prj.velocityY*.012, camera);
+			var end = worldPointToCameraSpace(prj.x+prj.velocityX*dt, prj.y+prj.velocityY*dt, camera);
 
 			if(start[0] > camera.width+prj.destructible.radius || start[0] < 0 - prj.destructible.radius || start[1] > camera.height + prj.destructible.radius || start[1] < 0 - prj.destructible.radius)
 				continue;
@@ -363,6 +363,25 @@ var drawing = {
 			ctx.stroke();
 			ctx.restore();
 		}
+	},
+
+	drawRadials:function(radials, camera, dt){
+		var ctx = camera.ctx;
+		radials.forEach(function(radial){
+			var center = worldPointToCameraSpace(radial.x, radial.y, camera);
+			var frameVelocity = radial.velocity * dt;
+
+			if(center[0] > camera.width+radial.radius+frameVelocity || center[0] < 0 - radial.radius-frameVelocity || center[1] > camera.height + radial.radius+frameVelocity || center[1] < 0 - radial.radius-frameVelocity)
+				return;
+
+			ctx.save();
+			ctx.beginPath();
+			ctx.arc(center[0], center[1], radial.radius+frameVelocity/2, 0, Math.PI*2);
+			ctx.strokeStyle = radial.color;
+			ctx.lineWidth = frameVelocity;
+			ctx.stroke();
+			ctx.restore();
+		});
 	},
 
 	//draws the projected overlay for all asteroids in the given array to the given main and projected cameras

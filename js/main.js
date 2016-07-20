@@ -42,6 +42,7 @@ app.main = {
 	maxOtherShips:10,
 	hitscans:[],
 	projectiles:[],
+	radials:[],
 	camera:{
 		//position/rotation
 		x:0,

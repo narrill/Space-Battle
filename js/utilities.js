@@ -308,6 +308,72 @@ function raySphereIntersect(s,e,c,r){
 	return tca-thc;
 }
 
+function isCapsuleWithinCircle(circle, capsule){
+	var capsuleAxis = [capsule.center2[0] - capsule.center1[0], capsule.center2[1] - capsule.center1[1]];
+	capsuleAxis = normalizeVector(capsuleAxis[0], capsuleAxis[1]);
+
+	var pushedCenter1 = [capsule.center1[0] - capsuleAxis[0] * capsule.radius, capsule.center1[1] - capsuleAxis[1] * capsule.radius];
+	var toCircleCenter = [circle.center[0] - pushedCenter1[0], circle.center[1] - pushedCenter1[1]];
+	if(toCircleCenter[0]*toCircleCenter[0] + toCircleCenter[1]*toCircleCenter[1] > circle.radius*circle.radius)
+		return false;
+
+	var pushedCenter2 = [capsule.center2[0] - capsuleAxis[0] * capsule.radius, capsule.center2[1] - capsuleAxis[1] * capsule.radius];
+	toCircleCenter = [circle.center[0] - pushedCenter2[0], circle.center[1] - pushedCenter2[1]];
+	if(toCircleCenter[0]*toCircleCenter[0] + toCircleCenter[1]*toCircleCenter[1] > circle.radius*circle.radius)
+		return false;
+}
+
+function circleCapsuleSAT(circle, capsule){
+	var axisCheck = circleCapsuleAxisCheck;
+
+	//check first capsule's center axis
+	var capsuleAxis = [capsule.center2[0] - capsule.center1[0], capsule.center2[1] - capsule.center1[1]];
+	if(!axisCheck(circle, capsule, capsuleAxis))
+		return false;
+
+	//check first capsule's normal axis
+	var capsuleNormal = [-capsuleAxis[1], capsuleAxis[0]];
+	if(!axisCheck(circle, capsule, capsuleNormal))
+		return false;
+
+	var circleAxis1 = [capsule.center1[0]-circle.center[0], capsule.center1[1]-circle.center[1]];
+	if(!axisCheck(circle, capsule, circleAxis1))
+		return false;
+
+	var circleAxis2 = [capsule.center2[0]-circle.center[0], capsule.center2[1]-circle.center[1]];
+	if(!axisCheck(circle, capsule, circleAxis2))
+		return false;
+}
+
+function circleCapsuleAxisCheck(circle, capsule, axis){
+	var normalizedAxis = normalizeVector(axis[0], axis[1]);
+	var maxCircle;
+	var minCircle;
+	var maxCapsule;
+	var minCapsule;
+
+	var projectedCenter = circle.center[0]*normalizedAxis[0]+circle.center[1]*normalizedAxis[1];
+	maxCircle = projectedCenter + circle.radius;
+	minCircle = projectedCenter - circle.radius;
+
+	var projectedCenters = [capsule.center1[0]*normalizedAxis[0] + capsule.center1[1]*normalizedAxis[1], capsule.center2[0]*normalizedAxis[0] + capsule.center2[1]*normalizedAxis[1]];
+	//find min and max
+	if(projectedCenters[0]>projectedCenters[1]){
+		maxCapsule = projectedCenters[0];
+		minCapsule = projectedCenters[1];
+	}
+	else{
+		maxCapsule = projectedCenters[1];
+		minCapsule = projectedCenters[0];
+	}
+	//add radius, because capsule
+	maxCapsule+=capsule.radius;
+	minCapsule-=capsule.radius;
+
+	//return whether they overlap
+	return !(maxCapsule < minCircle || maxCircle < minCapsule);
+}
+
 function polygonCapsuleSAT(polygon, capsule)
 {
 	var axisCheck = polygonCapsuleAxisCheck;

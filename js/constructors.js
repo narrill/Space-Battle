@@ -43,7 +43,10 @@ var constructors = {
 			color:getRandomBrightColor(),
 			//model
 			model:(objectParams.hasOwnProperty("model"))?objectParams.model:ships.cheetah.model,
-			weaponToggle:true
+			weaponToggle:true,
+			onDestroy:function(obj){
+				constructors.createRadial(obj.game.radials,obj.x, obj.y, 500, .99, 'red', obj, undefined, {});
+			}
 		};
 
 		if(objectParams.hasOwnProperty("laser"))
@@ -211,6 +214,41 @@ var constructors = {
 		return am;
 	},
 
+	createComponentLauncher:function(objectParams){
+		if(!objectParams)
+			objectParams = {};
+		var ln = {
+			targetingSystem:constructors.createComponentTargetingSystem(deepObjectMerge({},objectParams.targetingSystem)),
+			tubes:[
+				{}
+			],
+			firing:false,
+			cd:4,
+			fireInterval:.1,
+			lastFireTime:0
+		};
+
+		veryShallowObjectMerge(ln, objectParams);
+
+		return ln;
+	},
+
+	createComponentTargetingSystem:function(objectParams){
+		if(!objectParams)
+			objectParams = {};
+		var ts = {
+			target:undefined,
+			range:10000,
+			lockConeWidth:15,
+			lockTime:3,
+			lockedTarget:undefined
+		};
+
+		veryShallowObjectMerge(ts, objectParams);
+
+		return ts;
+	},
+
 	//constructor for the destructible component - stores hp, shields, and collider radius
 	createComponentDestructible:function(objectParams){
 		if(!objectParams)
@@ -319,6 +357,21 @@ var constructors = {
 			collisionFunction:collisionFunction
 		};
 		projectiles.push(prj);
+	},
+
+	createRadial:function(radials, x, y, vel, decay, color, owner, collisionFunction, collisionProperties){
+		var rad = {
+			x:x,
+			y:y,
+			radius:0,
+			velocity:vel,
+			decay:decay,
+			color:color,
+			owner:owner,
+			collisionFunction:collisionFunction,
+			collisionProperties:collisionProperties
+		};
+		radials.push(rad);
 	},
 
 	//returns a camera object with the given values and the context from the given canvas

@@ -48,7 +48,7 @@ var gameFunctions = {
 				gameFunctions.update(this,this.timeStep);
 			this.accumulator-= this.timeStep;
 		}
-		gameFunctions.draw(this);
+		gameFunctions.draw(this, dt);
 
 		//FPS text
 		if (this.debug){
@@ -66,6 +66,7 @@ var gameFunctions = {
 		clearFunctions.clearDestructibles(game.updatables);
 		clearFunctions.clearDestructibles(game.projectiles);
 		clearFunctions.cullDestructibles(game.projectiles, game.grid, .3);
+		clearFunctions.clearRadials(game.radials);
 
 	 	if(game.otherShipCount<game.maxOtherShips)
 	 	{
@@ -90,7 +91,7 @@ var gameFunctions = {
 		else if(game.gameState == enums.GAME_STATES.PLAYING || game.gameState==enums.GAME_STATES.TUTORIAL){				
 
 			game.otherShips.forEach(function(ship){
-				objControls.objAI(ship,game.ship,dt);
+				//objControls.objAI(ship,game.ship,dt);
 			},game);
 
 			objControls.objKeyboardControl(game.ship,dt);
@@ -109,14 +110,16 @@ var gameFunctions = {
 
 		 	//update ship, center main camera on ship
 			//game.updateShip(game.ship,dt);
-			updaters.updateUpdatable(game.ship,dt);
-			game.otherShips.forEach(function(ship){
-				updaters.updateUpdatable(ship,dt);
-			},game);
-
 			for(var i = 0; i<game.projectiles.length; i++){
 				updaters.updateMobile(game.projectiles[i], dt);
 			}
+			for(var i = 0;i<game.radials.length; i++){
+				updaters.updateRadial(game.radials[i], dt);
+			}
+			updaters.updateUpdatable(game.ship,dt);
+			game.otherShips.forEach(function(ship){
+				updaters.updateUpdatable(ship,dt);
+			},game);			
 
 			gameFunctions.checkCollisions(game, dt);	
 
@@ -168,7 +171,7 @@ var gameFunctions = {
 	},
 
 	//renders everything
-	draw:function(game){
+	draw:function(game, dt){
 
 		//console.log('drawing');
 		//pause screen
@@ -197,13 +200,13 @@ var gameFunctions = {
 				var ship = (n==-1)?game.ship:game.otherShips[n];
 				drawing.drawShipOverlay(ship,game.camera,game.gridCamera);
 			}
-			drawing.drawProjectiles(game.projectiles, game.camera);
+			drawing.drawProjectiles(game.projectiles, game.camera, dt);
 			drawing.drawHitscans(game.hitscans, game.camera);
 			for(var c = game.otherShips.length-1;c>=-1;c--){
 				var ship = (c==-1)?game.ship:game.otherShips[c];
 				drawing.drawShip(ship,game.camera);
 			}
-			
+			drawing.drawRadials(game.radials, game.camera, dt);
 			drawing.drawAsteroids(game.asteroids,game.camera, game.gridCamera);
 			drawing.drawHUD(game.camera, game.ship);
 			drawing.drawMinimap(game.minimapCamera, game);
@@ -364,7 +367,7 @@ var gameFunctions = {
 	resetGame:function(game){
 		clearFunctions.clearProjectiles(game.projectiles);
 		game.ship = {};
-		game.ship = constructors.createShip(ships.cheetah,game.grid, game);
+		game.ship = constructors.createShip(ships.gull,game.grid, game);
 		constructors.makeAsteroids.bind(game,game.asteroids,game.grid)();
 		game.otherShips = [];
 		game.otherShipCount = 1;

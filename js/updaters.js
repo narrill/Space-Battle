@@ -1,6 +1,10 @@
 "use strict"
 
 var updaters = {
+	updateRadial:function(radial, dt){
+		radial.radius+=radial.velocity*dt;
+		radial.velocity-=radial.velocity*radial.decay*dt;
+	},
 	updateThrusterSystem:function(ship,dt){
 		//add acceleration from each thruster
 			//medial
@@ -272,7 +276,18 @@ var clearFunctions = {
 	clearDestructibles:function(destructibles){
 		for(var c = 0;c<destructibles.length;c++){
 			if(destructibles[c].destructible.hp<=0)
+			{
+				if(destructibles[c].onDestroy)
+					destructibles[c].onDestroy(destructibles[c]);
 				destructibles.splice(c--,1);
+			}
+		}
+	},
+
+	clearRadials:function(radials){
+		for(var c = 0;c<radials.length;c++){
+			if(radials[c].velocity<=.001)
+				radials.splice(c--,1);
 		}
 	},
 
