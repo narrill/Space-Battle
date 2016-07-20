@@ -147,6 +147,16 @@ var updaters = {
 			}
 	},
 
+	updateLauncherComponent:function(obj, dt){
+		if(obj.launcher.firing){
+			//var now = Date.now();
+			var launchee = obj.launcher.tubes[0].ammo;
+			launchee.x = obj.x, launchee.y = obj.y;
+			obj.game.otherShips.push(constructors.createShip(launchee, obj.game));
+			obj.launcher.firing = false;
+		}
+	},
+
 	updateShieldComponent:function(obj,dt){
 		//refresh shields
 			if(obj.destructible.shield.current<obj.destructible.shield.max)
@@ -254,8 +264,18 @@ var updaters = {
 			updateFunctions.push(updaters.updateShieldComponent);
 		if(obj.powerSystem)
 			updateFunctions.push(updaters.updatePowerSystem);
+		if(obj.launcher)
+			updateFunctions.push(updaters.updateLauncherComponent);
 
 		obj.updaters = updateFunctions;
+	},
+
+	populateOnDestroy:function(obj){
+		var onDestroyFunctions = [];
+		if(obj.warhead)
+			onDestroyFunctions.push(destructors.destroyWarhead);
+
+		obj.onDestroy = onDestroyFunctions;
 	}
 };
 
@@ -278,7 +298,8 @@ var clearFunctions = {
 			if(destructibles[c].destructible.hp<=0)
 			{
 				if(destructibles[c].onDestroy)
-					destructibles[c].onDestroy(destructibles[c]);
+					for(var i = 0; i <destructibles[c].onDestroy.length; i++)
+						destructibles[c].onDestroy[i](destructibles[c]);
 				destructibles.splice(c--,1);
 			}
 		}
@@ -286,7 +307,7 @@ var clearFunctions = {
 
 	clearRadials:function(radials){
 		for(var c = 0;c<radials.length;c++){
-			if(radials[c].velocity<=.001)
+			if(radials[c].velocity<=5)
 				radials.splice(c--,1);
 		}
 	},

@@ -33,7 +33,10 @@ var ships = {
 				width:5
 			}
 		},
-		laser:{}
+		laser:{},
+		stabilizer:{},
+		powerSystem:{},
+		launcher:{}
 	},
 
 	gull:{
@@ -68,6 +71,43 @@ var ships = {
 				width:5
 			}
 		},
-		cannon:{}
+		cannon:{},
+		stabilizer:{},
+		powerSystem:{}
+	}
+};
+
+var missiles = {
+	tomcat:{
+		model:{
+			vertices:[
+				[-10, 15],
+				[0,-15],
+				[10,15]
+			],
+			thrusterPoints:{
+				medial:{
+					positive:[[-12.5,12],[12.5,12]],
+					negative:[[-12.5,7],[12.5,7]]
+				},
+				lateral:{
+					positive:[[10,1.5]],
+					negative:[[-10,1.5]]
+				},
+				rotational:{
+					positive:[[5,-8.5]],
+					negative:[[-5,-8.5]]
+				},
+				width:5
+			}
+		},
+		destructible:{
+			hp:15,
+			radius:5,
+			shield:{
+				max:0
+			}
+		},
+		warhead:{}
 	}
 };

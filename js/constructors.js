@@ -2,10 +2,10 @@
 
 var constructors = {
 	//constructor for ship objects
-	createShip:function(objectParams, grid, game){
+	createShip:function(objectParams, game){
 		if(!objectParams)
 			objectParams = {};
-		var gridPosition = gridFunctions.randomGridPosition(grid);
+		var gridPosition = gridFunctions.randomGridPosition(game.grid);
 		var ship = {
 			game:game,
 			//position/rotation
@@ -37,28 +37,35 @@ var constructors = {
 				}
 			}, objectParams.destructible)),
 			thrusters:constructors.createComponentThrusterSystem(deepObjectMerge({},objectParams.thrusters)),
-			stabilizer:constructors.createComponentStabilizer(deepObjectMerge({},objectParams.stabilizer)),
-			powerSystem:constructors.createComponentPowerSystem(deepObjectMerge({},objectParams.powerSystem)),
 			//colors
 			color:getRandomBrightColor(),
 			//model
 			model:(objectParams.hasOwnProperty("model"))?objectParams.model:ships.cheetah.model,
 			weaponToggle:true,
-			onDestroy:function(obj){
+			/*onDestroy:function(obj){
 				constructors.createRadial(obj.game.radials,obj.x, obj.y, 500, .99, 'red', obj, undefined, {});
-			}
+			}*/
 		};
 
-		if(objectParams.hasOwnProperty("laser"))
-			ship.laser = this.createComponentLaser(deepObjectMerge({},objectParams.laser));
-
-		if(objectParams.hasOwnProperty("cannon"))
-			ship.cannon = this.createComponentCannon(deepObjectMerge({},objectParams.cannon));
+		//this is for adding additional components. also it's super janky
+		//iterate through params
+		for(var key in objectParams)
+			//if params contains something ship doesn't
+			if(!ship.hasOwnProperty(key))
+			{
+				//capitalize the first letter and try to find a constructor for it
+				var capitalized = key.charAt(0).toUpperCase() + key.slice(1);
+				var constructor = constructors['createComponent'+capitalized];
+				//if a constructor was found, call it
+				if(constructor) ship[key] = constructor(deepObjectMerge({}, objectParams[key]));
+			}
 
 		//deepObjectMerge(ship, defaults);
 		veryShallowObjectMerge(ship, objectParams);
 
 		updaters.populateUpdaters(ship);
+
+		updaters.populateOnDestroy(ship);
 
 		//this.updatables.push(ship);
 
@@ -220,7 +227,7 @@ var constructors = {
 		var ln = {
 			targetingSystem:constructors.createComponentTargetingSystem(deepObjectMerge({},objectParams.targetingSystem)),
 			tubes:[
-				{}
+				{ammo:missiles.tomcat, lastFireTime:0}
 			],
 			firing:false,
 			cd:4,
@@ -247,6 +254,24 @@ var constructors = {
 		veryShallowObjectMerge(ts, objectParams);
 
 		return ts;
+	},
+
+	createComponentWarhead:function(objectParams){
+		if(!objectParams)
+			objectParams = {};
+		var wh = {
+			radial:deepObjectMerge({
+				velocity:1000,
+				decay:.99,
+				color:'red',
+				collisionProperties:{
+					power:1
+				},
+				collisionFunction:"basicWarheadCollision"
+			},objectParams.radial)
+		};
+
+		return wh;
 	},
 
 	//constructor for the destructible component - stores hp, shields, and collider radius
@@ -431,4 +456,11 @@ var constructors = {
 			});
 		}
 	},
+};
+
+var destructors = {
+	destroyWarhead:function(obj){
+		var radial = obj.warhead.radial;
+		constructors.createRadial(obj.game.radials, obj.x, obj.y, radial.velocity, radial.decay, radial.color, obj, radial.collisionFunction, radial.collisionProperties);
+	}
 };

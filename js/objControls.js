@@ -79,6 +79,14 @@ var objControls = {
 		}
 	},
 
+	objFireLauncher: function(obj){
+		var now = Date.now();
+		if(now>obj.launcher.lastFireTime+obj.launcher.cd*1000){
+			obj.launcher.lastFireTime = now;
+			obj.launcher.firing = true;
+		}
+	},
+
 	objAI:function(obj, target,dt){
 		var vectorToTarget = [target.x-obj.x,target.y-obj.y];
 		var forwardVector = utilities.getForwardVector(obj);
@@ -146,7 +154,7 @@ var objControls = {
 					objControls.objRotationalThrusters(obj,-obj.thrusters.rotational.maxStrength/obj.stabilizer.thrustRatio);
 				if(obj.stabilizer.enabled)
 					objControls.objRotationalStabilizers(obj,dt);
-			//lasers
+			//weapons
 				if(myMouse.mousedown[myMouse.BUTTONS.LEFT] || myKeys.keydown[myKeys.KEYBOARD.KEY_SPACE])
 				{
 					if(obj.weaponToggle && obj.hasOwnProperty("laser"))
@@ -154,6 +162,8 @@ var objControls = {
 					else if(obj.hasOwnProperty("cannon"))
 						objControls.objFireCannon(obj);
 				}
+				if(myKeys.keydown[myKeys.KEYBOARD.KEY_Q])
+					objControls.objFireLauncher(obj);
 			//power system
 				if(myKeys.keydown[myKeys.KEYBOARD.KEY_SHIFT])
 					obj.powerSystem.target[enums.SHIP_COMPONENTS.THRUSTERS] = 1;

@@ -23,7 +23,7 @@ var gameFunctions = {
 		// initialize properties
 			var canvas = game.canvas = document.querySelector('#canvas1');
 			constructors.generateStarField.bind(game, game.stars)();
-			game.ship = constructors.createShip(ships.cheetah,game.grid, game);
+			game.ship = constructors.createShip(ships.cheetah, game);
 			game.camera = constructors.createCamera(canvas,{x:game.ship.x,y:game.ship.y,rotation:game.ship.rotation,zoom:.5,minZoom:.025,maxZoom:5});
 			game.camera.globalCompositeOperation = 'hard-light';
 			game.starCamera = constructors.createCamera(canvas);
@@ -72,7 +72,7 @@ var gameFunctions = {
 	 	{
 			game.otherShipCount+=game.otherShipCount-game.otherShips.length;
 			for(;game.otherShips.length<game.otherShipCount;){ //lol
-				game.otherShips.push(constructors.createShip((Math.round(Math.random())) ? ships.gull : ships.cheetah,game.grid, game));
+				game.otherShips.push(constructors.createShip((Math.round(Math.random())) ? ships.gull : ships.cheetah, game));
 				game.otherShips[game.otherShips.length-1].ai = constructors.createComponentShipAI();
 			}
 	 	}
@@ -367,13 +367,13 @@ var gameFunctions = {
 	resetGame:function(game){
 		clearFunctions.clearProjectiles(game.projectiles);
 		game.ship = {};
-		game.ship = constructors.createShip(ships.gull,game.grid, game);
+		game.ship = constructors.createShip(ships.gull,game);
 		constructors.makeAsteroids.bind(game,game.asteroids,game.grid)();
 		game.otherShips = [];
 		game.otherShipCount = 1;
 		for(var c = 0;c<game.otherShipCount;c++)
 		{
-			game.otherShips.push(constructors.createShip((Math.round(Math.random())) ? ships.gull : ships.cheetah,game.grid, game));
+			game.otherShips.push(constructors.createShip((Math.round(Math.random())) ? ships.gull : ships.cheetah, game));
 			game.otherShips[c].ai = constructors.createComponentShipAI();
 		}
 		game.gameState = enums.GAME_STATES.PLAYING;

@@ -268,27 +268,29 @@ var drawing = {
 			}
 
 		//shields
-			var shieldCoeff = (ship.destructible.shield.max/ship.destructible.shield.efficiency);
-			ctx.save();
-			ctx.fillStyle = 'dodgerblue';
-			ctx.beginPath();
-			//ctx.arc(0,-5,30,0,Math.PI*2);
-			/*ctx.moveTo(-20-1*shieldCoeff,10+1*shieldCoeff);
-			ctx.lineTo(0,0+.5*shieldCoeff);
-			ctx.lineTo(20+1*shieldCoeff,10+1*shieldCoeff);
-			ctx.lineTo(0,-30-1.2*shieldCoeff);*/
-			for(var n = 0; n<ship.model.shieldVectors.length; n++){
-				var vert = ship.model.vertices[n];
-				var vec = ship.model.shieldVectors[n];
-				var shieldVert = [vert[0]+vec[0]*shieldCoeff,vert[1]+vec[1]*shieldCoeff];
-				if(n==0)
-					ctx.moveTo(shieldVert[0],shieldVert[1]);
-				else
-					ctx.lineTo(shieldVert[0],shieldVert[1]);
+			if(ship.destructible.shield.max>0){
+				var shieldCoeff = (ship.destructible.shield.max/ship.destructible.shield.efficiency);
+				ctx.save();
+				ctx.fillStyle = 'dodgerblue';
+				ctx.beginPath();
+				//ctx.arc(0,-5,30,0,Math.PI*2);
+				/*ctx.moveTo(-20-1*shieldCoeff,10+1*shieldCoeff);
+				ctx.lineTo(0,0+.5*shieldCoeff);
+				ctx.lineTo(20+1*shieldCoeff,10+1*shieldCoeff);
+				ctx.lineTo(0,-30-1.2*shieldCoeff);*/
+				for(var n = 0; n<ship.model.shieldVectors.length; n++){
+					var vert = ship.model.vertices[n];
+					var vec = ship.model.shieldVectors[n];
+					var shieldVert = [vert[0]+vec[0]*shieldCoeff,vert[1]+vec[1]*shieldCoeff];
+					if(n==0)
+						ctx.moveTo(shieldVert[0],shieldVert[1]);
+					else
+						ctx.lineTo(shieldVert[0],shieldVert[1]);
+				}
+				ctx.globalAlpha = ship.destructible.shield.current/ship.destructible.shield.max;
+				ctx.fill();
+				ctx.restore();
 			}
-			ctx.globalAlpha = ship.destructible.shield.current/ship.destructible.shield.max;
-			ctx.fill();
-			ctx.restore();
 
 		//the rest of the ship
 			ctx.beginPath();
@@ -376,9 +378,10 @@ var drawing = {
 
 			ctx.save();
 			ctx.beginPath();
-			ctx.arc(center[0], center[1], radial.radius+frameVelocity/2, 0, Math.PI*2);
+			ctx.arc(center[0], center[1], (radial.radius+frameVelocity/2)*camera.zoom, 0, Math.PI*2);
 			ctx.strokeStyle = radial.color;
-			ctx.lineWidth = frameVelocity;
+			var width = frameVelocity*camera.zoom
+			ctx.lineWidth = (width>.3)?width:.1;
 			ctx.stroke();
 			ctx.restore();
 		});
