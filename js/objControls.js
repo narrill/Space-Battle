@@ -18,6 +18,8 @@ var objControls = {
 
 	//rotational stabilizer
 	objRotationalStabilizers:function(obj,dt){
+		if(!obj.stabilizer)
+			return;
 		//if the side thruster isn't active, or is active in the opposite direction of our rotation
 		if(obj.thrusters.rotational.targetStrength*obj.rotationalVelocity>=0 && Math.abs(obj.rotationalVelocity) > obj.stabilizer.precision/6)
 			//add correctional strength in the opposite direction of our rotation
@@ -30,6 +32,8 @@ var objControls = {
 
 	//medial stabilizer
 	objMedialStabilizers:function(obj,dt){
+		if(!obj.stabilizer)
+			return;
 		//if the main thruster isn't active, or is working against our velocity
 		var medialVelocity = utilities.getMedialVelocity(obj);
 		if(obj.thrusters.medial.targetStrength*medialVelocity>=0 && Math.abs(medialVelocity) > obj.stabilizer.precision)
@@ -43,6 +47,8 @@ var objControls = {
 
 	//lateral stabilizer
 	objLateralStabilizers:function(obj,dt){
+		if(!obj.stabilizer)
+			return;
 		//see above
 		var lateralVelocity = utilities.getLateralVelocity(obj);
 		if(obj.thrusters.lateral.targetStrength*lateralVelocity>=0 && Math.abs(lateralVelocity) > obj.stabilizer.precision)
@@ -52,6 +58,8 @@ var objControls = {
 	},
 
 	objFireLaser:function(obj){
+		if(!obj.laser)
+			return;
 		var now = Date.now();
 		//if the cool down is up
 		if(now>obj.laser.lastFireTime+obj.laser.cd*1000){
@@ -66,6 +74,8 @@ var objControls = {
 	},
 
 	objFireCannon: function(obj){
+		if(!obj.cannon)
+			return;
 		var now = Date.now();
 		if(now>obj.cannon.lastFireTime+obj.cannon.cd*1000){
 			obj.cannon.lastFireTime = now;
@@ -80,54 +90,13 @@ var objControls = {
 	},
 
 	objFireLauncher: function(obj){
+		if(!obj.launcher)
+			return;
 		var now = Date.now();
 		if(now>obj.launcher.lastFireTime+obj.launcher.cd*1000){
 			obj.launcher.lastFireTime = now;
 			obj.launcher.firing = true;
 		}
-	},
-
-	objAI:function(obj, target,dt){
-		var vectorToTarget = [target.x-obj.x,target.y-obj.y];
-		var forwardVector = utilities.getForwardVector(obj);
-		var relativeAngleToTarget = angleBetweenVectors(forwardVector[0],forwardVector[1],vectorToTarget[0],vectorToTarget[1]);
-
-		if(relativeAngleToTarget>0)
-			objControls.objRotationalThrusters(obj,-relativeAngleToTarget * dt * obj.ai.accuracy * obj.thrusters.rotational.maxStrength/obj.stabilizer.thrustRatio);
-		else if (relativeAngleToTarget<0)
-			objControls.objRotationalThrusters(obj,-relativeAngleToTarget * dt * obj.ai.accuracy * obj.thrusters.rotational.maxStrength/obj.stabilizer.thrustRatio);
-
-		var distanceSqr = vectorMagnitudeSqr(vectorToTarget[0],vectorToTarget[1]);
-
-		var myRange = (obj.hasOwnProperty("laser")) ? obj.laser.range : 10000;
-
-		if(relativeAngleToTarget<obj.ai.fireSpread/2 && relativeAngleToTarget>-obj.ai.fireSpread/2)
-		{
-			if(distanceSqr<(myRange*myRange) && obj.hasOwnProperty("laser"))
-				objControls.objFireLaser(obj);
-			else if(obj.hasOwnProperty("cannon"))
-				objControls.objFireCannon(obj);
-		}
-
-		if(distanceSqr > obj.ai.followMax*obj.ai.followMax)
-			objControls.objMedialThrusters(obj,obj.thrusters.medial.maxStrength/obj.stabilizer.thrustRatio);
-		else if(distanceSqr<obj.ai.followMin*obj.ai.followMin)
-			objControls.objMedialThrusters(obj,-obj.thrusters.medial.maxStrength/obj.stabilizer.thrustRatio);
-
-		var vectorFromTarget = [-vectorToTarget[0],-vectorToTarget[1]];
-		var relativeAngleToMe = angleBetweenVectors(target.forwardVectorX,target.forwardVectorY,vectorFromTarget[0],vectorFromTarget[1]);
-		//console.log(Math.floor(relativeAngleToMe));
-
-		var targetRange = (target.hasOwnProperty("laser")) ? target.laser.range : 10000;
-
-		if(distanceSqr<2*(targetRange*targetRange) && relativeAngleToMe<90 && relativeAngleToMe>0)
-			objControls.objLateralThrusters(obj, obj.thrusters.lateral.maxStrength/obj.stabilizer.thrustRatio);
-		else if(distanceSqr<2*(targetRange*targetRange) && relativeAngleToMe>-90 &&relativeAngleToMe<0)
-			objControls.objLateralThrusters(obj, -obj.thrusters.lateral.maxStrength/obj.stabilizer.thrustRatio);
-
-		objControls.objMedialStabilizers(obj,dt);
-		objControls.objLateralStabilizers(obj,dt);
-		objControls.objRotationalStabilizers(obj,dt);
 	},
 
 	objKeyboardControl:function(obj, dt){

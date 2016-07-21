@@ -58,6 +58,8 @@ var constructors = {
 				var constructor = constructors['createComponent'+capitalized];
 				//if a constructor was found, call it
 				if(constructor) ship[key] = constructor(deepObjectMerge({}, objectParams[key]));
+				else if(key=='specialProperties')
+					ship.specialProperties = objectParams[key];
 			}
 
 		//deepObjectMerge(ship, defaults);
@@ -207,13 +209,13 @@ var constructors = {
 			objectParams = {};
 		var am = {
 			destructible:constructors.createComponentDestructible(deepObjectMerge({
-				hp:.1,
+				hp:50,
 				radius:.5
 			},objectParams.destructible)),
 			color:'yellow',
 			tracerInterval:5,
 			tracerSeed:0,
-			collisionFunction:"basicBulletCollision"
+			collisionFunction:"basicKineticCollision"
 		};
 
 		veryShallowObjectMerge(am, objectParams);
@@ -307,15 +309,16 @@ var constructors = {
 	},
 
 	//constructor for the AI component
-	createComponentShipAI:function(objectParams){
+	createComponentAi:function(objectParams){
 		if(!objectParams)
 			objectParams = {};
-		return veryShallowObjectMerge({
-			followMin:2500,
-			followMax:3000,
-			accuracy:.5,
-			fireSpread:5
-		}, objectParams);
+		var ai = {
+			aiFunction:undefined
+		};
+
+		veryShallowObjectMerge(ai, objectParams);
+
+		return ai;
 	},
 
 	//constructor for viewport component
@@ -369,6 +372,7 @@ var constructors = {
 	//constructor for projectile object
 	createProjectile:function(projectiles, startX, startY, velX, velY, destructible, color, owner, visible, collisionFunction){
 		var prj = {
+			cullTolerance:.3,
 			x:startX,
 			y:startY,
 			prevX:startX,

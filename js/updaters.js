@@ -150,8 +150,8 @@ var updaters = {
 	updateLauncherComponent:function(obj, dt){
 		if(obj.launcher.firing){
 			//var now = Date.now();
-			var launchee = obj.launcher.tubes[0].ammo;
-			launchee.x = obj.x, launchee.y = obj.y;
+			var launchee = deepObjectMerge({},obj.launcher.tubes[0].ammo);
+			launchee.x = obj.x, launchee.y = obj.y, launchee.velocityX = obj.velocityX, launchee.velocityY = obj.velocityY, launchee.rotation = obj.rotation, launchee.color = obj.color, launchee.specialProperties = {owner:obj};
 			obj.game.otherShips.push(constructors.createShip(launchee, obj.game));
 			obj.launcher.firing = false;
 		}
@@ -241,6 +241,11 @@ var updaters = {
 		return clamp(0,(ps.current[component]-(1/components))/(2*(1/components)),1); //this is the transformation function
 	},
 
+	updateAiComponent:function(obj, dt){
+		var aiF = aiFunctions[obj.ai.aiFunction];
+		aiF(obj, dt);
+	},
+
 	updateUpdatable:function(obj,dt){
 		var test = this;
 		for(var c = 0;c<obj.updaters.length;c++){
@@ -254,6 +259,8 @@ var updaters = {
 
 		if(obj.hasOwnProperty("velocityX") && obj.hasOwnProperty("velocityY"))
 			updateFunctions.push(updaters.updateMobile);
+		if(obj.ai)
+			updateFunctions.push(updaters.updateAiComponent);
 		if(obj.thrusters)
 			updateFunctions.push(updaters.updateThrusterSystem);
 		if(obj.laser)
@@ -281,11 +288,14 @@ var updaters = {
 
 var clearFunctions = {
 	//destroys any members of the given destructible array that are outside the given grid by more than the tolerance
-	cullDestructibles: function(destructibles, grid, tolerancePercent){
+	cullDestructibles: function(destructibles, grid){
 		var gridDimensions = grid.gridLines * grid.gridSpacing;
-		var tolerances = [gridDimensions * tolerancePercent, gridDimensions * tolerancePercent];
-
+		var tolerancePercent;
 		for(var c = 0;c<destructibles.length;c++){
+			if(!destructibles[c].hasOwnProperty("cullTolerance"))
+				continue;
+			tolerancePercent = destructibles[c].cullTolerance;
+			var tolerances = [gridDimensions * tolerancePercent, gridDimensions * tolerancePercent];
 			var position = [destructibles[c].x, destructibles[c].y];
 			if(!gridFunctions.isPositionInGrid(position, grid, tolerances))
 				destructibles.splice(c--,1);
@@ -337,17 +347,31 @@ var collisions = {
 		laser.endY = newEnd[1];
 	},
 
-	basicBulletCollision:function(prj, gameObj, dt){
-		var objVel = [(gameObj.velocityX)?gameObj.velocityX:0,(gameObj.velocityY)?gameObj.velocityY:0];
-		var velocityDifference = [prj.velocityX - objVel[0], prj.velocityY - objVel[1]];
+	basicKineticCollision:function(collider, collidee, dt){
+		var LIMITINGSIZEFACTOR = 10;
+		var objVel = [(collidee.velocityX)?collidee.velocityX:0,(collidee.velocityY)?collidee.velocityY:0];
+		var velocityDifference = [collider.velocityX - objVel[0], collider.velocityY - objVel[1]];
 		var magnitude = Math.sqrt(velocityDifference[0] * velocityDifference[0] + velocityDifference[1] * velocityDifference[1]);
-		var damage = magnitude * prj.destructible.maxHp * prj.destructible.radius/gameObj.destructible.radius;
-		prj.destructible.hp-=damage;
-		gameObj.destructible.shield.current-=damage;
-		if(gameObj.destructible.shield.current<0)
+		var damage = dt * magnitude/200;// * collider.destructible.maxHp;// * collider.destructible.radius/collidee.destructible.radius;
+		//console.log('collision damage: '+damage);
+		//collider.destructible.hp-=damage;
+		var colliderSizeCoeff = LIMITINGSIZEFACTOR*collidee.destructible.radius/collider.destructible.radius;
+		var colliderDamage = clamp(0,damage * collidee.destructible.maxHp,colliderSizeCoeff*collider.destructible.maxHp);// * collidee.destructible.radius/collider.destructible.radius;
+		collider.destructible.shield.current-= colliderDamage;
+		if(collider.destructible.shield.current<0)
 		{
-			gameObj.destructible.hp+=gameObj.destructible.shield.current;
-			gameObj.destructible.shield.current = 0;
+			collider.destructible.hp+=collider.destructible.shield.current;
+			collider.destructible.shield.current = 0;
 		}
+		var collideeSizeCoeff = LIMITINGSIZEFACTOR*collider.destructible.radius/collidee.destructible.radius;
+		var collideeDamage = clamp(0,damage * collider.destructible.maxHp,collideeSizeCoeff*collidee.destructible.maxHp);// * collider.destructible.radius/collidee.destructible.radius;
+		collidee.destructible.shield.current-= collideeDamage;
+		if(collidee.destructible.shield.current<0)
+		{
+			collidee.destructible.hp+=collidee.destructible.shield.current;
+			collidee.destructible.shield.current = 0;
+		}
+
+		console.log('collider'+Math.round(collider.destructible.radius)+' damage: '+colliderDamage+'\ncollidee '+Math.round(collidee.destructible.radius)+' damage: '+collideeDamage);
 	}
 };

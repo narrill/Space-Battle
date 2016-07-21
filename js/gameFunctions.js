@@ -65,15 +65,24 @@ var gameFunctions = {
 		clearFunctions.clearDestructibles(game.otherShips); 
 		clearFunctions.clearDestructibles(game.updatables);
 		clearFunctions.clearDestructibles(game.projectiles);
-		clearFunctions.cullDestructibles(game.projectiles, game.grid, .3);
+		clearFunctions.cullDestructibles(game.projectiles, game.grid);
+		clearFunctions.cullDestructibles(game.otherShips, game.grid);
 		clearFunctions.clearRadials(game.radials);
 
 	 	if(game.otherShipCount<game.maxOtherShips)
 	 	{
 			game.otherShipCount+=game.otherShipCount-game.otherShips.length;
 			for(;game.otherShips.length<game.otherShipCount;){ //lol
-				game.otherShips.push(constructors.createShip((Math.round(Math.random())) ? ships.gull : ships.cheetah, game));
-				game.otherShips[game.otherShips.length-1].ai = constructors.createComponentShipAI();
+				var newShip = deepObjectMerge({},(Math.round(Math.random())) ? ships.gull : ships.cheetah);
+				newShip.ai = {
+					aiFunction:'basic',
+					followMin:2500,
+					followMax:3000,
+					accuracy:.5,
+					fireSpread:5
+				};
+				game.otherShips.push(constructors.createShip(newShip, game));
+				//game.otherShips[game.otherShips.length-1].ai = constructors.createComponentShipAI();
 			}
 	 	}
 
@@ -233,7 +242,30 @@ var gameFunctions = {
 	},	
 
 	checkCollisions:function(game, dt){
-		//laser collisions
+		//obj collisions
+			//var resolvedCollisions = [];
+			for(var i = -1;i<game.otherShips.length;i++){
+				var currentObj = ((i==-1)?game.ship:game.otherShips[i]);
+				var currentObjNext = [currentObj.x+currentObj.velocityX*dt, currentObj.y+currentObj.velocityY*dt];
+				var currentObjCapsule = {center1:[currentObj.x,currentObj.y], center2:currentObjNext, radius:currentObj.destructible.radius};
+				for(var c = i+1;c<game.otherShips.length;c++){
+					var gameObj = ((c==-1) ? game.ship : game.otherShips[c]); //lol
+					var gameObjNext = [gameObj.x+gameObj.velocityX*dt, gameObj.y+gameObj.velocityY*dt];
+					if(currentObj.specialProperties && gameObj == currentObj.specialProperties.owner || gameObj.specialProperties && currentObj == gameObj.specialProperties.owner)
+						continue;
+					var distanceSqr = Math.abs((currentObj.x - gameObj.x)*(currentObj.x - gameObj.x) + (currentObj.y - gameObj.y)*(currentObj.y - gameObj.y));
+					if(distanceSqr>5*(currentObj.destructible.radius+gameObj.destructible.radius)*(currentObj.destructible.radius+gameObj.destructible.radius))
+						continue;
+					//if(capsuleCapsuleSAT({center1:[gameObj.x,gameObj.y], center2:[gameObj.x+gameObj.velocityX*dt, gameObj.y+gameObj.velocityY*dt], radius:gameObj.destructible.radius}, currentObjCapsule))
+					if(capsuleCapsuleSAT({center1:[gameObj.x,gameObj.y], center2:gameObjNext, radius:gameObj.destructible.radius}, currentObjCapsule))
+					{
+						console.log('collision');
+						collisions.basicKineticCollision(currentObj, gameObj, dt);
+						//console.log(damage+' damage, '+magnitude+' magnitude');
+					}
+				}
+			}
+		//hitscan collisions
 			game.hitscans.forEach(function(hitscan){
 				if(hitscan.power == 0)
 					return;
@@ -373,8 +405,15 @@ var gameFunctions = {
 		game.otherShipCount = 1;
 		for(var c = 0;c<game.otherShipCount;c++)
 		{
-			game.otherShips.push(constructors.createShip((Math.round(Math.random())) ? ships.gull : ships.cheetah, game));
-			game.otherShips[c].ai = constructors.createComponentShipAI();
+			var newShip = deepObjectMerge({},(Math.round(Math.random())) ? ships.gull : ships.cheetah);
+			/*newShip.ai = {
+				aiFunction:'basic',
+				followMin:2500,
+				followMax:3000,
+				accuracy:.5,
+				fireSpread:5
+			};*/
+			game.otherShips.push(constructors.createShip(newShip, game));
 		}
 		game.gameState = enums.GAME_STATES.PLAYING;
 		game.frameCount = 0;
