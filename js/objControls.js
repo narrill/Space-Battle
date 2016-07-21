@@ -99,6 +99,12 @@ var objControls = {
 		}
 	},
 
+	objFireTargetingSystem: function(obj){
+		if(!obj.targetingSystem)
+			return;
+		obj.targetingSystem.firing = true;
+	},
+
 	objKeyboardControl:function(obj, dt){
 		//set obj thruster values
 			//medial motion
@@ -126,13 +132,16 @@ var objControls = {
 			//weapons
 				if(myMouse.mousedown[myMouse.BUTTONS.LEFT] || myKeys.keydown[myKeys.KEYBOARD.KEY_SPACE])
 				{
-					if(obj.weaponToggle && obj.hasOwnProperty("laser"))
+					if(obj.hasOwnProperty("laser"))
 						objControls.objFireLaser(obj);
 					else if(obj.hasOwnProperty("cannon"))
 						objControls.objFireCannon(obj);
 				}
 				if(myKeys.keydown[myKeys.KEYBOARD.KEY_Q])
 					objControls.objFireLauncher(obj);
+				if(myKeys.keydown[myKeys.KEYBOARD.KEY_E])
+					objControls.objFireTargetingSystem(obj);
+
 			//power system
 				if(myKeys.keydown[myKeys.KEYBOARD.KEY_SHIFT])
 					obj.powerSystem.target[enums.SHIP_COMPONENTS.THRUSTERS] = 1;

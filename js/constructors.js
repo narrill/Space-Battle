@@ -227,7 +227,6 @@ var constructors = {
 		if(!objectParams)
 			objectParams = {};
 		var ln = {
-			targetingSystem:constructors.createComponentTargetingSystem(deepObjectMerge({},objectParams.targetingSystem)),
 			tubes:[
 				{ammo:missiles.tomcat, lastFireTime:0}
 			],
@@ -246,11 +245,12 @@ var constructors = {
 		if(!objectParams)
 			objectParams = {};
 		var ts = {
-			target:undefined,
-			range:10000,
+			targets:[],
+			maxTargets:1,
+			range:50000,
 			lockConeWidth:15,
 			lockTime:3,
-			lockedTarget:undefined
+			lockedTargets:[]
 		};
 
 		veryShallowObjectMerge(ts, objectParams);
@@ -313,8 +313,13 @@ var constructors = {
 		if(!objectParams)
 			objectParams = {};
 		var ai = {
-			aiFunction:undefined
+			aiFunction:undefined,
+			specialProperties:{}
 		};
+
+		if(objectParams.specialProperties)
+			for(var key in objectParams.specialProperties)
+				ai.specialProperties[key] = objectParams.specialProperties[key];
 
 		veryShallowObjectMerge(ai, objectParams);
 
@@ -334,19 +339,19 @@ var constructors = {
 	},
 
 	//constructor for laser object
-	createHitscan:function(hitscans, startX,startY,endX,endY,color, power,efficiency, owner, collisionFunction){
+	createHitscan:function(hitscans, startX,startY,endX,endY,color, owner, collisionFunction, collisionProperties){
 		var hitscan = {
 			startX:startX,
 			startY:startY,
 			endX:endX,
 			endY:endY,
 			color:color,
-			power:power,
-			efficiency:efficiency,
 			//previousLaser:previousLaser,
 			owner:owner,
 			collisionFunction:collisionFunction
 		};
+
+		if(collisionProperties) veryShallowObjectMerge(hitscan, collisionProperties);
 		//lsr.nextLaser = constructors.createNextLaserObject(lsr)
 		if(hitscans) hitscans.push(hitscan);
 		return hitscan;

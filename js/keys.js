@@ -104,8 +104,8 @@ window.addEventListener("keyup",function(e){
 		if(app.main.paused) gameFunctions.resumeGame(app.main);
 		else gameFunctions.pauseGame(app.main);
 	}
-	else if(e.keyCode == myKeys.KEYBOARD.KEY_E)
-		app.main.ship.weaponToggle = !app.main.ship.weaponToggle;
+	//else if(e.keyCode == myKeys.KEYBOARD.KEY_E)
+	//	app.main.ship.weaponToggle = !app.main.ship.weaponToggle;
 });
 
 function requestLock(){

@@ -211,6 +211,11 @@ function requestFullscreen(element) {
 	// .. and do nothing if the method is not supported
 };
 
+function distanceSqr(p1, p2){
+	var vec = [p2[0]-p1[0], p2[1]-p1[1]];
+	return vec[0]*vec[0] + vec[1]*vec[1];
+}
+
 //http://stackoverflow.com/questions/17410809/how-to-calculate-rotation-in-2d-in-javascript
 //point to rotate around, point to rotate, angle to rotate by
 function rotate(cx, cy, x, y, angle) {
@@ -584,7 +589,10 @@ function deepObjectMerge(target, src){
 			if(!target[key] || !(target[key] instanceof Object && !(target[key] instanceof Array)))
 				target[key] = {}; //make it an empty object
 			//then deep merge the two
-			deepObjectMerge(target[key],src[key]);
+			if(key=='specialProperties')
+				target[key] = src[key];
+			else
+				deepObjectMerge(target[key],src[key]);
 		}
 		//if current attribute isn't an object in the source
 		else

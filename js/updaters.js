@@ -126,7 +126,7 @@ var updaters = {
 				endX:obj.x+obj.velocityX*dt+nextLaserVector[0],
 				endX:obj.x+obj.velocityX*dt+nextLaserVector[1]
 			};*/
-			if(obj.laser.currentPower>0) constructors.createHitscan(obj.game.hitscans,obj.x+forwardVector[0]*(30),obj.y+forwardVector[1]*30,obj.x+currentLaserVector[0],obj.y+currentLaserVector[1],obj.laser.color,obj.laser.currentPower, obj.laser.efficiency, obj, collisions[obj.laser.collisionFunction]);
+			if(obj.laser.currentPower>0) constructors.createHitscan(obj.game.hitscans,obj.x+forwardVector[0]*(30),obj.y+forwardVector[1]*30,obj.x+currentLaserVector[0],obj.y+currentLaserVector[1],obj.laser.color, obj, collisions[obj.laser.collisionFunction], {power:obj.laser.currentPower, efficiency:obj.laser.efficiency});
 			obj.laser.currentPower -= obj.laser.maxPower*(1-obj.laser.coherence)*dt*1000;
 			if(obj.laser.currentPower<0)
 				obj.laser.currentPower=0;
@@ -152,8 +152,70 @@ var updaters = {
 			//var now = Date.now();
 			var launchee = deepObjectMerge({},obj.launcher.tubes[0].ammo);
 			launchee.x = obj.x, launchee.y = obj.y, launchee.velocityX = obj.velocityX, launchee.velocityY = obj.velocityY, launchee.rotation = obj.rotation, launchee.color = obj.color, launchee.specialProperties = {owner:obj};
+			if(obj.targetingSystem && obj.targetingSystem.lockedTargets.length>0 && launchee.ai)
+				launchee.ai.specialProperties = {target:obj.targetingSystem.lockedTargets[0]};
 			obj.game.otherShips.push(constructors.createShip(launchee, obj.game));
 			obj.launcher.firing = false;
+		}
+	},
+
+	updateTargetingSystemComponent:function(obj, dt){
+		var forwardVector = utilities.getForwardVector(obj);
+		var rightVector = utilities.getRightVector(obj);
+		var ts = obj.targetingSystem;
+		//drop oldest targets if we have too many
+		while(ts.targets.length>ts.maxTargets)
+		{
+			ts.targets.shift();
+			console.log('target shifted');
+		}
+		//if the angle to any of the targets is greater than the cone width or they are out of range, drop them
+		for(var c = 0; c<ts.targets.length; c++)
+		{
+			var targetInfo = ts.targets[c];
+			var target = targetInfo.obj;
+			var vectorToTarget = [target.x-obj.x,target.y-obj.y];
+			var vectorToRight = [vectorToTarget[0] + rightVector[0]*target.destructible.radius, vectorToTarget[1] + rightVector[1]*target.destructible.radius];	
+			var vectorToLeft = [vectorToTarget[0] - rightVector[0]*target.destructible.radius, vectorToTarget[1] - rightVector[1]*target.destructible.radius];	
+			var relativeAngleToRight = angleBetweenVectors(forwardVector[0],forwardVector[1],vectorToRight[0],vectorToRight[1]);
+			var relativeAngleToLeft = angleBetweenVectors(forwardVector[0],forwardVector[1],vectorToLeft[0],vectorToLeft[1]);
+			var outsideCone = Math.abs(relativeAngleToRight) > ts.lockConeWidth/2 && Math.abs(relativeAngleToLeft) > ts.lockConeWidth/2 && relativeAngleToLeft*relativeAngleToRight > 0;
+			var rangeToTarget = vectorToTarget[0]*vectorToTarget[0] + vectorToTarget[1]*vectorToTarget[1];
+			var outsideRange = rangeToTarget > (ts.range+target.destructible.radius) * (ts.range+target.destructible.radius);
+			if(outsideCone || outsideRange)
+			{
+				ts.targets.splice(c--,1);
+				console.log('target dropped - cone: '+outsideCone+' range: '+rangeToTarget+' / '+(ts.range+target.destructible.radius) * (ts.range+target.destructible.radius));
+				continue;
+			}
+			if(Date.now()>targetInfo.timeAdded+ts.lockTime*1000)
+			{
+				ts.lockedTargets.push(target);
+				ts.targets.splice(c--,1);
+				console.log('locking target');
+			}
+		}
+		//if any locked targets are out of range, drop them
+		for(var c = 0; c<ts.lockedTargets.length; c++)
+		{
+			var target = ts.lockedTargets[c];
+			if(distanceSqr([obj.x, obj.y], [target.x, target.y]) > (ts.range+target.destructible.radius) * (ts.range+target.destructible.radius))
+			{
+				ts.lockedTargets.splice(c--,1);
+				console.log('locked target dropped');
+			}
+		}
+		//drop oldest locked targets if we have too many
+		while(ts.lockedTargets.length>ts.maxTargets)
+		{
+			ts.lockedTargets.shift();
+			console.log('locked target shifted');
+		}
+
+		if(ts.firing){
+			var rangeVector = [forwardVector[0]*ts.range, forwardVector[1]*ts.range];
+			constructors.createHitscan(obj.game.hitscans,obj.x+forwardVector[0]*(30),obj.y+forwardVector[1]*30,obj.x+rangeVector[0],obj.y+rangeVector[1], 'rgb(255,0,0)', obj, collisions.targetingLaserCollision);
+			ts.firing = false;
 		}
 	},
 
@@ -273,6 +335,8 @@ var updaters = {
 			updateFunctions.push(updaters.updatePowerSystem);
 		if(obj.launcher)
 			updateFunctions.push(updaters.updateLauncherComponent);
+		if(obj.targetingSystem)
+			updateFunctions.push(updaters.updateTargetingSystemComponent);
 
 		obj.updaters = updateFunctions;
 	},
@@ -341,10 +405,6 @@ var collisions = {
 			obj.destructible.shield.current = 0;
 		}
 		console.log('hp: '+Math.round(obj.destructible.hp)+'/'+Math.round(obj.destructible.maxHp)+', damage: '+Math.round(laser.power*dt*(1-tValOfObj)));
-		var laserDir = [laser.endX-laser.startX,laser.endY-laser.startY];
-		var newEnd = [laser.startX+tValOfObj*laserDir[0],laser.startY+tValOfObj*laserDir[1]];
-		laser.endX = newEnd[0];
-		laser.endY = newEnd[1];
 	},
 
 	basicKineticCollision:function(collider, collidee, dt){
@@ -373,5 +433,17 @@ var collisions = {
 		}
 
 		console.log('collider'+Math.round(collider.destructible.radius)+' damage: '+colliderDamage+'\ncollidee '+Math.round(collidee.destructible.radius)+' damage: '+collideeDamage);
+	},
+
+	targetingLaserCollision:function(hitscan, obj, tValOfObj, dt){
+		var ts = hitscan.owner.targetingSystem;
+		for(var c = 0;c<ts.targets.length;c++)
+			if(ts.targets[c].obj == obj)
+				return;
+		for(var c = 0;c<ts.lockedTargets.length;c++)
+			if(ts.lockedTargets[c] == obj)
+				return;
+		ts.targets.push({obj:obj, timeAdded:Date.now()});
+		console.log('adding target');
 	}
 };

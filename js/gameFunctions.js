@@ -326,7 +326,13 @@ var gameFunctions = {
 
 				//resolve collision
 					if(obj)
+					{
 						hitscan.collisionFunction(hitscan, obj, tValOfObj, dt);
+						var hitscanDir = [hitscan.endX-hitscan.startX,hitscan.endY-hitscan.startY];
+						var newEnd = [hitscan.startX+tValOfObj*hitscanDir[0],hitscan.startY+tValOfObj*hitscanDir[1]];
+						hitscan.endX = newEnd[0];
+						hitscan.endY = newEnd[1];
+					}
 			},game);
 
 		//projectile collisions
@@ -406,13 +412,13 @@ var gameFunctions = {
 		for(var c = 0;c<game.otherShipCount;c++)
 		{
 			var newShip = deepObjectMerge({},(Math.round(Math.random())) ? ships.gull : ships.cheetah);
-			/*newShip.ai = {
+			newShip.ai = {
 				aiFunction:'basic',
 				followMin:2500,
 				followMax:3000,
 				accuracy:.5,
 				fireSpread:5
-			};*/
+			};
 			game.otherShips.push(constructors.createShip(newShip, game));
 		}
 		game.gameState = enums.GAME_STATES.PLAYING;

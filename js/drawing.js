@@ -310,15 +310,15 @@ var drawing = {
 	drawHitscans:function(hitscans,camera){
 		var ctx = camera.ctx;
 		hitscans.forEach(function(hitscan){
-			if(hitscan.power == 0)
-				return;
+			//if(hitscan.power == 0)
+			//	return;
 			var start = worldPointToCameraSpace(hitscan.startX,hitscan.startY,camera);
 			var end = worldPointToCameraSpace(hitscan.endX,hitscan.endY,camera);
 			var startNext = worldPointToCameraSpace(hitscan.nextHitscan.startX,hitscan.nextHitscan.startY,camera);
 			var endNext = worldPointToCameraSpace(hitscan.nextHitscan.endX,hitscan.nextHitscan.endY,camera);
 			var angle = angleBetweenVectors(end[0]-start[0],end[1]-start[1],1,0);
 			var rightVector = rotate(0,0,1,0,angle+90	);
-			var width = (hitscan.power/hitscan.efficiency)*camera.zoom;
+			var width = (hitscan.power && hitscan.efficiency) ? (hitscan.power/hitscan.efficiency)*camera.zoom : 0;
 			if(width<.8)
 				width = .8;
 			for(var c = 0;c<=hitscanDetail;c++)

@@ -74,7 +74,8 @@ var ships = {
 		cannon:{},
 		stabilizer:{},
 		powerSystem:{},
-		launcher:{}
+		launcher:{},
+		targetingSystem:{}
 	}
 };
 
@@ -138,10 +139,10 @@ var aiFunctions = {
 
 		if(relativeAngleToTarget<obj.ai.fireSpread/2 && relativeAngleToTarget>-obj.ai.fireSpread/2)
 		{
-			if(distanceSqr<(myRange*myRange) && obj.hasOwnProperty("laser"))
+			/*if(distanceSqr<(myRange*myRange) && obj.hasOwnProperty("laser"))
 				objControls.objFireLaser(obj);
 			else if(obj.hasOwnProperty("cannon"))
-				objControls.objFireCannon(obj);
+				objControls.objFireCannon(obj);*/
 		}
 
 		if(distanceSqr > obj.ai.followMax*obj.ai.followMax)
@@ -165,6 +166,22 @@ var aiFunctions = {
 		objControls.objRotationalStabilizers(obj,dt);
 	},
 	tomcat:function(obj, dt){
-		objControls.objMedialThrusters(obj, obj.thrusters.medial.maxStrength);
+		var target = obj.ai.specialProperties.target;
+		if(target)
+		{
+			var vectorToTarget = [target.x-obj.x,target.y-obj.y];
+			if(vectorToTarget[0]*vectorToTarget[0] + vectorToTarget[1]*vectorToTarget[1] < (100 + target.destructible.radius + obj.destructible.radius) * (100 + target.destructible.radius + obj.destructible.radius))
+				obj.destructible.hp = 0;
+			var rightVector = utilities.getRightVector(obj);
+			var forwardVector = utilities.getForwardVector(obj);
+			var relativeAngleToTarget = angleBetweenVectors(forwardVector[0],forwardVector[1],vectorToTarget[0],vectorToTarget[1]);
+			var lateralDisplacementToTarget = scalarComponentOf1InDirectionOf2(vectorToTarget[0], vectorToTarget[1], rightVector[0], rightVector[1]);
+
+			objControls.objRotationalThrusters(obj,-relativeAngleToTarget * .2 * dt * obj.thrusters.rotational.maxStrength);
+			objControls.objLateralThrusters(obj, lateralDisplacementToTarget*.2*dt*obj.thrusters.lateral.maxStrength);
+			if(relativeAngleToTarget > -10 && relativeAngleToTarget < 10)
+				objControls.objMedialThrusters(obj, obj.thrusters.medial.maxStrength);
+		}
+		else objControls.objMedialThrusters(obj, obj.thrusters.medial.maxStrength);
 	}
 };
