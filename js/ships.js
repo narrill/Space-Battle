@@ -48,31 +48,31 @@ var ships = {
 	gull:{
 		model:{
 			vertices:[
-				[-10,0],
+				[-10,-5],
 				[0,20],
-				[10,0],
+				[10,-5],
 				[0,-20]
 			],
 
 			shieldVectors:[
 				[-.5, 0],
-				[0,1],
+				[0,1.25],
 				[.5, 0],
-				[0,-1]
+				[0,-.75]
 			],
 
 			thrusterPoints:{
 				medial:{
-					positive:[[0,12]],
-					negative:[[0,7]]
+					positive:[[0,7]],
+					negative:[[0,2]]
 				},
 				lateral:{
-					positive:[[10,0]],
-					negative:[[-10,0]]
+					positive:[[10,-5]],
+					negative:[[-10,-5]]
 				},
 				rotational:{
-					positive:[[2,-5]],
-					negative:[[-2,-5]]
+					positive:[[2,-10]],
+					negative:[[-2,-10]]
 				},
 				width:5
 			},

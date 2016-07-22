@@ -210,7 +210,7 @@ var constructors = {
 		var am = {
 			destructible:constructors.createComponentDestructible(deepObjectMerge({
 				hp:50,
-				radius:.5
+				radius:2
 			},objectParams.destructible)),
 			color:'yellow',
 			tracerInterval:5,
