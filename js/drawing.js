@@ -86,8 +86,13 @@ var drawing = {
 		ctx.lineTo(shipPosInGridCameraSpace[0],shipPosInGridCameraSpace[1]);
 		ctx.translate(shipPosInGridCameraSpace[0],shipPosInGridCameraSpace[1]);
 		ctx.rotate((ship.rotation-gridCamera.rotation) * (Math.PI / 180));
-		var range = (ship.hasOwnProperty("laser"))?ship.laser.range:3000;
-		ctx.arc(0,0,range*gridCamera.zoom,-Math.PI/2,Math.PI*2-Math.PI/2);			
+		for(var type in ship.model.overlay.ranges)
+		{
+			var component = ship[type];
+			if(!component || !component.range)
+				continue;
+			ctx.arc(0,0,component.range*gridCamera.zoom,-Math.PI/2,Math.PI*2-Math.PI/2);
+		}			
 		ctx.rotate(-(ship.rotation-gridCamera.rotation) * (Math.PI / 180));
 		ctx.translate(-shipPosInGridCameraSpace[0],-shipPosInGridCameraSpace[1]);
 		ctx.lineWidth = .5;
@@ -98,24 +103,38 @@ var drawing = {
 		ctx.globalAlpha = .5;
 		ctx.translate(shipPosInGridCameraSpace[0],shipPosInGridCameraSpace[1]);
 		ctx.scale(gridCamera.zoom,gridCamera.zoom);
-		ctx.beginPath();
-		ctx.arc(0,0,750,-Math.PI/2,-Math.PI*2*(ship.destructible.shield.current/ship.destructible.shield.max)-Math.PI/2,true);
-		ctx.strokeStyle = 'dodgerblue';
-		ctx.lineWidth = 100;
-		ctx.stroke();
-		ctx.beginPath();
-		ctx.arc(0,0,600,-Math.PI/2,-Math.PI*2*(ship.destructible.hp/ship.destructible.maxHp)-Math.PI/2,true);
-		ctx.strokeStyle = 'green';
-		ctx.stroke();
-		ctx.beginPath();
-		ctx.arc(0,0,300,0,Math.PI*2);
-		ctx.fillStyle = ship.color;
-		ctx.fill();			
-		ctx.beginPath();
-		ctx.arc(0,0,ship.destructible.radius,0,Math.PI*2);
-		ctx.fillStyle = 'black';
-		ctx.globalAlpha = 1;
-		ctx.fill();
+		if(ship.model.overlay.destructible){
+			ctx.beginPath();
+			ctx.arc(0,0,750,-Math.PI/2,-Math.PI*2*(ship.destructible.shield.current/ship.destructible.shield.max)-Math.PI/2,true);
+			ctx.strokeStyle = 'dodgerblue';
+			ctx.lineWidth = 100;
+			ctx.stroke();
+			ctx.beginPath();
+			ctx.arc(0,0,600,-Math.PI/2,-Math.PI*2*(ship.destructible.hp/ship.destructible.maxHp)-Math.PI/2,true);
+			ctx.strokeStyle = 'green';
+			ctx.stroke();
+		}
+		if(ship.model.overlay.colorCircle){
+			ctx.beginPath();
+			ctx.arc(0,0,300,0,Math.PI*2);
+			ctx.fillStyle = ship.color;
+			ctx.fill();	
+			ctx.beginPath();
+			ctx.arc(0,0,ship.destructible.radius,0,Math.PI*2);
+			ctx.fillStyle = 'black';
+			ctx.globalAlpha = 1;
+			ctx.fill();
+		}
+		else{
+			ctx.scale(1/gridCamera.zoom,1/gridCamera.zoom);
+			ctx.beginPath();
+			ctx.moveTo(ship.destructible.radius*gridCamera.zoom,0);
+			ctx.arc(0,0,ship.destructible.radius*gridCamera.zoom,0,Math.PI*2);
+			ctx.globalAlpha = .2;
+			ctx.lineWidth = .5;
+			ctx.strokeStyle = 'grey';
+			ctx.stroke();
+		}
 		ctx.restore();
 	},
 

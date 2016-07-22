@@ -31,12 +31,18 @@ var ships = {
 					negative:[[-5,-8.5]]
 				},
 				width:5
+			},
+			overlay:{
+				colorCircle:{},
+				destructible:{},
+				ranges:{
+					laser:{}
+				}
 			}
 		},
 		laser:{},
 		stabilizer:{},
-		powerSystem:{},
-		launcher:{}
+		powerSystem:{}
 	},
 
 	gull:{
@@ -69,6 +75,12 @@ var ships = {
 					negative:[[-2,-5]]
 				},
 				width:5
+			},
+
+			overlay:{
+				colorCircle:{},
+				destructible:{},
+				targetingSystem:{}
 			}
 		},
 		cannon:{},
@@ -104,19 +116,20 @@ var missiles = {
 				width:5
 			},
 			overlay:{
-
+				
 			}
 		},
 		destructible:{
 			hp:15,
-			radius:5,
+			radius:15,
 			shield:{
 				max:0
 			}
 		},
 		warhead:{},
 		ai:{
-			aiFunction:'tomcat'
+			aiFunction:'basicMissile',
+			detonationRadius:100
 		}
 	}
 };
@@ -165,22 +178,38 @@ var aiFunctions = {
 		objControls.objLateralStabilizers(obj,dt);
 		objControls.objRotationalStabilizers(obj,dt);
 	},
-	tomcat:function(obj, dt){
-		var target = obj.ai.specialProperties.target;
+	basicMissile:function(obj, dt){
+		var target = (obj.ai.specialProperties) ? obj.ai.specialProperties.target : undefined;
 		if(target)
 		{
-			var vectorToTarget = [target.x-obj.x,target.y-obj.y];
-			if(vectorToTarget[0]*vectorToTarget[0] + vectorToTarget[1]*vectorToTarget[1] < (100 + target.destructible.radius + obj.destructible.radius) * (100 + target.destructible.radius + obj.destructible.radius))
+			var vectorToTarget = (target.velocityX && target.velocityY) ? [target.x-obj.x+target.velocityX*.5,target.y-obj.y+target.velocityY*.5] : [target.x-obj.x,target.y-obj.y];
+			if(vectorToTarget[0]*vectorToTarget[0] + vectorToTarget[1]*vectorToTarget[1] < (obj.ai.detonationRadius + target.destructible.radius + obj.destructible.radius) * (obj.ai.detonationRadius + target.destructible.radius + obj.destructible.radius))
+			{
 				obj.destructible.hp = 0;
+				console.log('detonation');
+			}
 			var rightVector = utilities.getRightVector(obj);
 			var forwardVector = utilities.getForwardVector(obj);
 			var relativeAngleToTarget = angleBetweenVectors(forwardVector[0],forwardVector[1],vectorToTarget[0],vectorToTarget[1]);
 			var lateralDisplacementToTarget = scalarComponentOf1InDirectionOf2(vectorToTarget[0], vectorToTarget[1], rightVector[0], rightVector[1]);
+			var timeTillAligned = relativeAngleToTarget/obj.rotationalVelocity;
+			var timeTillStop = Math.abs(obj.rotationalVelocity/obj.thrusters.rotational.maxStrength);
 
-			objControls.objRotationalThrusters(obj,-relativeAngleToTarget * .2 * dt * obj.thrusters.rotational.maxStrength);
-			objControls.objLateralThrusters(obj, lateralDisplacementToTarget*.2*dt*obj.thrusters.lateral.maxStrength);
-			if(relativeAngleToTarget > -10 && relativeAngleToTarget < 10)
-				objControls.objMedialThrusters(obj, obj.thrusters.medial.maxStrength);
+			if(obj.rotationalVelocity==0)
+			{
+				objControls.objRotationalThrusters(obj, -relativeAngleToTarget * obj.thrusters.rotational.maxStrength);
+				return;
+			}
+
+			if(timeTillAligned<0 || timeTillAligned<timeTillStop)
+				objControls.objRotationalThrusters(obj, (obj.rotationalVelocity/Math.abs(obj.rotationalVelocity))*obj.thrusters.rotational.maxStrength*timeTillStop*10);
+			else if(timeTillAligned>timeTillStop)
+				objControls.objRotationalThrusters(obj, -(obj.rotationalVelocity/Math.abs(obj.rotationalVelocity))*obj.thrusters.rotational.maxStrength*timeTillStop*10);
+
+			objControls.objLateralThrusters(obj,utilities.getLateralVelocity(obj)*1200*dt);
+			objControls.objMedialThrusters(obj, obj.thrusters.medial.maxStrength);
+
+			//objControls.objLateralStabilizers(obj, dt);
 		}
 		else objControls.objMedialThrusters(obj, obj.thrusters.medial.maxStrength);
 	}

@@ -58,8 +58,8 @@ var constructors = {
 				var constructor = constructors['createComponent'+capitalized];
 				//if a constructor was found, call it
 				if(constructor) ship[key] = constructor(deepObjectMerge({}, objectParams[key]));
-				else if(key=='specialProperties')
-					ship.specialProperties = objectParams[key];
+				//else if(key=='specialProperties')
+				//	ship.specialProperties = objectParams[key];
 			}
 
 		//deepObjectMerge(ship, defaults);
@@ -248,7 +248,7 @@ var constructors = {
 			targets:[],
 			maxTargets:1,
 			range:50000,
-			lockConeWidth:15,
+			lockConeWidth:45,
 			lockTime:3,
 			lockedTargets:[]
 		};
@@ -313,13 +313,8 @@ var constructors = {
 		if(!objectParams)
 			objectParams = {};
 		var ai = {
-			aiFunction:undefined,
-			specialProperties:{}
+			aiFunction:undefined
 		};
-
-		if(objectParams.specialProperties)
-			for(var key in objectParams.specialProperties)
-				ai.specialProperties[key] = objectParams.specialProperties[key];
 
 		veryShallowObjectMerge(ai, objectParams);
 

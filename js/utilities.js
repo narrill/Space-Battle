@@ -590,7 +590,11 @@ function deepObjectMerge(target, src){
 				target[key] = {}; //make it an empty object
 			//then deep merge the two
 			if(key=='specialProperties')
-				target[key] = src[key];
+			{
+				if(!target[key])
+					target[key] = {};
+				shallowObjectMerge(target[key], src[key]);
+			}
 			else
 				deepObjectMerge(target[key],src[key]);
 		}
@@ -616,6 +620,13 @@ function veryShallowObjectMerge(target, src){
 		//if the attribute is up the prototype chain, skip it
 		if(!src.hasOwnProperty(key))
 			continue;
+		if(key=='specialProperties')
+		{
+			if(!target[key])
+				target[key] = {};
+			shallowObjectMerge(target[key], src[key]);
+			continue;
+		}
 		//if the current attribute is an object in the source
 		if(src[key] instanceof Object && !(src[key] instanceof Array))
 			continue;
@@ -623,6 +634,17 @@ function veryShallowObjectMerge(target, src){
 	}
 
 	return target;
+}
+
+function shallowObjectMerge(target, src){
+	if(!src)
+		return target;
+	for(var key in src){
+		//if the attribute is up the prototype chain, skip it
+		if(!src.hasOwnProperty(key))
+			continue;
+		target[key] = src[key];
+	}
 }
 
 var mapFunctions = {
