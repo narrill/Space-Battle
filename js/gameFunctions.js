@@ -69,7 +69,7 @@ var gameFunctions = {
 		clearFunctions.cullDestructibles(game.otherShips, game.grid);
 		clearFunctions.clearRadials(game.radials);
 
-	 	if(game.otherShipCount<game.maxOtherShips)
+	 	/*if(game.otherShipCount<game.maxOtherShips)
 	 	{
 			game.otherShipCount+=game.otherShipCount-game.otherShips.length;
 			for(;game.otherShips.length<game.otherShipCount;){ //lol
@@ -84,7 +84,7 @@ var gameFunctions = {
 				game.otherShips.push(constructors.createShip(newShip, game));
 				//game.otherShips[game.otherShips.length-1].ai = constructors.createComponentShipAI();
 			}
-	 	}
+	 	}*/
 
 		if(game.otherShips.length==0 && game.gameState==enums.GAME_STATES.PLAYING)
 		{
@@ -99,9 +99,9 @@ var gameFunctions = {
 		}
 		else if(game.gameState == enums.GAME_STATES.PLAYING || game.gameState==enums.GAME_STATES.TUTORIAL){				
 
-			game.otherShips.forEach(function(ship){
+			/*game.otherShips.forEach(function(ship){
 				//objControls.objAI(ship,game.ship,dt);
-			},game);
+			},game);*/
 
 			objControls.objKeyboardControl(game.ship,dt);
 
@@ -399,6 +399,22 @@ var gameFunctions = {
 					}
 				}
 			}
+
+		//radial collisions
+			for(var n = 0;n<game.radials.length;n++)
+			{
+				var rad = game.radials[n];
+				for(var c = -1;c<game.otherShips.length;c++)
+				{
+					var gameObj = ((c==-1) ? game.ship : game.otherShips[c]); //lol
+					var gameObjNext = [gameObj.x+gameObj.velocityX*dt, gameObj.y+gameObj.velocityY*dt];
+					var circleInner = {center:[rad.x,rad.y],radius:rad.radius};
+					var circleOuter = {center:[rad.x,rad.y],radius:rad.radius+rad.velocity};
+					var capsule = {center1:[gameObj.x,gameObj.y],center2:gameObjNext,radius:gameObj.destructible.radius};
+					if(circleCapsuleSAT(circleOuter,capsule) && !isCapsuleWithinCircle(circleInner,capsule))
+						rad.collisionFunction(rad, gameObj,dt);
+				}
+			}
 	},		
 
 	//resets the game state
@@ -409,7 +425,7 @@ var gameFunctions = {
 		constructors.makeAsteroids.bind(game,game.asteroids,game.grid)();
 		game.otherShips = [];
 		game.otherShipCount = 1;
-		for(var c = 0;c<game.otherShipCount;c++)
+		for(var c = 0;c<game.maxOtherShips-1;c++)
 		{
 			var newShip = deepObjectMerge({},(Math.round(Math.random())) ? ships.gull : ships.cheetah);
 			newShip.ai = {

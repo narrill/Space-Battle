@@ -39,7 +39,7 @@ app.main = {
 	ship:{},
 	otherShips:[],
 	otherShipCount:0,
-	maxOtherShips:10,
+	maxOtherShips:2,
 	hitscans:[],
 	projectiles:[],
 	radials:[],

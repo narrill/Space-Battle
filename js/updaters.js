@@ -445,5 +445,9 @@ var collisions = {
 				return;
 		ts.targets.push({obj:obj, timeAdded:Date.now()});
 		console.log('adding target');
+	},
+
+	basicBlastwaveCollision:function(radial, obj, dt){
+		console.log('radial collision');
 	}
 };

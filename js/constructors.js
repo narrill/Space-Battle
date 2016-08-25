@@ -269,7 +269,7 @@ var constructors = {
 				collisionProperties:{
 					power:1
 				},
-				collisionFunction:"basicWarheadCollision"
+				collisionFunction:"basicBlastwaveCollision"
 			},objectParams.radial)
 		};
 
@@ -465,6 +465,6 @@ var constructors = {
 var destructors = {
 	destroyWarhead:function(obj){
 		var radial = obj.warhead.radial;
-		constructors.createRadial(obj.game.radials, obj.x, obj.y, radial.velocity, radial.decay, radial.color, obj, radial.collisionFunction, radial.collisionProperties);
+		constructors.createRadial(obj.game.radials, obj.x, obj.y, radial.velocity, radial.decay, radial.color, obj, collisions[radial.collisionFunction], radial.collisionProperties);
 	}
 };

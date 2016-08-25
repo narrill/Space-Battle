@@ -136,6 +136,7 @@ var missiles = {
 
 var aiFunctions = {
 	basic:function(obj, dt){
+		return;
 		var target = obj.game.ship;
 		var vectorToTarget = [target.x-obj.x,target.y-obj.y];
 		var forwardVector = utilities.getForwardVector(obj);

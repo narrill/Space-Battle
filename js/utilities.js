@@ -315,7 +315,8 @@ function raySphereIntersect(s,e,c,r){
 
 function isCapsuleWithinCircle(circle, capsule){
 	var capsuleAxis = [capsule.center2[0] - capsule.center1[0], capsule.center2[1] - capsule.center1[1]];
-	capsuleAxis = normalizeVector(capsuleAxis[0], capsuleAxis[1]);
+	if(!(capsuleAxis[0]==0 && capsuleAxis[1]==0))
+		capsuleAxis = normalizeVector(capsuleAxis[0], capsuleAxis[1]);
 
 	var pushedCenter1 = [capsule.center1[0] - capsuleAxis[0] * capsule.radius, capsule.center1[1] - capsuleAxis[1] * capsule.radius];
 	var toCircleCenter = [circle.center[0] - pushedCenter1[0], circle.center[1] - pushedCenter1[1]];
@@ -326,6 +327,8 @@ function isCapsuleWithinCircle(circle, capsule){
 	toCircleCenter = [circle.center[0] - pushedCenter2[0], circle.center[1] - pushedCenter2[1]];
 	if(toCircleCenter[0]*toCircleCenter[0] + toCircleCenter[1]*toCircleCenter[1] > circle.radius*circle.radius)
 		return false;
+
+	return true;
 }
 
 function circleCapsuleSAT(circle, capsule){
@@ -348,6 +351,8 @@ function circleCapsuleSAT(circle, capsule){
 	var circleAxis2 = [capsule.center2[0]-circle.center[0], capsule.center2[1]-circle.center[1]];
 	if(!axisCheck(circle, capsule, circleAxis2))
 		return false;
+
+	return true;
 }
 
 function circleCapsuleAxisCheck(circle, capsule, axis){
