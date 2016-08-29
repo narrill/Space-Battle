@@ -193,14 +193,15 @@ var drawing = {
 		var width = ship.model.thrusterPoints.width;
 			//forward thrust
 			for(var c = 0;c<=thrusterDetail;c++){
-				ctx.fillStyle = shadeRGBColor(ship.thrusters.color,.5*c);
+				ctx.fillStyle = shadeRGBColor(ship.thrusterSystem.color,.5*c);
 				ctx.save();
 				ctx.beginPath();
 
 				//Medial Thrusters
 					//forward
-						var trailLength = 40*(ship.thrusters.medial.currentStrength/ship.thrusters.medial.efficiency)*(1-(c/(thrusterDetail+1)));
-						if(ship.thrusters.medial.currentStrength>0){
+						var trailLength = 40*(ship.thrusterSystem.medial.currentStrength/ship.thrusterSystem.medial.efficiency)*(1-(c/(thrusterDetail+1)));
+
+						if(ship.thrusterSystem.medial.currentStrength>0){
 							for(var n = 0; n<ship.model.thrusterPoints.medial.positive.length;n++)
 							{
 								var tp = ship.model.thrusterPoints.medial.positive[n];
@@ -211,7 +212,7 @@ var drawing = {
 							}
 						}
 					//backward
-						else if(ship.thrusters.medial.currentStrength<0){
+						else if(ship.thrusterSystem.medial.currentStrength<0){
 							for(var n = 0; n<ship.model.thrusterPoints.medial.positive.length;n++)
 							{
 								var tp = ship.model.thrusterPoints.medial.negative[n];
@@ -223,9 +224,9 @@ var drawing = {
 						}	
 
 				//rotational thrusters	
-					trailLength = 40*(ship.thrusters.rotational.currentStrength/ship.thrusters.rotational.efficiency)*(1-(c/(thrusterDetail+1)));
+					trailLength = 40*(ship.thrusterSystem.rotational.currentStrength/ship.thrusterSystem.rotational.efficiency)*(1-(c/(thrusterDetail+1)));
 					//ccw
-						if(ship.thrusters.rotational.currentStrength>0){
+						if(ship.thrusterSystem.rotational.currentStrength>0){
 							for(var n = 0; n<ship.model.thrusterPoints.rotational.positive.length;n++)
 							{
 								var tp = ship.model.thrusterPoints.rotational.positive[n];
@@ -236,7 +237,7 @@ var drawing = {
 							}
 						}
 					//cw
-						else if(ship.thrusters.rotational.currentStrength<0){
+						else if(ship.thrusterSystem.rotational.currentStrength<0){
 							for(var n = 0; n<ship.model.thrusterPoints.rotational.negative.length;n++)
 							{
 								var tp = ship.model.thrusterPoints.rotational.negative[n];
@@ -248,9 +249,9 @@ var drawing = {
 						}
 
 				//lateral thrusters
-					trailLength = 40*(ship.thrusters.lateral.currentStrength/ship.thrusters.lateral.efficiency)*(1-(c/(thrusterDetail+1)));
+					trailLength = 40*(ship.thrusterSystem.lateral.currentStrength/ship.thrusterSystem.lateral.efficiency)*(1-(c/(thrusterDetail+1)));
 					//rightward
-						if(ship.thrusters.lateral.currentStrength>0){
+						if(ship.thrusterSystem.lateral.currentStrength>0){
 							for(var n = 0; n<ship.model.thrusterPoints.lateral.positive.length;n++)
 							{
 								var tp = ship.model.thrusterPoints.lateral.positive[n];
@@ -261,12 +262,12 @@ var drawing = {
 							}
 						}
 					//leftward
-						else if(ship.thrusters.lateral.currentStrength<0){
+						else if(ship.thrusterSystem.lateral.currentStrength<0){
 							//ctx.save();				
 							//ctx.beginPath();
 							/*ctx.moveTo(10,0);
 							ctx.lineTo(10,-5);
-							ctx.lineTo(10-40*(ship.thrusters.lateral.currentStrength/ship.thrusters.lateral.efficiency)*(1-(c/(this.thrusterDetail+1))),-2.5);
+							ctx.lineTo(10-40*(ship.thrusterSystem.lateral.currentStrength/ship.thrusterSystem.lateral.efficiency)*(1-(c/(this.thrusterDetail+1))),-2.5);
 							ctx.lineTo(10,0);*/
 							//ctx.globalAlpha = ((c+1)/(this.thrusterDetail+1));
 							//ctx.fill();

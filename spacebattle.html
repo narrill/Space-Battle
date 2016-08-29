@@ -52,7 +52,11 @@
 		{
 			font-family: Orbitron, Arial, Sans-serif;
 		}
-		canvas{border:1px solid gray;}
+		* { margin:0; padding:0; } /* to remove the top and left whitespace */
+
+		html, body { width:100%; height:100%; } /* just to be sure these are full screen*/
+
+		canvas { display:block; } /* To remove the scrollbars */
 		audio{display:none;}
 	</style>
 	<title>Space Battle</title>
@@ -65,7 +69,7 @@
 		<span class="orbitron-light"><!-- / --></span>
 		<span class="orbitron-black"><!-- / --></span>
 	</span>
-	<canvas id="canvas1" width=1600 height=900>
+	<canvas id="canvas1">
 	</canvas>
 	<script src="https://code.createjs.com/soundjs-0.6.2.min.js"></script>
 	<script src='js/utilities.js'></script>

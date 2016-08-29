@@ -22,14 +22,22 @@ var gameFunctions = {
 	init : function(game) {
 		// initialize properties
 			var canvas = game.canvas = document.querySelector('#canvas1');
+			canvas.width = window.innerWidth;
+			canvas.height = window.innerHeight;
 			constructors.generateStarField.bind(game, game.stars)();
 			game.ship = constructors.createShip(ships.cheetah, game);
 			game.camera = constructors.createCamera(canvas,{x:game.ship.x,y:game.ship.y,rotation:game.ship.rotation,zoom:.5,minZoom:.025,maxZoom:5});
 			game.camera.globalCompositeOperation = 'hard-light';
 			game.starCamera = constructors.createCamera(canvas);
 			game.gridCamera = constructors.createCamera(canvas);
-			game.minimapCamera = constructors.createCamera(canvas,{x:game.grid.gridStart[0]+game.grid.gridLines*game.grid.gridSpacing/2,y:game.grid.gridStart[1]+game.grid.gridLines*game.grid.gridSpacing/2,zoom:.001,viewport:{startX:.83,startY:.7,endX:1,endY:1}});
-
+			game.minimapCamera = constructors.createCamera(canvas,{zoom:.001,viewport:{startX:.83,startY:.7,endX:1,endY:1}});
+			var hue = Math.round(Math.random()*360);
+			for(var c = 0;c<game.factions;c++){
+				game.factionColors[c] = 'hsl('+hue+',100%,65%)';
+				hue+=360/game.factions;
+				if(hue>=360)
+					hue-=360;
+			}
 		// start the game loop		
 			game.lastTime = Date.now();
 			//game.animationID = requestAnimationFrame(game.frame.bind(game));
@@ -168,12 +176,15 @@ var gameFunctions = {
 	 	var cameraDistance = 1/game.camera.zoom;
 	 	game.starCamera.zoom = 1/(cameraDistance+10000);
 	 	game.gridCamera.zoom = 1/(cameraDistance+5);
+	 	game.minimapCamera.x = game.ship.x;
+	 	game.minimapCamera.y = game.ship.y;
+	 	game.minimapCamera.rotation = game.ship.rotation;
 
 		//game needs to be done
 		resetMouse();
 
 		if(game.thrusterSound && (game.gameState == enums.GAME_STATES.PLAYING || game.gameState == enums.GAME_STATES.TUTORIAL))
-			game.thrusterSound.volume = (game.paused)?0:game.ship.thrusters.noiseLevel*2*(1-(1-game.camera.zoom)/game.soundLevel);
+			game.thrusterSound.volume = (game.paused)?0:game.ship.thrusterSystem.noiseLevel*2*(1-(1-game.camera.zoom)/game.soundLevel);
 
 		//because we might use the frame count for something at some point
 		game.frameCount++;
@@ -250,9 +261,11 @@ var gameFunctions = {
 				var currentObjCapsule = {center1:[currentObj.x,currentObj.y], center2:currentObjNext, radius:currentObj.destructible.radius};
 				for(var c = i+1;c<game.otherShips.length;c++){
 					var gameObj = ((c==-1) ? game.ship : game.otherShips[c]); //lol
-					var gameObjNext = [gameObj.x+gameObj.velocityX*dt, gameObj.y+gameObj.velocityY*dt];
+					/*if(currentObj.faction == -1 || gameObj.faction== -1 || currentObj.faction == gameObj.faction)
+						continue;*/
 					if(currentObj.specialProperties && gameObj == currentObj.specialProperties.owner || gameObj.specialProperties && currentObj == gameObj.specialProperties.owner)
 						continue;
+					var gameObjNext = [gameObj.x+gameObj.velocityX*dt, gameObj.y+gameObj.velocityY*dt];
 					var distanceSqr = Math.abs((currentObj.x - gameObj.x)*(currentObj.x - gameObj.x) + (currentObj.y - gameObj.y)*(currentObj.y - gameObj.y));
 					if(distanceSqr>5*(currentObj.destructible.radius+gameObj.destructible.radius)*(currentObj.destructible.radius+gameObj.destructible.radius))
 						continue;
@@ -298,6 +311,8 @@ var gameFunctions = {
 						var gameObj = ((c==-1) ? game.ship : game.otherShips[c]); //lol
 						if(gameObj == hitscan.owner)
 							continue;
+						/*if(hitscan.owner.faction == -1 || gameObj.faction == -1 || hitscan.owner.faction == gameObj.faction)
+							continue;*/
 						if(gameObj.x + gameObj.destructible.radius<start[0] || gameObj.x-gameObj.destructible.radius>end[0] || gameObj.y + gameObj.destructible.radius<start[1] || gameObj.y-gameObj.destructible.radius>end[1])
 							continue;
 						var gameDistance = distanceFromPointToLine(gameObj.x,gameObj.y,hitscan.startX,hitscan.startY,hitscan.endX,hitscan.endY);
@@ -409,7 +424,7 @@ var gameFunctions = {
 					var gameObj = ((c==-1) ? game.ship : game.otherShips[c]); //lol
 					var gameObjNext = [gameObj.x+gameObj.velocityX*dt, gameObj.y+gameObj.velocityY*dt];
 					var circleInner = {center:[rad.x,rad.y],radius:rad.radius};
-					var circleOuter = {center:[rad.x,rad.y],radius:rad.radius+rad.velocity};
+					var circleOuter = {center:[rad.x,rad.y],radius:rad.radius+rad.velocity*dt};
 					var capsule = {center1:[gameObj.x,gameObj.y],center2:gameObjNext,radius:gameObj.destructible.radius};
 					if(circleCapsuleSAT(circleOuter,capsule) && !isCapsuleWithinCircle(circleInner,capsule))
 						rad.collisionFunction(rad, gameObj,dt);
@@ -435,6 +450,7 @@ var gameFunctions = {
 				accuracy:.5,
 				fireSpread:5
 			};
+			newShip.faction = Math.floor(Math.random()*game.factions);
 			game.otherShips.push(constructors.createShip(newShip, game));
 		}
 		game.gameState = enums.GAME_STATES.PLAYING;

@@ -39,7 +39,9 @@ app.main = {
 	ship:{},
 	otherShips:[],
 	otherShipCount:0,
-	maxOtherShips:2,
+	maxOtherShips:8,
+	factions:4,
+	factionColors:[],
 	hitscans:[],
 	projectiles:[],
 	radials:[],
@@ -72,7 +74,7 @@ app.main = {
 	grid:{
 		gridLines: 500, //number of grid lines
 		gridSpacing: 500, //pixels per grid unit
-		gridStart: [-125000,-125000], //corner anchor in world coordinates
+		gridStart: [-250000,-250000], //corner anchor in world coordinates
 		colors:[
 			{
 				color:'#1111FF',

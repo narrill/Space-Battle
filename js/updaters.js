@@ -5,20 +5,20 @@ var updaters = {
 		radial.radius+=radial.velocity*dt;
 		radial.velocity-=radial.velocity*radial.decay*dt;
 	},
-	updateThrusterSystem:function(ship,dt){
+	updateThrusterSystemComponent:function(ship,dt){
 		//add acceleration from each thruster
 			//medial
-				var strength = ship.thrusters.medial.targetStrength;
-				ship.thrusters.medial.targetStrength = 0; //clear target
+				var strength = ship.thrusterSystem.medial.targetStrength;
+				ship.thrusterSystem.medial.targetStrength = 0; //clear target
 
 				//clamp target strength to the thruster's max
-					var maxStrength = ship.thrusters.medial.maxStrength;
+					var maxStrength = ship.thrusterSystem.medial.maxStrength;
 					strength = clamp(-maxStrength,strength,maxStrength);
 				//lerp current thruster strength to target strength at the power ramp rate, then set current strength and the target strength to the lerped value
-					var thrusterDelta = lerp(ship.thrusters.medial.currentStrength,strength,ship.thrusters.medial.powerRampPercentage*dt) - ship.thrusters.medial.currentStrength;
-					if(thrusterDelta * ship.thrusters.medial.currentStrength > 0)
-						thrusterDelta = clamp(-ship.thrusters.medial.powerRampLimit * dt, thrusterDelta, ship.thrusters.medial.powerRampLimit * dt);
-					strength = ship.thrusters.medial.currentStrength = ship.thrusters.medial.currentStrength + thrusterDelta;
+					var thrusterDelta = lerp(ship.thrusterSystem.medial.currentStrength,strength,ship.thrusterSystem.medial.powerRampPercentage*dt) - ship.thrusterSystem.medial.currentStrength;
+					if(thrusterDelta * ship.thrusterSystem.medial.currentStrength > 0)
+						thrusterDelta = clamp(-ship.thrusterSystem.medial.powerRampLimit * dt, thrusterDelta, ship.thrusterSystem.medial.powerRampLimit * dt);
+					strength = ship.thrusterSystem.medial.currentStrength = ship.thrusterSystem.medial.currentStrength + thrusterDelta;
 					strength = clamp(-maxStrength,strength,maxStrength); //this is in case of really low dt values
 
 				//add forward vector times strength to acceleration
@@ -27,17 +27,17 @@ var updaters = {
 					ship.accelerationY += fv[1]*strength;
 
 			//lateral
-				var strength = ship.thrusters.lateral.targetStrength;
-				ship.thrusters.lateral.targetStrength = 0; //clear target
+				var strength = ship.thrusterSystem.lateral.targetStrength;
+				ship.thrusterSystem.lateral.targetStrength = 0; //clear target
 
 				//clamp strength
-					var maxStrength = ship.thrusters.lateral.maxStrength;
+					var maxStrength = ship.thrusterSystem.lateral.maxStrength;
 					strength = clamp(-maxStrength,strength,maxStrength);
 				//lerp current thruster strength to target strength at the power ramp rate, then set current strength and the target strength to the lerped value
-					var thrusterDelta = lerp(ship.thrusters.lateral.currentStrength,strength,ship.thrusters.lateral.powerRampPercentage*dt) - ship.thrusters.lateral.currentStrength;
-					if(thrusterDelta * ship.thrusters.lateral.currentStrength > 0)
-						thrusterDelta = clamp(-ship.thrusters.lateral.powerRampLimit * dt, thrusterDelta, ship.thrusters.lateral.powerRampLimit * dt);
-					strength = ship.thrusters.lateral.currentStrength = ship.thrusters.lateral.currentStrength + thrusterDelta;
+					var thrusterDelta = lerp(ship.thrusterSystem.lateral.currentStrength,strength,ship.thrusterSystem.lateral.powerRampPercentage*dt) - ship.thrusterSystem.lateral.currentStrength;
+					if(thrusterDelta * ship.thrusterSystem.lateral.currentStrength > 0)
+						thrusterDelta = clamp(-ship.thrusterSystem.lateral.powerRampLimit * dt, thrusterDelta, ship.thrusterSystem.lateral.powerRampLimit * dt);
+					strength = ship.thrusterSystem.lateral.currentStrength = ship.thrusterSystem.lateral.currentStrength + thrusterDelta;
 					strength = clamp(-maxStrength,strength,maxStrength);
 
 				//add right vector times strength to acceleration
@@ -46,26 +46,26 @@ var updaters = {
 					ship.accelerationY += rv[1]*strength;
 
 			//rotational
-				var strength = ship.thrusters.rotational.targetStrength;
-				ship.thrusters.rotational.targetStrength = 0; //clear target
+				var strength = ship.thrusterSystem.rotational.targetStrength;
+				ship.thrusterSystem.rotational.targetStrength = 0; //clear target
 
 				//clamp strength
-					var maxStrength = ship.thrusters.rotational.maxStrength;
+					var maxStrength = ship.thrusterSystem.rotational.maxStrength;
 					strength = clamp(-maxStrength,strength,maxStrength);
 				//lerp current thruster strength to target strength at the power ramp rate, then set current strength and the target strength to the lerped value
-					var thrusterDelta = lerp(ship.thrusters.rotational.currentStrength,strength,ship.thrusters.rotational.powerRampPercentage*dt) - ship.thrusters.rotational.currentStrength;
-					if(thrusterDelta * ship.thrusters.rotational.currentStrength > 0)
-						thrusterDelta = clamp(-ship.thrusters.rotational.powerRampLimit * dt, thrusterDelta, ship.thrusters.rotational.powerRampLimit * dt);
-					strength = ship.thrusters.rotational.currentStrength = ship.thrusters.rotational.currentStrength + thrusterDelta;
+					var thrusterDelta = lerp(ship.thrusterSystem.rotational.currentStrength,strength,ship.thrusterSystem.rotational.powerRampPercentage*dt) - ship.thrusterSystem.rotational.currentStrength;
+					if(thrusterDelta * ship.thrusterSystem.rotational.currentStrength > 0)
+						thrusterDelta = clamp(-ship.thrusterSystem.rotational.powerRampLimit * dt, thrusterDelta, ship.thrusterSystem.rotational.powerRampLimit * dt);
+					strength = ship.thrusterSystem.rotational.currentStrength = ship.thrusterSystem.rotational.currentStrength + thrusterDelta;
 					strength = clamp(-maxStrength,strength,maxStrength);
 
 				//this one we can set directly
 					ship.rotationalAcceleration = -strength;
 
 		//thruster percentage for the sound effect
-			var thrusterTotal = Math.abs(ship.thrusters.medial.currentStrength)+Math.abs(ship.thrusters.lateral.currentStrength)+Math.abs(ship.thrusters.rotational.currentStrength);
-			var thrusterEfficiencyTotal = ship.thrusters.medial.efficiency+ship.thrusters.lateral.efficiency+ship.thrusters.rotational.efficiency;
-			ship.thrusters.noiseLevel = (thrusterTotal/thrusterEfficiencyTotal);
+			var thrusterTotal = Math.abs(ship.thrusterSystem.medial.currentStrength)+Math.abs(ship.thrusterSystem.lateral.currentStrength)+Math.abs(ship.thrusterSystem.rotational.currentStrength);
+			var thrusterEfficiencyTotal = ship.thrusterSystem.medial.efficiency+ship.thrusterSystem.lateral.efficiency+ship.thrusterSystem.rotational.efficiency;
+			ship.thrusterSystem.noiseLevel = (thrusterTotal/thrusterEfficiencyTotal);
 	},
 
 	updateMobile:function(obj, dt){
@@ -396,15 +396,24 @@ var clearFunctions = {
 };
 
 var collisions = {
-	basicLaserCollision:function(laser, obj, tValOfObj, dt){
-		obj.destructible.shield.current-=laser.power*dt*(1-tValOfObj);
-		//console.log('damage: '+laser.power*dt*(1-tValOfObj));
+	dealDamage:function(obj,dmg){
+		obj.destructible.shield.current -= dmg;
 		if(obj.destructible.shield.current<0)
 		{
 			obj.destructible.hp+=obj.destructible.shield.current;
 			obj.destructible.shield.current = 0;
 		}
-		console.log('hp: '+Math.round(obj.destructible.hp)+'/'+Math.round(obj.destructible.maxHp)+', damage: '+Math.round(laser.power*dt*(1-tValOfObj)));
+	},
+	basicLaserCollision:function(laser, obj, tValOfObj, dt){
+		collisions.dealDamage(obj, laser.power*dt*(1-tValOfObj));
+		obj.destructible.shield.current-=laser.power*dt*(1-tValOfObj);
+		//console.log('damage: '+laser.power*dt*(1-tValOfObj));
+		/*if(obj.destructible.shield.current<0)
+		{
+			obj.destructible.hp+=obj.destructible.shield.current;
+			obj.destructible.shield.current = 0;
+		}*/
+		//console.log('hp: '+Math.round(obj.destructible.hp)+'/'+Math.round(obj.destructible.maxHp)+', damage: '+Math.round(laser.power*dt*(1-tValOfObj)));
 	},
 
 	basicKineticCollision:function(collider, collidee, dt){
@@ -415,24 +424,16 @@ var collisions = {
 		var damage = dt * magnitude/200;// * collider.destructible.maxHp;// * collider.destructible.radius/collidee.destructible.radius;
 		//console.log('collision damage: '+damage);
 		//collider.destructible.hp-=damage;
+
 		var colliderSizeCoeff = LIMITINGSIZEFACTOR*collidee.destructible.radius/collider.destructible.radius;
 		var colliderDamage = clamp(0,damage * collidee.destructible.maxHp,colliderSizeCoeff*collider.destructible.maxHp);// * collidee.destructible.radius/collider.destructible.radius;
-		collider.destructible.shield.current-= colliderDamage;
-		if(collider.destructible.shield.current<0)
-		{
-			collider.destructible.hp+=collider.destructible.shield.current;
-			collider.destructible.shield.current = 0;
-		}
+		collisions.dealDamage(collider,colliderDamage);
+
 		var collideeSizeCoeff = LIMITINGSIZEFACTOR*collider.destructible.radius/collidee.destructible.radius;
 		var collideeDamage = clamp(0,damage * collider.destructible.maxHp,collideeSizeCoeff*collidee.destructible.maxHp);// * collider.destructible.radius/collidee.destructible.radius;
-		collidee.destructible.shield.current-= collideeDamage;
-		if(collidee.destructible.shield.current<0)
-		{
-			collidee.destructible.hp+=collidee.destructible.shield.current;
-			collidee.destructible.shield.current = 0;
-		}
+		collisions.dealDamage(collidee, collideeDamage);
 
-		console.log('collider'+Math.round(collider.destructible.radius)+' damage: '+colliderDamage+'\ncollidee '+Math.round(collidee.destructible.radius)+' damage: '+collideeDamage);
+		//console.log('collider'+Math.round(collider.destructible.radius)+' damage: '+colliderDamage+'\ncollidee '+Math.round(collidee.destructible.radius)+' damage: '+collideeDamage);
 	},
 
 	targetingLaserCollision:function(hitscan, obj, tValOfObj, dt){
@@ -448,6 +449,6 @@ var collisions = {
 	},
 
 	basicBlastwaveCollision:function(radial, obj, dt){
-		console.log('radial collision');
+		collisions.dealDamage(obj, radial.velocity*radial.collisionProperties.density*dt);
 	}
 };

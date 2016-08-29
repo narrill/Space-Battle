@@ -40,6 +40,11 @@ window.onload = function(){
 	//createjs.Sound.registerSounds(thrusterSound,audioPath,1);
 	gameFunctions.init(app.main);
 	pointerInit();
+	window.addEventListener('resize',function(e){
+		var can = document.querySelector('#canvas1');
+		can.width = window.innerWidth;
+        can.height = window.innerHeight;
+	});
 }
 
 function handleLoad(event){

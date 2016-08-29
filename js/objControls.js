@@ -3,17 +3,17 @@
 var objControls = {
 	//add given strength to main thruster
 	objMedialThrusters:function(obj, strength){
-		obj.thrusters.medial.targetStrength += strength;
+		obj.thrusterSystem.medial.targetStrength += strength;
 	},
 
 	//add strength to side thruster
 	objRotationalThrusters: function(obj, strength){
-		obj.thrusters.rotational.targetStrength += strength;
+		obj.thrusterSystem.rotational.targetStrength += strength;
 	},
 
 	//add strength to lateral thruster
 	objLateralThrusters:function(obj, strength){
-		obj.thrusters.lateral.targetStrength += strength;
+		obj.thrusterSystem.lateral.targetStrength += strength;
 	},
 
 	//rotational stabilizer
@@ -21,13 +21,13 @@ var objControls = {
 		if(!obj.stabilizer)
 			return;
 		//if the side thruster isn't active, or is active in the opposite direction of our rotation
-		if(obj.thrusters.rotational.targetStrength*obj.rotationalVelocity>=0 && Math.abs(obj.rotationalVelocity) > obj.stabilizer.precision/6)
+		if(obj.thrusterSystem.rotational.targetStrength*obj.rotationalVelocity>=0 && Math.abs(obj.rotationalVelocity) > obj.stabilizer.precision/6)
 			//add correctional strength in the opposite direction of our rotation
 			objControls.objRotationalThrusters(obj,obj.rotationalVelocity*obj.stabilizer.strength*dt); //we check the direction because the stabilizers can apply more thrust than the player
 		//or, if we've exceeded our clamp speed and are trying to keep accelerating in that direction
-		else if (obj.stabilizer.clamps.enabled && Math.abs(obj.rotationalVelocity)>=obj.stabilizer.clamps.rotational && obj.thrusters.rotational.targetStrength*obj.rotationalVelocity<0)
+		else if (obj.stabilizer.clamps.enabled && Math.abs(obj.rotationalVelocity)>=obj.stabilizer.clamps.rotational && obj.thrusterSystem.rotational.targetStrength*obj.rotationalVelocity<0)
 			//shut off the thruster
-			obj.thrusters.rotational.targetStrength = 0;
+			obj.thrusterSystem.rotational.targetStrength = 0;
 	},
 
 	//medial stabilizer
@@ -36,13 +36,13 @@ var objControls = {
 			return;
 		//if the main thruster isn't active, or is working against our velocity
 		var medialVelocity = utilities.getMedialVelocity(obj);
-		if(obj.thrusters.medial.targetStrength*medialVelocity>=0 && Math.abs(medialVelocity) > obj.stabilizer.precision)
+		if(obj.thrusterSystem.medial.targetStrength*medialVelocity>=0 && Math.abs(medialVelocity) > obj.stabilizer.precision)
 			//add corrective strength
 			objControls.objMedialThrusters(obj,medialVelocity*obj.stabilizer.strength*dt);
 		//or, if we're past our clamp and trying to keep going
-		else if (obj.stabilizer.clamps.enabled && Math.abs(medialVelocity)>=obj.stabilizer.clamps.medial && obj.thrusters.medial.targetStrength*medialVelocity<0)
+		else if (obj.stabilizer.clamps.enabled && Math.abs(medialVelocity)>=obj.stabilizer.clamps.medial && obj.thrusterSystem.medial.targetStrength*medialVelocity<0)
 			//shut off the thruster
-			obj.thrusters.medial.targetStrength = 0;
+			obj.thrusterSystem.medial.targetStrength = 0;
 	},
 
 	//lateral stabilizer
@@ -51,10 +51,10 @@ var objControls = {
 			return;
 		//see above
 		var lateralVelocity = utilities.getLateralVelocity(obj);
-		if(obj.thrusters.lateral.targetStrength*lateralVelocity>=0 && Math.abs(lateralVelocity) > obj.stabilizer.precision)
+		if(obj.thrusterSystem.lateral.targetStrength*lateralVelocity>=0 && Math.abs(lateralVelocity) > obj.stabilizer.precision)
 			objControls.objLateralThrusters(obj,lateralVelocity*obj.stabilizer.strength*dt);
-		else if (obj.stabilizer.clamps.enabled && Math.abs(lateralVelocity)>=obj.stabilizer.clamps.lateral && obj.thrusters.lateral.targetStrength*lateralVelocity<0)
-			obj.thrusters.lateral.targetStrength = 0;
+		else if (obj.stabilizer.clamps.enabled && Math.abs(lateralVelocity)>=obj.stabilizer.clamps.lateral && obj.thrusterSystem.lateral.targetStrength*lateralVelocity<0)
+			obj.thrusterSystem.lateral.targetStrength = 0;
 	},
 
 	objFireLaser:function(obj){
@@ -109,24 +109,24 @@ var objControls = {
 		//set obj thruster values
 			//medial motion
 				if(myKeys.keydown[myKeys.KEYBOARD.KEY_W])
-					objControls.objMedialThrusters(obj,obj.thrusters.medial.maxStrength/obj.stabilizer.thrustRatio);
+					objControls.objMedialThrusters(obj,obj.thrusterSystem.medial.maxStrength/obj.stabilizer.thrustRatio);
 				if(myKeys.keydown[myKeys.KEYBOARD.KEY_S])
-					objControls.objMedialThrusters(obj,-obj.thrusters.medial.maxStrength/obj.stabilizer.thrustRatio);
+					objControls.objMedialThrusters(obj,-obj.thrusterSystem.medial.maxStrength/obj.stabilizer.thrustRatio);
 				if(obj.stabilizer.enabled)
 					objControls.objMedialStabilizers(obj,dt);
 			//lateral motion
 				if(myKeys.keydown[myKeys.KEYBOARD.KEY_A])
-					objControls.objLateralThrusters(obj,obj.thrusters.lateral.maxStrength/obj.stabilizer.thrustRatio);
+					objControls.objLateralThrusters(obj,obj.thrusterSystem.lateral.maxStrength/obj.stabilizer.thrustRatio);
 				if(myKeys.keydown[myKeys.KEYBOARD.KEY_D])
-					objControls.objLateralThrusters(obj,-obj.thrusters.lateral.maxStrength/obj.stabilizer.thrustRatio);
+					objControls.objLateralThrusters(obj,-obj.thrusterSystem.lateral.maxStrength/obj.stabilizer.thrustRatio);
 				if(obj.stabilizer.enabled)
 					objControls.objLateralStabilizers(obj,dt);
 			//rotational motion - mouse			
-				objControls.objRotationalThrusters(obj,-myMouse.direction*myMouse.sensitivity*obj.thrusters.rotational.maxStrength/obj.stabilizer.thrustRatio);
+				objControls.objRotationalThrusters(obj,-myMouse.direction*myMouse.sensitivity*obj.thrusterSystem.rotational.maxStrength/obj.stabilizer.thrustRatio);
 				if(myKeys.keydown[myKeys.KEYBOARD.KEY_LEFT])
-					objControls.objRotationalThrusters(obj,obj.thrusters.rotational.maxStrength/obj.stabilizer.thrustRatio);
+					objControls.objRotationalThrusters(obj,obj.thrusterSystem.rotational.maxStrength/obj.stabilizer.thrustRatio);
 				if(myKeys.keydown[myKeys.KEYBOARD.KEY_RIGHT])
-					objControls.objRotationalThrusters(obj,-obj.thrusters.rotational.maxStrength/obj.stabilizer.thrustRatio);
+					objControls.objRotationalThrusters(obj,-obj.thrusterSystem.rotational.maxStrength/obj.stabilizer.thrustRatio);
 				if(obj.stabilizer.enabled)
 					objControls.objRotationalStabilizers(obj,dt);
 			//weapons

@@ -136,16 +136,37 @@ var missiles = {
 
 var aiFunctions = {
 	basic:function(obj, dt){
-		return;
-		var target = obj.game.ship;
+		//return;
+		var target;
+		var lowestDistance = Number.MAX_VALUE;
+		var cVal;
+		for(var c = -1; c< obj.game.otherShips.length;c++){
+			var ship = (c==-1)?obj.game.ship:obj.game.otherShips[c];
+			if((obj.faction == ship.faction && obj.faction!=-1) || obj == ship)
+			{
+				//console.log('continue');
+				continue;
+			}
+			var distanceSqr = obj.x*ship.x+obj.y*ship.y;
+			if(distanceSqr<lowestDistance)
+			{
+				target = ship;
+				lowestDistance = distanceSqr;
+				cVal = c;
+			}
+		}
+
+		if(!target)
+			return;
+		//console.log(cVal+' '+obj.faction);
 		var vectorToTarget = [target.x-obj.x,target.y-obj.y];
 		var forwardVector = utilities.getForwardVector(obj);
 		var relativeAngleToTarget = angleBetweenVectors(forwardVector[0],forwardVector[1],vectorToTarget[0],vectorToTarget[1]);
 
 		if(relativeAngleToTarget>0)
-			objControls.objRotationalThrusters(obj,-relativeAngleToTarget * dt * obj.ai.accuracy * obj.thrusters.rotational.maxStrength/obj.stabilizer.thrustRatio);
+			objControls.objRotationalThrusters(obj,-relativeAngleToTarget * dt * obj.ai.accuracy * obj.thrusterSystem.rotational.maxStrength/obj.stabilizer.thrustRatio);
 		else if (relativeAngleToTarget<0)
-			objControls.objRotationalThrusters(obj,-relativeAngleToTarget * dt * obj.ai.accuracy * obj.thrusters.rotational.maxStrength/obj.stabilizer.thrustRatio);
+			objControls.objRotationalThrusters(obj,-relativeAngleToTarget * dt * obj.ai.accuracy * obj.thrusterSystem.rotational.maxStrength/obj.stabilizer.thrustRatio);
 
 		var distanceSqr = vectorMagnitudeSqr(vectorToTarget[0],vectorToTarget[1]);
 
@@ -153,16 +174,16 @@ var aiFunctions = {
 
 		if(relativeAngleToTarget<obj.ai.fireSpread/2 && relativeAngleToTarget>-obj.ai.fireSpread/2)
 		{
-			/*if(distanceSqr<(myRange*myRange) && obj.hasOwnProperty("laser"))
+			if(distanceSqr<(myRange*myRange) && obj.hasOwnProperty("laser"))
 				objControls.objFireLaser(obj);
 			else if(obj.hasOwnProperty("cannon"))
-				objControls.objFireCannon(obj);*/
+				objControls.objFireCannon(obj);
 		}
 
 		if(distanceSqr > obj.ai.followMax*obj.ai.followMax)
-			objControls.objMedialThrusters(obj,obj.thrusters.medial.maxStrength/obj.stabilizer.thrustRatio);
+			objControls.objMedialThrusters(obj,obj.thrusterSystem.medial.maxStrength/obj.stabilizer.thrustRatio);
 		else if(distanceSqr<obj.ai.followMin*obj.ai.followMin)
-			objControls.objMedialThrusters(obj,-obj.thrusters.medial.maxStrength/obj.stabilizer.thrustRatio);
+			objControls.objMedialThrusters(obj,-obj.thrusterSystem.medial.maxStrength/obj.stabilizer.thrustRatio);
 
 		var vectorFromTarget = [-vectorToTarget[0],-vectorToTarget[1]];
 		var relativeAngleToMe = angleBetweenVectors(target.forwardVectorX,target.forwardVectorY,vectorFromTarget[0],vectorFromTarget[1]);
@@ -171,9 +192,9 @@ var aiFunctions = {
 		var targetRange = (target.hasOwnProperty("laser")) ? target.laser.range : 10000;
 
 		if(distanceSqr<2*(targetRange*targetRange) && relativeAngleToMe<90 && relativeAngleToMe>0)
-			objControls.objLateralThrusters(obj, obj.thrusters.lateral.maxStrength/obj.stabilizer.thrustRatio);
+			objControls.objLateralThrusters(obj, obj.thrusterSystem.lateral.maxStrength/obj.stabilizer.thrustRatio);
 		else if(distanceSqr<2*(targetRange*targetRange) && relativeAngleToMe>-90 &&relativeAngleToMe<0)
-			objControls.objLateralThrusters(obj, -obj.thrusters.lateral.maxStrength/obj.stabilizer.thrustRatio);
+			objControls.objLateralThrusters(obj, -obj.thrusterSystem.lateral.maxStrength/obj.stabilizer.thrustRatio);
 
 		objControls.objMedialStabilizers(obj,dt);
 		objControls.objLateralStabilizers(obj,dt);
@@ -194,24 +215,24 @@ var aiFunctions = {
 			var relativeAngleToTarget = angleBetweenVectors(forwardVector[0],forwardVector[1],vectorToTarget[0],vectorToTarget[1]);
 			var lateralDisplacementToTarget = scalarComponentOf1InDirectionOf2(vectorToTarget[0], vectorToTarget[1], rightVector[0], rightVector[1]);
 			var timeTillAligned = relativeAngleToTarget/obj.rotationalVelocity;
-			var timeTillStop = Math.abs(obj.rotationalVelocity/obj.thrusters.rotational.maxStrength);
+			var timeTillStop = Math.abs(obj.rotationalVelocity/obj.thrusterSystem.rotational.maxStrength);
 
 			if(obj.rotationalVelocity==0)
 			{
-				objControls.objRotationalThrusters(obj, -relativeAngleToTarget * obj.thrusters.rotational.maxStrength);
+				objControls.objRotationalThrusters(obj, -relativeAngleToTarget * obj.thrusterSystem.rotational.maxStrength);
 				return;
 			}
 
 			if(timeTillAligned<0 || timeTillAligned<timeTillStop)
-				objControls.objRotationalThrusters(obj, (obj.rotationalVelocity/Math.abs(obj.rotationalVelocity))*obj.thrusters.rotational.maxStrength*timeTillStop*10);
+				objControls.objRotationalThrusters(obj, (obj.rotationalVelocity/Math.abs(obj.rotationalVelocity))*obj.thrusterSystem.rotational.maxStrength*timeTillStop*10);
 			else if(timeTillAligned>timeTillStop)
-				objControls.objRotationalThrusters(obj, -(obj.rotationalVelocity/Math.abs(obj.rotationalVelocity))*obj.thrusters.rotational.maxStrength*timeTillStop*10);
+				objControls.objRotationalThrusters(obj, -(obj.rotationalVelocity/Math.abs(obj.rotationalVelocity))*obj.thrusterSystem.rotational.maxStrength*timeTillStop*10);
 
 			objControls.objLateralThrusters(obj,utilities.getLateralVelocity(obj)*1200*dt);
-			objControls.objMedialThrusters(obj, obj.thrusters.medial.maxStrength);
+			objControls.objMedialThrusters(obj, obj.thrusterSystem.medial.maxStrength);
 
 			//objControls.objLateralStabilizers(obj, dt);
 		}
-		else objControls.objMedialThrusters(obj, obj.thrusters.medial.maxStrength);
+		else objControls.objMedialThrusters(obj, obj.thrusterSystem.medial.maxStrength);
 	}
 };

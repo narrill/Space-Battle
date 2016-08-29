@@ -8,6 +8,7 @@ var constructors = {
 		var gridPosition = gridFunctions.randomGridPosition(game.grid);
 		var ship = {
 			game:game,
+			faction:-1,
 			//position/rotation
 			x:gridPosition.x,
 			y:gridPosition.y,
@@ -36,7 +37,7 @@ var constructors = {
 					efficiency:8
 				}
 			}, objectParams.destructible)),
-			thrusters:constructors.createComponentThrusterSystem(deepObjectMerge({},objectParams.thrusters)),
+			thrusterSystem:constructors.createComponentThrusterSystem(deepObjectMerge({},objectParams.thrusters)),
 			//colors
 			color:getRandomBrightColor(),
 			//model
@@ -65,7 +66,19 @@ var constructors = {
 		//deepObjectMerge(ship, defaults);
 		veryShallowObjectMerge(ship, objectParams);
 
-		updaters.populateUpdaters(ship);
+		if(ship.faction != -1)
+			ship.color = game.factionColors[ship.faction];
+
+		//updaters.populateUpdaters(ship);
+		ship.updaters = [];
+		ship.updaters.push(updaters.updateMobile);
+		for(var key in ship)
+		{
+			var capitalized = key.charAt(0).toUpperCase() + key.slice(1);
+			var updater = updaters['update'+capitalized+'Component'];
+			if(updater)
+				ship.updaters.push(updater);
+		}
 
 		updaters.populateOnDestroy(ship);
 
@@ -267,7 +280,7 @@ var constructors = {
 				decay:.99,
 				color:'red',
 				collisionProperties:{
-					power:1
+					density:8
 				},
 				collisionFunction:"basicBlastwaveCollision"
 			},objectParams.radial)
@@ -407,7 +420,7 @@ var constructors = {
 	createCamera:function(canvas, objectParams){
 		if(!objectParams)
 			objectParams = {};
-		return {
+		var cam = {
 			x:(objectParams.x) ? objectParams.x : 0,
 			y:(objectParams.y) ? objectParams.y : 0,
 			rotation:(objectParams.rotation) ? objectParams.rotation : 0,
@@ -415,10 +428,15 @@ var constructors = {
 			minZoom:(objectParams.minZoom)?objectParams.minZoom:0,
 			maxZoom:(objectParams.maxZoom)?objectParams.maxZoom:Number.MAX_VALUE,
 			viewport:constructors.createComponentViewport(objectParams.viewport),
-			width:canvas.width,
-			height:canvas.height,
+			get width(){
+				return canvas.width;
+			},
+			get height(){
+				return canvas.height;
+			},
 			ctx:canvas.getContext('2d')
 		};
+		return cam;
 	},
 
 	//generates the field of asteroids
