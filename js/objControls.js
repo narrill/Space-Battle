@@ -60,7 +60,7 @@ var objControls = {
 	objFireLaser:function(obj){
 		if(!obj.laser)
 			return;
-		var now = Date.now();
+		var now = obj.game.elapsedGameTime;
 		//if the cool down is up
 		if(now>obj.laser.lastFireTime+obj.laser.cd*1000){
 			obj.laser.lastFireTime = now;
@@ -76,7 +76,7 @@ var objControls = {
 	objFireCannon: function(obj){
 		if(!obj.cannon)
 			return;
-		var now = Date.now();
+		var now = obj.game.elapsedGameTime;
 		if(now>obj.cannon.lastFireTime+obj.cannon.cd*1000){
 			obj.cannon.lastFireTime = now;
 			obj.cannon.firing = true;
@@ -92,7 +92,7 @@ var objControls = {
 	objFireLauncher: function(obj){
 		if(!obj.launcher)
 			return;
-		var now = Date.now();
+		var now = obj.game.elapsedGameTime;
 		if(now>obj.launcher.lastFireTime+obj.launcher.cd*1000){
 			obj.launcher.lastFireTime = now;
 			obj.launcher.firing = true;

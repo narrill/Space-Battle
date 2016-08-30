@@ -40,6 +40,7 @@ var gameFunctions = {
 			}
 		// start the game loop		
 			game.lastTime = Date.now();
+			game.elapsedGameTime = 0;
 			//game.animationID = requestAnimationFrame(game.frame.bind(game));
 			gameFunctions.frame.bind(game)();
 	},
@@ -113,7 +114,7 @@ var gameFunctions = {
 
 			for(var c = 0;c<game.respawnQueue.length;c++){
 				var rs = game.respawnQueue[c];
-				if(Date.now()>=rs.time)
+				if(game.elapsedGameTime>=rs.time)
 				{
 					game.otherShips.push(constructors.createShip(rs.params, game));
 					game.respawnQueue.splice(c--,1);
@@ -147,7 +148,9 @@ var gameFunctions = {
 				updaters.updateUpdatable(ship,dt);
 			},game);			
 
-			gameFunctions.checkCollisions(game, dt);	
+			gameFunctions.checkCollisions(game, dt);
+
+			game.elapsedGameTime+=dt*1000;	
 
 			if(game.gameState == enums.GAME_STATES.TUTORIAL && myKeys.keydown[myKeys.KEYBOARD.KEY_ENTER]){
 				gameFunctions.resetGame(game);

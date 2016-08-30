@@ -229,16 +229,16 @@ var updaters = {
 			}
 	},
 
-	updatePowerSystem:function(obj,dt){
+	updatePowerSystemComponent:function(obj,dt){
 		//update power system
 			//scale all relevant values down from the augmented to their normal using the old power values
 				var thrusterPower = updaters.getPowerForComponent(obj.powerSystem, enums.SHIP_COMPONENTS.THRUSTERS);
 				var laserPower = updaters.getPowerForComponent(obj.powerSystem, enums.SHIP_COMPONENTS.LASERS);
 				var shieldPower = updaters.getPowerForComponent(obj.powerSystem, enums.SHIP_COMPONENTS.SHIELDS);
 				//thrusters
-					obj.thrusters.medial.maxStrength/=(1+thrusterPower);
-					obj.thrusters.lateral.maxStrength/=(1+thrusterPower);
-					obj.thrusters.rotational.maxStrength/=(1+thrusterPower);
+					obj.thrusterSystem.medial.maxStrength/=(1+thrusterPower);
+					obj.thrusterSystem.lateral.maxStrength/=(1+thrusterPower);
+					obj.thrusterSystem.rotational.maxStrength/=(1+thrusterPower);
 					obj.stabilizer.clamps.medial/=(1+thrusterPower);
 					obj.stabilizer.clamps.lateral/=(1+thrusterPower);
 					obj.stabilizer.clamps.rotational/=(1+thrusterPower);
@@ -264,9 +264,9 @@ var updaters = {
 				laserPower = updaters.getPowerForComponent(obj.powerSystem, enums.SHIP_COMPONENTS.LASERS);
 				shieldPower = updaters.getPowerForComponent(obj.powerSystem, enums.SHIP_COMPONENTS.SHIELDS);
 				//thrusters
-					obj.thrusters.medial.maxStrength*=(1+thrusterPower);
-					obj.thrusters.lateral.maxStrength*=(1+thrusterPower);
-					obj.thrusters.rotational.maxStrength*=(1+thrusterPower);
+					obj.thrusterSystem.medial.maxStrength*=(1+thrusterPower);
+					obj.thrusterSystem.lateral.maxStrength*=(1+thrusterPower);
+					obj.thrusterSystem.rotational.maxStrength*=(1+thrusterPower);
 					obj.stabilizer.clamps.medial*=(1+thrusterPower);
 					obj.stabilizer.clamps.lateral*=(1+thrusterPower);
 					obj.stabilizer.clamps.rotational*=(1+thrusterPower);
@@ -323,7 +323,7 @@ var updaters = {
 			updateFunctions.push(updaters.updateMobile);
 		if(obj.ai)
 			updateFunctions.push(updaters.updateAiComponent);
-		if(obj.thrusters)
+		if(obj.thrusterSystem)
 			updateFunctions.push(updaters.updateThrusterSystem);
 		if(obj.laser)
 			updateFunctions.push(updaters.updateLaserComponent);

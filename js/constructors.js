@@ -487,6 +487,6 @@ var destructors = {
 		constructors.createRadial(obj.game.radials, obj.x, obj.y, radial.velocity, radial.decay, radial.color, obj, collisions[radial.collisionFunction], radial.collisionProperties);
 	},
 	queueRespawn:function(obj){
-		obj.game.respawnQueue.push({time:Date.now()+obj.respawnTime*1000,params:obj.constructionObject});
+		obj.game.respawnQueue.push({time:obj.game.elapsedGameTime+obj.respawnTime*1000,params:obj.constructionObject});
 	}
 };

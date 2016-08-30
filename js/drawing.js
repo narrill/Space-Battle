@@ -84,6 +84,16 @@ var drawing = {
 		ctx.beginPath();
 		ctx.moveTo(shipPosInCameraSpace[0],shipPosInCameraSpace[1]);
 		ctx.lineTo(shipPosInGridCameraSpace[0],shipPosInGridCameraSpace[1]);
+		if(ship==ship.game.ship && ship.targetingSystem)
+		{
+			for(var c = 0;c<ship.targetingSystem.lockedTargets.length;c++)
+			{
+				var otherShip = ship.targetingSystem.lockedTargets[c];
+				ctx.moveTo(shipPosInGridCameraSpace[0],shipPosInGridCameraSpace[1]);
+				var otherShipPosInGridCameraSpace = worldPointToCameraSpace(otherShip.x,otherShip.y,gridCamera);
+				ctx.lineTo(otherShipPosInGridCameraSpace[0], otherShipPosInGridCameraSpace[1]);
+			}
+		}
 		ctx.translate(shipPosInGridCameraSpace[0],shipPosInGridCameraSpace[1]);
 		ctx.rotate((ship.rotation-gridCamera.rotation) * (Math.PI / 180));
 		for(var type in ship.model.overlay.ranges)
@@ -99,6 +109,23 @@ var drawing = {
 		ctx.strokeStyle = 'grey';
 		ctx.globalAlpha = .2;
 		ctx.stroke();
+
+		if(ship==ship.game.ship && ship.targetingSystem)
+		{
+			ctx.beginPath();
+			for(var c = 0;c<ship.targetingSystem.targets.length;c++)
+			{
+				var otherShip = ship.targetingSystem.targets[c].obj;
+				ctx.moveTo(shipPosInGridCameraSpace[0],shipPosInGridCameraSpace[1]);
+				var otherShipPosInGridCameraSpace = worldPointToCameraSpace(otherShip.x,otherShip.y,gridCamera);
+				ctx.lineTo(otherShipPosInGridCameraSpace[0], otherShipPosInGridCameraSpace[1]);
+			}
+			ctx.lineWidth = .5;
+			ctx.strokeStyle = 'red';
+			ctx.globalAlpha = .2;
+			ctx.stroke();
+			ctx.strokeStyle = 'grey';
+		}
 
 		ctx.globalAlpha = .5;
 		ctx.translate(shipPosInGridCameraSpace[0],shipPosInGridCameraSpace[1]);
