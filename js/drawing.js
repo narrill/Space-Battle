@@ -1,6 +1,83 @@
 "use strict"
 
 var drawing = {
+	//renders everything
+	draw:function(cameras, game, dt){
+
+		//console.log('drawing');
+		//pause screen
+	 	if((game.gameState == enums.GAME_STATES.PLAYING || game.gameState == enums.GAME_STATES.TUTORIAL) && game.paused){
+	 		//dt = 0;
+	 		drawing.drawPauseScreen(cameras.camera);
+	 		drawing.drawLockedGraphic(cameras.camera);
+	 		//game.drawPauseScreen(game.worldCamera);
+	 		return;
+	 	}		
+
+		//clear cameras
+		drawing.clearCamera(cameras.camera);
+
+		//draw grids then asteroids then ships
+		if(game.drawStarField)
+			drawing.drawAsteroids(game.stars,cameras.starCamera);		
+		
+		if(game.gameState == enums.GAME_STATES.PLAYING || game.gameState == enums.GAME_STATES.TUTORIAL)
+		{
+			//camera zoom controls
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_UP] && cameras.camera.zoom<=cameras.camera.maxZoom)
+				cameras.camera.zoom*=1.05;
+			if(myKeys.keydown[myKeys.KEYBOARD.KEY_DOWN] && cameras.camera.zoom>=cameras.camera.minZoom)
+				cameras.camera.zoom*=.95;
+			if(myMouse.wheel)
+				cameras.camera.zoom*=1+(myMouse.wheel/500);
+			if(cameras.camera.zoom>cameras.camera.maxZoom)
+				cameras.camera.zoom = cameras.camera.maxZoom;
+			else if(cameras.camera.zoom<cameras.camera.minZoom)
+				cameras.camera.zoom = cameras.camera.minZoom;
+
+			drawing.drawGrid(cameras.gridCamera, game.grid);
+			drawing.drawAsteroidsOverlay(game.asteroids,cameras.camera,cameras.gridCamera);
+			for(var n = game.otherShips.length-1;n>=-1;n--){
+				var ship = (n==-1)?game.ship:game.otherShips[n];
+				drawing.drawShipOverlay(ship,cameras.camera,cameras.gridCamera);
+			}
+			drawing.drawProjectiles(game.projectiles, cameras.camera, dt);
+			drawing.drawHitscans(game.hitscans, cameras.camera);
+			for(var c = game.otherShips.length-1;c>=-1;c--){
+				var ship = (c==-1)?game.ship:game.otherShips[c];
+				drawing.drawShip(ship,cameras.camera);
+			}
+			drawing.drawRadials(game.radials, cameras.camera, dt);
+			drawing.drawAsteroids(game.asteroids,cameras.camera, cameras.gridCamera);
+			drawing.drawHUD(cameras.camera, game.ship);
+			drawing.drawMinimap(cameras.minimapCamera, game);
+			if(game.gameState == enums.GAME_STATES.TUTORIAL)
+				drawing.drawTutorialGraphics(cameras.camera);
+		}
+		else if(game.gameState == enums.GAME_STATES.TITLE)
+		{
+			drawing.drawAsteroids(game.asteroids,cameras.camera,cameras.gridCamera);
+			drawing.drawTitleScreen(cameras.camera);
+		}
+		else if(game.gameState == enums.GAME_STATES.WIN){
+			drawing.drawGrid(cameras.gridCamera, game.grid);
+			drawing.drawAsteroids(game.asteroids,cameras.camera,cameras.gridCamera);
+			drawing.drawWinScreen(cameras.camera);
+		}
+		else if(game.gameState == enums.GAME_STATES.LOSE){
+			drawing.drawGrid(cameras.gridCamera, game.grid);
+			drawing.drawAsteroids(game.asteroids,cameras.camera,cameras.gridCamera);
+			drawing.drawLoseScreen(cameras.camera);
+		}		
+
+		drawing.drawLockedGraphic(cameras.camera);
+
+		//resetMouse();
+
+		utilities.fillText(cameras.camera.ctx,'fps: '+Math.floor(1/dt),15,15,"8pt Orbitron",'white');
+		utilities.fillText(cameras.camera.ctx,'prjs: '+this.projectiles.length,15,30,"8pt Orbitron",'white');
+	},	
+
 	//clears the given camera's canvas
 	clearCamera:function(camera){
 		var ctx = camera.ctx;
@@ -528,9 +605,9 @@ var drawing = {
 	//draws the minimap to the given camera
 	//note that the minimap camera has a viewport
 	drawMinimap:function(camera, game){
-		var ctx = camera.ctx;
-		var viewportStart = [camera.width*camera.viewport.startX,camera.height*camera.viewport.startY];
-		var viewportEnd = [camera.width*camera.viewport.endX,camera.height*camera.viewport.endY];
+		var ctx = camera.viewport.parent.ctx;
+		var viewportStart = [camera.viewport.parent.width*camera.viewport.startX,camera.viewport.parent.height*camera.viewport.startY];
+		var viewportEnd = [camera.viewport.parent.width*camera.viewport.endX,camera.viewport.parent.height*camera.viewport.endY];
 		var viewportDimensions = [viewportEnd[0]-viewportStart[0],viewportEnd[1]-viewportStart[1]];
 		ctx.save();
 		ctx.translate(0,-30);
@@ -543,11 +620,11 @@ var drawing = {
 		ctx.clip();
 		ctx.translate((viewportStart[0]+viewportDimensions[0]/2-camera.width/2),(viewportStart[1]+viewportDimensions[1]/2-camera.height/2));
 		//ctx.translate(600,300);
-		drawing.drawGrid(game.minimapCamera, game.grid, true);
-		drawing.drawAsteroids(game.asteroids,game.minimapCamera);
+		drawing.drawGrid(camera, game.grid, true);
+		drawing.drawAsteroids(game.asteroids,camera);
 		for(var n = game.otherShips.length-1;n>=-1;n--){
 			var ship = (n==-1)?game.ship:game.otherShips[n];
-			drawing.drawShipMinimap(ship,game.minimapCamera);
+			drawing.drawShipMinimap(ship,camera);
 		}
 		ctx.restore();
 	},

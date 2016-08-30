@@ -20,17 +20,9 @@ var enums = {
 var gameFunctions = {
 	//initialize the stuff
 	init : function(game) {
-		// initialize properties
-			var canvas = game.canvas = document.querySelector('#canvas1');
-			canvas.width = window.innerWidth;
-			canvas.height = window.innerHeight;
+		// initialize properties			
 			constructors.generateStarField.bind(game, game.stars)();
 			game.ship = constructors.createShip(ships.cheetah, game);
-			game.camera = constructors.createCamera(canvas,{x:game.ship.x,y:game.ship.y,rotation:game.ship.rotation,zoom:.5,minZoom:.025,maxZoom:5});
-			game.camera.globalCompositeOperation = 'hard-light';
-			game.starCamera = constructors.createCamera(canvas);
-			game.gridCamera = constructors.createCamera(canvas);
-			game.minimapCamera = constructors.createCamera(canvas,{zoom:.001,viewport:{startX:.83,startY:.7,endX:1,endY:1}});
 			var hue = Math.round(Math.random()*360);
 			for(var c = 0;c<game.factions;c++){
 				game.factionColors[c] = 'hsl('+hue+',100%,65%)';
@@ -42,12 +34,13 @@ var gameFunctions = {
 			game.lastTime = Date.now();
 			game.elapsedGameTime = 0;
 			//game.animationID = requestAnimationFrame(game.frame.bind(game));
-			gameFunctions.frame.bind(game)();
+			gameFunctions.loop.bind(game)();
 	},
 
 	//the main this function - called once per frame
-	frame:function(){
-		this.animationID = requestAnimationFrame(gameFunctions.frame.bind(this));
+	loop:function(){
+		//this.animationID = requestAnimationFrame(gameFunctions.frame.bind(this));
+		this.frameTimeout = setTimeout(gameFunctions.loop.bind(this),this.timeStep*1000);
 		var dt = utilities.calculateDeltaTime(this);
 		if(dt>this.timeStep*4)
 			dt = this.timeStep;
@@ -57,13 +50,7 @@ var gameFunctions = {
 				gameFunctions.update(this,this.timeStep);
 			this.accumulator-= this.timeStep;
 		}
-		gameFunctions.draw(this, dt);
-
-		//FPS text
-		if (this.debug){
-			utilities.fillText(this.camera.ctx,'fps: '+Math.floor(1/dt),15,15,"8pt Orbitron",'white');
-			utilities.fillText(this.camera.ctx,'prjs: '+this.projectiles.length,15,30,"8pt Orbitron",'white');
-		}
+		//gameFunctions.draw(this, dt);
 	},
 
 	//one game tick
@@ -123,18 +110,6 @@ var gameFunctions = {
 
 			objControls.objKeyboardControl(game.ship,dt);
 
-		 	//camera zoom controls
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_UP] && game.camera.zoom<=game.camera.maxZoom)
-				game.camera.zoom*=1.05;
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_DOWN] && game.camera.zoom>=game.camera.minZoom)
-				game.camera.zoom*=.95;
-			if(myMouse.wheel)
-				game.camera.zoom*=1+(myMouse.wheel/500);
-			if(game.camera.zoom>game.camera.maxZoom)
-				game.camera.zoom = game.camera.maxZoom;
-			else if(game.camera.zoom<game.camera.minZoom)
-				game.camera.zoom = game.camera.minZoom;
-
 		 	//update ship, center main camera on ship
 			//game.updateShip(game.ship,dt);
 			for(var i = 0; i<game.projectiles.length; i++){
@@ -166,34 +141,10 @@ var gameFunctions = {
 		else if((game.gameState == enums.GAME_STATES.WIN || game.gameState == enums.GAME_STATES.LOSE) && myKeys.keydown[myKeys.KEYBOARD.KEY_R])
 			gameFunctions.resetGame(game);
 
-	 	//camera shenanigans
-		game.camera.x = lerp(game.camera.x,game.ship.x+game.ship.velocityX/10,12*dt);// game.ship.forwardVectorX*(game.camera.height/6)*(1/game.camera.zoom);
-		game.camera.y = lerp(game.camera.y,game.ship.y+game.ship.velocityY/10,12*dt);// game.ship.forwardVectorY*(game.camera.height/6)*(1/game.camera.zoom);
-		var rotDiff = game.ship.rotation+game.ship.rotationalVelocity/10 - game.camera.rotation;
-		if(rotDiff>180)
-			rotDiff-=360;
-		else if(rotDiff<-180)
-			rotDiff+=360;
-		game.camera.rotation += lerp(0,rotDiff,12*dt);
-		if(game.camera.rotation>180)
-			game.camera.rotation-=360;
-		else if(game.camera.rotation<-180)
-			game.camera.rotation+=360;
-		game.starCamera.x = game.camera.x;
-	 	game.starCamera.y = game.camera.y;
-	 	game.starCamera.rotation = game.camera.rotation;
-	 	game.gridCamera.x = game.camera.x;
-	 	game.gridCamera.y = game.camera.y;
-	 	game.gridCamera.rotation = game.camera.rotation;
-	 	var cameraDistance = 1/game.camera.zoom;
-	 	game.starCamera.zoom = 1/(cameraDistance+10000);
-	 	game.gridCamera.zoom = 1/(cameraDistance+5);
-	 	game.minimapCamera.x = game.ship.x;
-	 	game.minimapCamera.y = game.ship.y;
-	 	game.minimapCamera.rotation = game.ship.rotation;
+	 	
 
 		//game needs to be done
-		resetMouse();
+		//resetMouse();
 
 		if(game.thrusterSound && (game.gameState == enums.GAME_STATES.PLAYING || game.gameState == enums.GAME_STATES.TUTORIAL))
 			game.thrusterSound.volume = (game.paused)?0:game.ship.thrusterSystem.noiseLevel*2*(1-(1-game.camera.zoom)/game.soundLevel);
@@ -201,68 +152,6 @@ var gameFunctions = {
 		//because we might use the frame count for something at some point
 		game.frameCount++;
 	},
-
-	//renders everything
-	draw:function(game, dt){
-
-		//console.log('drawing');
-		//pause screen
-	 	if((game.gameState == enums.GAME_STATES.PLAYING || game.gameState == enums.GAME_STATES.TUTORIAL) && game.paused){
-	 		//dt = 0;
-	 		drawing.drawPauseScreen(game.camera);
-	 		drawing.drawLockedGraphic(game.camera);
-	 		//game.drawPauseScreen(game.worldCamera);
-	 		return;
-	 	}		
-
-		//clear cameras
-		drawing.clearCamera(game.camera);
-		//drawing.clearCamera(game.starCamera);
-		//game.clearCamera(game.minimapCamera);
-
-		//draw grids then asteroids then ships
-		if(game.drawStarField)
-			drawing.drawAsteroids(game.stars,game.starCamera);		
-		
-		if(game.gameState == enums.GAME_STATES.PLAYING || game.gameState == enums.GAME_STATES.TUTORIAL)
-		{
-			drawing.drawGrid(game.gridCamera, game.grid);
-			drawing.drawAsteroidsOverlay(game.asteroids,game.camera,game.gridCamera);
-			for(var n = game.otherShips.length-1;n>=-1;n--){
-				var ship = (n==-1)?game.ship:game.otherShips[n];
-				drawing.drawShipOverlay(ship,game.camera,game.gridCamera);
-			}
-			drawing.drawProjectiles(game.projectiles, game.camera, dt);
-			drawing.drawHitscans(game.hitscans, game.camera);
-			for(var c = game.otherShips.length-1;c>=-1;c--){
-				var ship = (c==-1)?game.ship:game.otherShips[c];
-				drawing.drawShip(ship,game.camera);
-			}
-			drawing.drawRadials(game.radials, game.camera, dt);
-			drawing.drawAsteroids(game.asteroids,game.camera, game.gridCamera);
-			drawing.drawHUD(game.camera, game.ship);
-			drawing.drawMinimap(game.minimapCamera, game);
-			if(game.gameState == enums.GAME_STATES.TUTORIAL)
-				drawing.drawTutorialGraphics(game.camera);
-		}
-		else if(game.gameState == enums.GAME_STATES.TITLE)
-		{
-			drawing.drawAsteroids(game.asteroids,game.camera,game.gridCamera);
-			drawing.drawTitleScreen(game.camera);
-		}
-		else if(game.gameState == enums.GAME_STATES.WIN){
-			drawing.drawGrid(game.gridCamera, game.grid);
-			drawing.drawAsteroids(game.asteroids,game.camera,game.gridCamera);
-			drawing.drawWinScreen(game.camera);
-		}
-		else if(game.gameState == enums.GAME_STATES.LOSE){
-			drawing.drawGrid(game.gridCamera, game.grid);
-			drawing.drawAsteroids(game.asteroids,game.camera,game.gridCamera);
-			drawing.drawLoseScreen(game.camera);
-		}		
-
-		drawing.drawLockedGraphic(game.camera);
-	},	
 
 	checkCollisions:function(game, dt){
 		//obj collisions
@@ -474,12 +363,12 @@ var gameFunctions = {
 		game.paused = true;
 		game.thrusterSound.volume = 0;
 		cancelAnimationFrame(game.animationID);
-		gameFunctions.frame.bind(game)();
+		gameFunctions.loop.bind(game)();
 	},
 
 	resumeGame:function(game){
 		cancelAnimationFrame(game.animationID);
 		game.paused = false;
-		gameFunctions.frame.bind(game)();
+		gameFunctions.loop.bind(game)();
 	}	
 };

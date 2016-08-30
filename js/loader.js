@@ -25,7 +25,7 @@ window.onload = function(){
 		{id:"gunshot4",src:"gunshot4.mp3"}
 	];
 	//var thrusterSound = [{id:"thruster",src:"thruster.mp3"}];
-	app.main.sounds = {
+	app.game.sounds = {
 		laser:{id:'laser',loaded:false},
 		thruster:{id:'thruster',loaded:false},
 		bgm:{id:'bgm',loaded:false},
@@ -38,7 +38,8 @@ window.onload = function(){
 	createjs.Sound.addEventListener("fileload",handleLoad);
 	createjs.Sound.registerSounds(sounds,audioPath,100);
 	//createjs.Sound.registerSounds(thrusterSound,audioPath,1);
-	gameFunctions.init(app.main);
+	gameFunctions.init(app.game);
+	startClient(app.game);
 	pointerInit();
 	window.addEventListener('resize',function(e){
 		var can = document.querySelector('#canvas1');
@@ -48,22 +49,22 @@ window.onload = function(){
 }
 
 function handleLoad(event){
-	if(event.id==app.main.sounds.bgm.id)
+	if(event.id==app.game.sounds.bgm.id)
 		createjs.Sound.play(event.src,{loop:-1});
-	else if(event.id==app.main.sounds.thruster.id)
+	else if(event.id==app.game.sounds.thruster.id)
 	{
-		app.main.thrusterSound = createjs.Sound.play(event.src,{loop:-1});
-		app.main.thrusterSound.volume = 0;
+		app.game.thrusterSound = createjs.Sound.play(event.src,{loop:-1});
+		app.game.thrusterSound.volume = 0;
 	}
-	app.main.sounds[event.id].loaded = true;
+	app.game.sounds[event.id].loaded = true;
 }
 
 window.onblur = function(){
 	myKeys.keydown = [];
-	gameFunctions.pauseGame(app.main);
-	//if(app.main.thrusterSound)
-	//	app.main.thrusterSound.volume = 0;
+	gameFunctions.pauseGame(app.game);
+	//if(app.game.thrusterSound)
+	//	app.game.thrusterSound.volume = 0;
 };
 window.onfocus = function(){
-	gameFunctions.resumeGame(app.main);
+	gameFunctions.resumeGame(app.game);
 };

@@ -5,7 +5,7 @@
 var canvas;
 var locked = false;
 function pointerInit(){
-	canvas = app.main.canvas;
+	canvas = app.game.canvas;
 	canvas.addEventListener("mouseup",requestLock);
 	// Hook pointer lock state change events
 	document.addEventListener('pointerlockchange', changeCallback, false);
@@ -67,13 +67,6 @@ myMouse.sensitivity = .10;
 // this works because JS has "sparse arrays" - not every language does
 myKeys.keydown = [];
 
-/*window.addEventListener("keydown", function(e) {
-    // space and arrow keys
-    if([32, 37, 38, 39, 40].indexOf(e.keyCode) > -1) {
-        e.preventDefault();
-    }
-}, false);*/
-
 // event listeners
 window.addEventListener("keydown",function(e){
 	//console.log("keydown=" + e.keyCode);
@@ -93,19 +86,19 @@ window.addEventListener("keyup",function(e){
 	
 	// pausing and resuming
 	if(e.keyCode == myKeys.KEYBOARD.KEY_TAB && !myKeys.keydown[myKeys.KEYBOARD.KEY_ALT])
-		app.main.ship.stabilizer.enabled = !app.main.ship.stabilizer.enabled;
+		app.game.ship.stabilizer.enabled = !app.game.ship.stabilizer.enabled;
 	else if(e.keyCode == myKeys.KEYBOARD.KEY_C)
-		app.main.ship.stabilizer.clamps.enabled = !app.main.ship.stabilizer.clamps.enabled;
+		app.game.ship.stabilizer.clamps.enabled = !app.game.ship.stabilizer.clamps.enabled;
 	else if(e.keyCode == myKeys.KEYBOARD.KEY_F)
-		app.main.drawStarField = !app.main.drawStarField;
+		app.game.drawStarField = !app.game.drawStarField;
 	else if (e.keyCode == myKeys.KEYBOARD.KEY_P)
 	{
-		//app.main.paused = !app.main.paused;
-		if(app.main.paused) gameFunctions.resumeGame(app.main);
-		else gameFunctions.pauseGame(app.main);
+		//app.game.paused = !app.game.paused;
+		if(app.game.paused) gameFunctions.resumeGame(app.game);
+		else gameFunctions.pauseGame(app.game);
 	}
 	//else if(e.keyCode == myKeys.KEYBOARD.KEY_E)
-	//	app.main.ship.weaponToggle = !app.main.ship.weaponToggle;
+	//	app.game.ship.weaponToggle = !app.game.ship.weaponToggle;
 });
 
 function requestLock(){

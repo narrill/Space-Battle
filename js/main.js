@@ -18,7 +18,7 @@ var app = app || {};
  This object literal has its own properties and methods (functions)
  
  */
-app.main = {
+app.game = {
 	canvas: undefined,
 	minimapCanvas: undefined,
 	accumulator:0,
@@ -32,7 +32,7 @@ app.main = {
    	lastTime: 0, // used by calculateDeltaTime() 
     debug: true,
 	paused:false,
-	animationID:0,
+	frameTimeout:undefined,
 	frameCount:0,
 	runningTime:0,
 	updatables:[],

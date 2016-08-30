@@ -339,12 +339,14 @@ var constructors = {
 	createComponentViewport:function(objectParams){
 		if(!objectParams)
 			objectParams = {};
-		return veryShallowObjectMerge({
+		var vp = veryShallowObjectMerge({
 			startX:0,
 			startY:0,
 			endX:1,
 			endY:1
 		}, objectParams);
+		vp.parent = objectParams.parent;
+		return vp;
 	},
 
 	//constructor for laser object
