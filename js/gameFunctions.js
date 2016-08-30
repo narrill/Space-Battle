@@ -111,6 +111,15 @@ var gameFunctions = {
 				//objControls.objAI(ship,game.ship,dt);
 			},game);*/
 
+			for(var c = 0;c<game.respawnQueue.length;c++){
+				var rs = game.respawnQueue[c];
+				if(Date.now()>=rs.time)
+				{
+					game.otherShips.push(constructors.createShip(rs.params, game));
+					game.respawnQueue.splice(c--,1);
+				}
+			}
+
 			objControls.objKeyboardControl(game.ship,dt);
 
 		 	//camera zoom controls
@@ -272,7 +281,7 @@ var gameFunctions = {
 					//if(capsuleCapsuleSAT({center1:[gameObj.x,gameObj.y], center2:[gameObj.x+gameObj.velocityX*dt, gameObj.y+gameObj.velocityY*dt], radius:gameObj.destructible.radius}, currentObjCapsule))
 					if(capsuleCapsuleSAT({center1:[gameObj.x,gameObj.y], center2:gameObjNext, radius:gameObj.destructible.radius}, currentObjCapsule))
 					{
-						console.log('collision');
+						//console.log('collision');
 						collisions.basicKineticCollision(currentObj, gameObj, dt);
 						//console.log(damage+' damage, '+magnitude+' magnitude');
 					}
@@ -335,7 +344,7 @@ var gameFunctions = {
 						if(gameDistance[1]<tValOfObj && polygonCapsuleSAT(hitscanVertices, {center1:[gameObj.x, gameObj.y], center2:gameObjNext, radius:gameObj.destructible.radius})){
 							obj = gameObj;
 							tValOfObj = gameDistance[1];
-							console.log('hitscan-projectile collision');
+							//console.log('hitscan-projectile collision');
 						}
 					}
 
@@ -451,6 +460,7 @@ var gameFunctions = {
 				fireSpread:5
 			};
 			newShip.faction = Math.floor(Math.random()*game.factions);
+			newShip.respawnTime = 5;
 			game.otherShips.push(constructors.createShip(newShip, game));
 		}
 		game.gameState = enums.GAME_STATES.PLAYING;

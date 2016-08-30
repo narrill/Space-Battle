@@ -345,6 +345,8 @@ var updaters = {
 		var onDestroyFunctions = [];
 		if(obj.warhead)
 			onDestroyFunctions.push(destructors.destroyWarhead);
+		if(obj.respawnTime)
+			onDestroyFunctions.push(destructors.queueRespawn);
 
 		obj.onDestroy = onDestroyFunctions;
 	}

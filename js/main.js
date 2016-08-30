@@ -41,6 +41,7 @@ app.main = {
 	otherShipCount:0,
 	maxOtherShips:8,
 	factions:4,
+	respawnQueue:[],
 	factionColors:[],
 	hitscans:[],
 	projectiles:[],

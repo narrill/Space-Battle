@@ -46,6 +46,7 @@ var constructors = {
 			/*onDestroy:function(obj){
 				constructors.createRadial(obj.game.radials,obj.x, obj.y, 500, .99, 'red', obj, undefined, {});
 			}*/
+			constructionObject:deepObjectMerge({},objectParams)
 		};
 
 		//this is for adding additional components. also it's super janky
@@ -484,5 +485,8 @@ var destructors = {
 	destroyWarhead:function(obj){
 		var radial = obj.warhead.radial;
 		constructors.createRadial(obj.game.radials, obj.x, obj.y, radial.velocity, radial.decay, radial.color, obj, collisions[radial.collisionFunction], radial.collisionProperties);
+	},
+	queueRespawn:function(obj){
+		obj.game.respawnQueue.push({time:Date.now()+obj.respawnTime*1000,params:obj.constructionObject});
 	}
 };
