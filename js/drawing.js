@@ -27,7 +27,7 @@ var drawing = {
 			}
 			drawing.drawRadials(game.radials, cameras.camera, dt);
 			drawing.drawAsteroids(game.asteroids,cameras.camera, cameras.gridCamera);
-			//drawing.drawHUD(cameras.camera, game.ship);
+			drawing.drawHUD(cameras.camera, game.ship);
 			drawing.drawMinimap(cameras.minimapCamera, game);
 			utilities.fillText(cameras.camera.ctx,'prjs: '+this.projectiles.length,15,30,"8pt Orbitron",'white');
 		}
@@ -536,7 +536,7 @@ var drawing = {
 	},
 
 	//draws the heads-up display to the given camera
-	drawHUD: function(camera, ship){
+	drawHUD: function(camera){
 		var ctx = camera.ctx;
 		ctx.save(); // NEW
 		ctx.textAlign = 'center';
@@ -544,15 +544,15 @@ var drawing = {
 		//utilities.fillText(ctx, "Shields: "+Math.round(this.ship.destructible.shield.current),camera.width/15,7.5*camera.height/10,"12pt Prime",'white')
 		//utilities.fillText(ctx, "HP: "+Math.round(this.ship.destructible.hp),camera.width/15,8*camera.height/10,"12pt Prime",'white')
 		ctx.fillRect(0,camera.height,camera.width,-30);
-		utilities.fillText(ctx, ((ship.stabilizer.enabled)?'assisted':'manual'),camera.width/2,camera.height-10,"bold 12pt Orbitron",(ship.stabilizer.enabled)?'green':'red');
+		utilities.fillText(ctx, ((hudInfo.stabilized)?'assisted':'manual'),camera.width/2,camera.height-10,"bold 12pt Orbitron",(hudInfo.stabilized)?'green':'red');
 		ctx.textAlign = 'left';
 		utilities.fillText(ctx,'limiter',10,camera.height-10,"8pt Orbitron",'white');
-		if(ship.stabilizer.clamps.enabled)
+		if(hudInfo.velocityClamps.enabled)
 		{
 			ctx.textAlign = 'right';
-			utilities.fillText(ctx,Math.round(ship.stabilizer.clamps.medial),110,camera.height-10,"10pt Orbitron",'green');
-			utilities.fillText(ctx,Math.round(ship.stabilizer.clamps.lateral),160,camera.height-10,"10pt Orbitron",'cyan');
-			utilities.fillText(ctx,Math.round(ship.stabilizer.clamps.rotational),195,camera.height-10,"10pt Orbitron",'yellow');
+			utilities.fillText(ctx,Math.round(hudInfo.velocityClamps.medial),110,camera.height-10,"10pt Orbitron",'green');
+			utilities.fillText(ctx,Math.round(hudInfo.velocityClamps.lateral),160,camera.height-10,"10pt Orbitron",'cyan');
+			utilities.fillText(ctx,Math.round(hudInfo.velocityClamps.rotational),195,camera.height-10,"10pt Orbitron",'yellow');
 		}
 		else
 		{
@@ -561,10 +561,10 @@ var drawing = {
 		}
 		//utilities.fillText(ctx, "Thruster clamps: "+((this.ship.stabilizer.clamps.enabled)?'Medial '+Math.round(this.ship.stabilizer.clamps.medial)+' Lateral '+Math.round(this.ship.stabilizer.clamps.lateral)+' Rotational '+Math.round(this.ship.stabilizer.clamps.rotational):'disabled'),0,camera.height-10,"12pt Prime",'white')
 		ctx.textAlign = 'right';
-		utilities.fillText(ctx,'T '+Math.round(updaters.getPowerForComponent(ship.powerSystem,enums.SHIP_COMPONENTS.THRUSTERS)*100)+'%',camera.width-220,camera.height-10,"10pt Orbitron",'green');
-		utilities.fillText(ctx,' L '+Math.round(updaters.getPowerForComponent(ship.powerSystem,enums.SHIP_COMPONENTS.LASERS)*100)+'%',camera.width-120,camera.height-10,"10pt Orbitron",'red');
-		utilities.fillText(ctx,' S '+Math.round(updaters.getPowerForComponent(ship.powerSystem,enums.SHIP_COMPONENTS.SHIELDS)*100)+'%',camera.width-20,camera.height-10,"10pt Orbitron",'dodgerblue');
-		//utilities.fillText(ctx, "Overcharge: Thrusters "+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.THRUSTERS)*100)+'% Laser '+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.LASERS)*100)+'% Shields '+Math.round(this.getPowerForComponent(this.ship.powerSystem,this.SHIP_COMPONENTS.SHIELDS)*100)+'%',camera.width,camera.height-10,"10pt Orbitron",'white')
+		//utilities.fillText(ctx,'T '+Math.round(updaters.getPowerForComponent(ship.powerSystem,enums.SHIP_COMPONENTS.THRUSTERS)*100)+'%',camera.width-220,camera.height-10,"10pt Orbitron",'green');
+		//utilities.fillText(ctx,' L '+Math.round(updaters.getPowerForComponent(ship.powerSystem,enums.SHIP_COMPONENTS.LASERS)*100)+'%',camera.width-120,camera.height-10,"10pt Orbitron",'red');
+		//utilities.fillText(ctx,' S '+Math.round(updaters.getPowerForComponent(ship.powerSystem,enums.SHIP_COMPONENTS.SHIELDS)*100)+'%',camera.width-20,camera.height-10,"10pt Orbitron",'dodgerblue');
+		
 		ctx.restore(); // NEW
 	},
 

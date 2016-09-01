@@ -115,6 +115,9 @@ var gameFunctions = {
 					d.velX = plShip.velocityX;
 					d.velY = plShip.velocityY;
 					d.rotationalVelocity = plShip.rotationalVelocity;
+					d.velocityClamps = plShip.stabilizer.clamps;
+					d.stabilized = plShip.stabilizer.enabled;
+					//d.powerDistribution = 
 				}
 				pl.socket.send(d);
 			}

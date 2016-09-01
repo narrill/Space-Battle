@@ -6,6 +6,7 @@ var cameras = {};
 var accumulator = 0;
 var socket;
 var playerInfo = {x:0,y:0, rotation:0,velX:0,velY:0,rotationalVelocity:0};
+var hudInfo = {};
 var state;
 var GAME_STATES = {
 	TITLE:0,
@@ -112,13 +113,16 @@ function update(game, dt){
 }
 
 function messageHandler(data){
-	playerInfo.x = data.x;
-	playerInfo.y = data.y;
-	playerInfo.rotation = data.rotation;
-	playerInfo.velX = data.velX;
-	playerInfo.velY = data.velY;
-	playerInfo.rotationalVelocity = data.rotationalVelocity;
-	game = data.game;
+	if(data.x) playerInfo.x = data.x;
+	if(data.y) playerInfo.y = data.y;
+	if(data.rotation) playerInfo.rotation = data.rotation;
+	if(data.velX) playerInfo.velX = data.velX;
+	if(data.velY) playerInfo.velY = data.velY;
+	if(data.rotationalVelocity) playerInfo.rotationalVelocity = data.rotationalVelocity;
+	if(data.game) game = data.game;
+	if(data.velocityClamps) hudInfo.velocityClamps = data.velocityClamps;
+	if(data.stabilized) hudInfo.stabilized = data.stabilized;
+	if(data.powerDistribution) hudInfo.powerDistribution = data.powerDistribution;
 	if(state==GAME_STATES.WAIT)
 		state = GAME_STATES.PLAYING;
 }
