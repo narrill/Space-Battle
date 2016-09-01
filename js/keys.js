@@ -4,8 +4,8 @@
 "use strict";
 var canvas;
 var locked = false;
-function pointerInit(){
-	canvas = app.game.canvas;
+function pointerInit(c){
+	canvas = c;
 	canvas.addEventListener("mouseup",requestLock);
 	// Hook pointer lock state change events
 	document.addEventListener('pointerlockchange', changeCallback, false);
@@ -60,7 +60,7 @@ myMouse.BUTTONS = Object.freeze({
 myMouse.mousedown = [];
 myMouse.direction = 0;
 myMouse.wheel = 0;
-myMouse.sensitivity = .10;
+myMouse.sensitivity = .1;
 // myKeys.keydown array to keep track of which keys are down
 // this is called a "key daemon"
 // main.js will "poll" this array every frame
@@ -71,6 +71,7 @@ myKeys.keydown = [];
 window.addEventListener("keydown",function(e){
 	//console.log("keydown=" + e.keyCode);
 	myKeys.keydown[e.keyCode] = true;
+	socket.send({keyCode:e.keyCode,pos:1});
 	e.preventDefault();
 	e.stopPropagation();
 
@@ -83,9 +84,12 @@ window.addEventListener("keydown",function(e){
 window.addEventListener("keyup",function(e){
 	//console.log("keyup=" + e.keyCode);
 	myKeys.keydown[e.keyCode] = false;
+	socket.send({keyCode:e.keyCode,pos:0});
+	e.preventDefault();
+	e.stopPropagation();
 	
 	// pausing and resuming
-	if(e.keyCode == myKeys.KEYBOARD.KEY_TAB && !myKeys.keydown[myKeys.KEYBOARD.KEY_ALT])
+	/*if(e.keyCode == myKeys.KEYBOARD.KEY_TAB && !myKeys.keydown[myKeys.KEYBOARD.KEY_ALT])
 		app.game.ship.stabilizer.enabled = !app.game.ship.stabilizer.enabled;
 	else if(e.keyCode == myKeys.KEYBOARD.KEY_C)
 		app.game.ship.stabilizer.clamps.enabled = !app.game.ship.stabilizer.clamps.enabled;
@@ -96,7 +100,7 @@ window.addEventListener("keyup",function(e){
 		//app.game.paused = !app.game.paused;
 		if(app.game.paused) gameFunctions.resumeGame(app.game);
 		else gameFunctions.pauseGame(app.game);
-	}
+	}*/
 	//else if(e.keyCode == myKeys.KEYBOARD.KEY_E)
 	//	app.game.ship.weaponToggle = !app.game.ship.weaponToggle;
 });
@@ -109,12 +113,15 @@ function requestLock(){
 
 function mouseDown(e){
 	//console.log(e.button);
-	myMouse.mousedown[e.button] = true;
+	//myMouse.mousedown[e.button] = true;
+	//socket.send({mouseLeft})
+	socket.send({mb:e.button,pos:1});
 }
 
 function mouseUp(e){
 	//console.log('up');
-	myMouse.mousedown[e.button] = false;
+	//myMouse.mousedown[e.button] = false;
+	socket.send({mb:e.button,pos:0});
 }
 
 function mouseWheel(e){
@@ -162,6 +169,13 @@ function moveCallback(e){
 		myMouse.direction += movementX;
 }
 function resetMouse(){
-	myMouse.direction = 0;
 	myMouse.wheel = 0;
+	myMouse.direction = 0;
+}
+function resetWheel(){
+	myMouse.wheel = 0;
+}
+
+function resetDirection(){
+	myMouse.direction = 0;
 }

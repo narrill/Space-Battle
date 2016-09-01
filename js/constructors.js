@@ -1,6 +1,17 @@
 "use strict"
 
 var constructors = {
+	createPlayer:function(objectParams, game){
+		var pl = {
+			socket:objectParams.socket,
+			game:undefined,
+			lastSpawn:0,
+			currentShip:undefined
+		};
+		veryShallowObjectMerge(pl, objectParams);
+		return pl;
+	},
+
 	//constructor for ship objects
 	createShip:function(objectParams, game){
 		if(!objectParams)
@@ -333,6 +344,16 @@ var constructors = {
 		veryShallowObjectMerge(ai, objectParams);
 
 		return ai;
+	},
+
+	createComponentRemoteInput:function(objectParams){
+		var ri = {
+			keyboard:[],
+			mouse:[],
+			mouseDirection:0
+		};
+		veryShallowObjectMerge(ri,objectParams);
+		return ri;
 	},
 
 	//constructor for viewport component

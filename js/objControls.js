@@ -21,7 +21,7 @@ var objControls = {
 		if(!obj.stabilizer)
 			return;
 		//if the side thruster isn't active, or is active in the opposite direction of our rotation
-		if(obj.thrusterSystem.rotational.targetStrength*obj.rotationalVelocity>=0 && Math.abs(obj.rotationalVelocity) > obj.stabilizer.precision/6)
+		if(obj.thrusterSystem.rotational.targetStrength*obj.rotationalVelocity>=-10 && Math.abs(obj.rotationalVelocity) > obj.stabilizer.precision/6)
 			//add correctional strength in the opposite direction of our rotation
 			objControls.objRotationalThrusters(obj,obj.rotationalVelocity*obj.stabilizer.strength*dt); //we check the direction because the stabilizers can apply more thrust than the player
 		//or, if we've exceeded our clamp speed and are trying to keep accelerating in that direction
@@ -103,51 +103,5 @@ var objControls = {
 		if(!obj.targetingSystem)
 			return;
 		obj.targetingSystem.firing = true;
-	},
-
-	objKeyboardControl:function(obj, dt){
-		//set obj thruster values
-			//medial motion
-				if(myKeys.keydown[myKeys.KEYBOARD.KEY_W])
-					objControls.objMedialThrusters(obj,obj.thrusterSystem.medial.maxStrength/obj.stabilizer.thrustRatio);
-				if(myKeys.keydown[myKeys.KEYBOARD.KEY_S])
-					objControls.objMedialThrusters(obj,-obj.thrusterSystem.medial.maxStrength/obj.stabilizer.thrustRatio);
-				if(obj.stabilizer.enabled)
-					objControls.objMedialStabilizers(obj,dt);
-			//lateral motion
-				if(myKeys.keydown[myKeys.KEYBOARD.KEY_A])
-					objControls.objLateralThrusters(obj,obj.thrusterSystem.lateral.maxStrength/obj.stabilizer.thrustRatio);
-				if(myKeys.keydown[myKeys.KEYBOARD.KEY_D])
-					objControls.objLateralThrusters(obj,-obj.thrusterSystem.lateral.maxStrength/obj.stabilizer.thrustRatio);
-				if(obj.stabilizer.enabled)
-					objControls.objLateralStabilizers(obj,dt);
-			//rotational motion - mouse			
-				objControls.objRotationalThrusters(obj,-myMouse.direction*myMouse.sensitivity*obj.thrusterSystem.rotational.maxStrength/obj.stabilizer.thrustRatio);
-				if(myKeys.keydown[myKeys.KEYBOARD.KEY_LEFT])
-					objControls.objRotationalThrusters(obj,obj.thrusterSystem.rotational.maxStrength/obj.stabilizer.thrustRatio);
-				if(myKeys.keydown[myKeys.KEYBOARD.KEY_RIGHT])
-					objControls.objRotationalThrusters(obj,-obj.thrusterSystem.rotational.maxStrength/obj.stabilizer.thrustRatio);
-				if(obj.stabilizer.enabled)
-					objControls.objRotationalStabilizers(obj,dt);
-			//weapons
-				if(myMouse.mousedown[myMouse.BUTTONS.LEFT] || myKeys.keydown[myKeys.KEYBOARD.KEY_SPACE])
-				{
-					if(obj.hasOwnProperty("laser"))
-						objControls.objFireLaser(obj);
-					else if(obj.hasOwnProperty("cannon"))
-						objControls.objFireCannon(obj);
-				}
-				if(myKeys.keydown[myKeys.KEYBOARD.KEY_Q])
-					objControls.objFireLauncher(obj);
-				if(myKeys.keydown[myKeys.KEYBOARD.KEY_E])
-					objControls.objFireTargetingSystem(obj);
-
-			//power system
-				if(myKeys.keydown[myKeys.KEYBOARD.KEY_SHIFT])
-					obj.powerSystem.target[enums.SHIP_COMPONENTS.THRUSTERS] = 1;
-				if(myMouse.mousedown[myMouse.BUTTONS.RIGHT])
-					obj.powerSystem.target[enums.SHIP_COMPONENTS.LASERS] = 1;
-				if(myKeys.keydown[myKeys.KEYBOARD.KEY_ALT])
-					obj.powerSystem.target[enums.SHIP_COMPONENTS.SHIELDS] = 1;
 	}
 };

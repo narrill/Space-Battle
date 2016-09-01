@@ -2,80 +2,46 @@
 
 var drawing = {
 	//renders everything
-	draw:function(cameras, game, dt){
-
-		//console.log('drawing');
-		//pause screen
-	 	if((game.gameState == enums.GAME_STATES.PLAYING || game.gameState == enums.GAME_STATES.TUTORIAL) && game.paused){
-	 		//dt = 0;
-	 		drawing.drawPauseScreen(cameras.camera);
-	 		drawing.drawLockedGraphic(cameras.camera);
-	 		//game.drawPauseScreen(game.worldCamera);
-	 		return;
-	 	}		
+	draw:function(cameras, game, dt){		
 
 		//clear cameras
 		drawing.clearCamera(cameras.camera);
 
 		//draw grids then asteroids then ships
-		if(game.drawStarField)
-			drawing.drawAsteroids(game.stars,cameras.starCamera);		
+		//if(game.drawStarField)
+		//	drawing.drawAsteroids(game.stars,cameras.starCamera);		
 		
-		if(game.gameState == enums.GAME_STATES.PLAYING || game.gameState == enums.GAME_STATES.TUTORIAL)
+		if(state == GAME_STATES.PLAYING)
 		{
-			//camera zoom controls
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_UP] && cameras.camera.zoom<=cameras.camera.maxZoom)
-				cameras.camera.zoom*=1.05;
-			if(myKeys.keydown[myKeys.KEYBOARD.KEY_DOWN] && cameras.camera.zoom>=cameras.camera.minZoom)
-				cameras.camera.zoom*=.95;
-			if(myMouse.wheel)
-				cameras.camera.zoom*=1+(myMouse.wheel/500);
-			if(cameras.camera.zoom>cameras.camera.maxZoom)
-				cameras.camera.zoom = cameras.camera.maxZoom;
-			else if(cameras.camera.zoom<cameras.camera.minZoom)
-				cameras.camera.zoom = cameras.camera.minZoom;
-
 			drawing.drawGrid(cameras.gridCamera, game.grid);
 			drawing.drawAsteroidsOverlay(game.asteroids,cameras.camera,cameras.gridCamera);
-			for(var n = game.otherShips.length-1;n>=-1;n--){
+			for(var n = game.otherShips.length-1;n>=0;n--){
 				var ship = (n==-1)?game.ship:game.otherShips[n];
 				drawing.drawShipOverlay(ship,cameras.camera,cameras.gridCamera);
 			}
 			drawing.drawProjectiles(game.projectiles, cameras.camera, dt);
 			drawing.drawHitscans(game.hitscans, cameras.camera);
-			for(var c = game.otherShips.length-1;c>=-1;c--){
+			for(var c = game.otherShips.length-1;c>=0;c--){
 				var ship = (c==-1)?game.ship:game.otherShips[c];
 				drawing.drawShip(ship,cameras.camera);
 			}
 			drawing.drawRadials(game.radials, cameras.camera, dt);
 			drawing.drawAsteroids(game.asteroids,cameras.camera, cameras.gridCamera);
-			drawing.drawHUD(cameras.camera, game.ship);
+			//drawing.drawHUD(cameras.camera, game.ship);
 			drawing.drawMinimap(cameras.minimapCamera, game);
-			if(game.gameState == enums.GAME_STATES.TUTORIAL)
-				drawing.drawTutorialGraphics(cameras.camera);
+			utilities.fillText(cameras.camera.ctx,'prjs: '+this.projectiles.length,15,30,"8pt Orbitron",'white');
 		}
-		else if(game.gameState == enums.GAME_STATES.TITLE)
+		else if(state == GAME_STATES.TITLE)
 		{
-			drawing.drawAsteroids(game.asteroids,cameras.camera,cameras.gridCamera);
+			//drawing.drawAsteroids(game.asteroids,cameras.camera,cameras.gridCamera);
 			drawing.drawTitleScreen(cameras.camera);
-		}
-		else if(game.gameState == enums.GAME_STATES.WIN){
-			drawing.drawGrid(cameras.gridCamera, game.grid);
-			drawing.drawAsteroids(game.asteroids,cameras.camera,cameras.gridCamera);
-			drawing.drawWinScreen(cameras.camera);
-		}
-		else if(game.gameState == enums.GAME_STATES.LOSE){
-			drawing.drawGrid(cameras.gridCamera, game.grid);
-			drawing.drawAsteroids(game.asteroids,cameras.camera,cameras.gridCamera);
-			drawing.drawLoseScreen(cameras.camera);
-		}		
+		}	
 
 		drawing.drawLockedGraphic(cameras.camera);
 
 		//resetMouse();
 
 		utilities.fillText(cameras.camera.ctx,'fps: '+Math.floor(1/dt),15,15,"8pt Orbitron",'white');
-		utilities.fillText(cameras.camera.ctx,'prjs: '+this.projectiles.length,15,30,"8pt Orbitron",'white');
 	},	
 
 	//clears the given camera's canvas
@@ -622,7 +588,7 @@ var drawing = {
 		//ctx.translate(600,300);
 		drawing.drawGrid(camera, game.grid, true);
 		drawing.drawAsteroids(game.asteroids,camera);
-		for(var n = game.otherShips.length-1;n>=-1;n--){
+		for(var n = game.otherShips.length-1;n>=0;n--){
 			var ship = (n==-1)?game.ship:game.otherShips[n];
 			drawing.drawShipMinimap(ship,camera);
 		}

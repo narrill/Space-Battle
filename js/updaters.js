@@ -308,6 +308,53 @@ var updaters = {
 		aiF(obj, dt);
 	},
 
+	updateRemoteInputComponent:function(obj, dt){
+		//set obj thruster values
+			//medial motion
+				if(obj.remoteInput.keyboard[myKeys.KEYBOARD.KEY_W])
+					objControls.objMedialThrusters(obj,obj.thrusterSystem.medial.maxStrength/obj.stabilizer.thrustRatio);
+				if(obj.remoteInput.keyboard[myKeys.KEYBOARD.KEY_S])
+					objControls.objMedialThrusters(obj,-obj.thrusterSystem.medial.maxStrength/obj.stabilizer.thrustRatio);
+				if(obj.stabilizer.enabled)
+					objControls.objMedialStabilizers(obj,dt);
+			//lateral motion
+				if(obj.remoteInput.keyboard[myKeys.KEYBOARD.KEY_A])
+					objControls.objLateralThrusters(obj,obj.thrusterSystem.lateral.maxStrength/obj.stabilizer.thrustRatio);
+				if(obj.remoteInput.keyboard[myKeys.KEYBOARD.KEY_D])
+					objControls.objLateralThrusters(obj,-obj.thrusterSystem.lateral.maxStrength/obj.stabilizer.thrustRatio);
+				if(obj.stabilizer.enabled)
+					objControls.objLateralStabilizers(obj,dt);
+			//rotational motion - mouse		
+			//console.log(-obj.remoteInput.mouseDirection);	
+				objControls.objRotationalThrusters(obj,-obj.remoteInput.mouseDirection*dt*obj.thrusterSystem.rotational.maxStrength/obj.stabilizer.thrustRatio);
+				if(obj.remoteInput.keyboard[myKeys.KEYBOARD.KEY_LEFT])
+					objControls.objRotationalThrusters(obj,obj.thrusterSystem.rotational.maxStrength/obj.stabilizer.thrustRatio);
+				if(obj.remoteInput.keyboard[myKeys.KEYBOARD.KEY_RIGHT])
+					objControls.objRotationalThrusters(obj,-obj.thrusterSystem.rotational.maxStrength/obj.stabilizer.thrustRatio);
+				if(obj.stabilizer.enabled)
+					objControls.objRotationalStabilizers(obj,dt);
+			//weapons
+				if(obj.remoteInput.mouse[myMouse.BUTTONS.LEFT] || obj.remoteInput.keyboard[myKeys.KEYBOARD.KEY_SPACE])
+				{
+					if(obj.hasOwnProperty("laser"))
+						objControls.objFireLaser(obj);
+					else if(obj.hasOwnProperty("cannon"))
+						objControls.objFireCannon(obj);
+				}
+				if(obj.remoteInput.keyboard[myKeys.KEYBOARD.KEY_Q])
+					objControls.objFireLauncher(obj);
+				if(obj.remoteInput.keyboard[myKeys.KEYBOARD.KEY_E])
+					objControls.objFireTargetingSystem(obj);
+
+			//power system
+				if(obj.remoteInput.keyboard[myKeys.KEYBOARD.KEY_SHIFT])
+					obj.powerSystem.target[enums.SHIP_COMPONENTS.THRUSTERS] = 1;
+				if(obj.remoteInput.keyboard.mouseRight)
+					obj.powerSystem.target[enums.SHIP_COMPONENTS.LASERS] = 1;
+				if(obj.remoteInput.keyboard[myKeys.KEYBOARD.KEY_ALT])
+					obj.powerSystem.target[enums.SHIP_COMPONENTS.SHIELDS] = 1;
+	},
+
 	updateUpdatable:function(obj,dt){
 		var test = this;
 		for(var c = 0;c<obj.updaters.length;c++){

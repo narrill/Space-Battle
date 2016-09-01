@@ -1,14 +1,6 @@
 "use strict"
 
 var enums = {
-	GAME_STATES:{
-		TITLE:0,
-		PLAYING:1,
-		WIN:2,
-		LOSE:3,
-		MENU:4,
-		TUTORIAL:5
-	},
 	SHIP_COMPONENTS:{
 		THRUSTERS:0,
 		LASERS:1,
@@ -22,7 +14,7 @@ var gameFunctions = {
 	init : function(game) {
 		// initialize properties			
 			constructors.generateStarField.bind(game, game.stars)();
-			game.ship = constructors.createShip(ships.cheetah, game);
+			//game.ship = constructors.createShip(ships.cheetah, game);
 			var hue = Math.round(Math.random()*360);
 			for(var c = 0;c<game.factions;c++){
 				game.factionColors[c] = 'hsl('+hue+',100%,65%)';
@@ -35,6 +27,7 @@ var gameFunctions = {
 			game.elapsedGameTime = 0;
 			//game.animationID = requestAnimationFrame(game.frame.bind(game));
 			gameFunctions.loop.bind(game)();
+			return game;
 	},
 
 	//the main this function - called once per frame
@@ -46,8 +39,7 @@ var gameFunctions = {
 			dt = this.timeStep;
 		this.accumulator+=dt;
 		while(this.accumulator>=this.timeStep){
-			if(!((this.gameState == enums.GAME_STATES.PLAYING || this.gameState == enums.GAME_STATES.TUTORIAL) && this.paused))
-				gameFunctions.update(this,this.timeStep);
+			gameFunctions.update(this,this.timeStep);
 			this.accumulator-= this.timeStep;
 		}
 		//gameFunctions.draw(this, dt);
@@ -81,73 +73,62 @@ var gameFunctions = {
 				//game.otherShips[game.otherShips.length-1].ai = constructors.createComponentShipAI();
 			}
 	 	}*/
+		/*game.otherShips.forEach(function(ship){
+			//objControls.objAI(ship,game.ship,dt);
+		},game);*/
 
-		if(game.otherShips.length==0 && game.gameState==enums.GAME_STATES.PLAYING)
-		{
-			game.gameState = enums.GAME_STATES.WIN;
-			game.maxOtherShips*=2;
-			game.thrusterSound.volume = 0;
+		for(var c = 0;c<game.respawnQueue.length;c++){
+			var rs = game.respawnQueue[c];
+			if(game.elapsedGameTime>=rs.time)
+			{
+				game.otherShips.push(constructors.createShip(rs.params, game));
+				game.respawnQueue.splice(c--,1);
+			}
 		}
-		else if(game.gameState == enums.GAME_STATES.PLAYING && game.ship.destructible.hp<=0)
-		{
-			game.gameState = enums.GAME_STATES.LOSE;
-			game.thrusterSound.volume = 0;
+
+	 	//update ship, center main camera on ship
+		//game.updateShip(game.ship,dt);
+		for(var i = 0; i<game.projectiles.length; i++){
+			updaters.updateMobile(game.projectiles[i], dt);
 		}
-		else if(game.gameState == enums.GAME_STATES.PLAYING || game.gameState==enums.GAME_STATES.TUTORIAL){				
+		for(var i = 0;i<game.radials.length; i++){
+			updaters.updateRadial(game.radials[i], dt);
+		}
+		//updaters.updateUpdatable(game.ship,dt);
+		game.otherShips.forEach(function(ship){
+			updaters.updateUpdatable(ship,dt);
+		},game);			
 
-			/*game.otherShips.forEach(function(ship){
-				//objControls.objAI(ship,game.ship,dt);
-			},game);*/
+		gameFunctions.checkCollisions(game, dt);
 
-			for(var c = 0;c<game.respawnQueue.length;c++){
-				var rs = game.respawnQueue[c];
-				if(game.elapsedGameTime>=rs.time)
+		for(var c = 0;c<game.players.length;c++)
+		{
+			var pl = game.players[c];
+			if(pl){
+				var d = {game:game};
+				var plShip = pl.currentShip;
+				if(plShip)
 				{
-					game.otherShips.push(constructors.createShip(rs.params, game));
-					game.respawnQueue.splice(c--,1);
+					d.x = plShip.x;
+					d.y = plShip.y;
+					d.rotation = plShip.rotation;
+					d.velX = plShip.velocityX;
+					d.velY = plShip.velocityY;
+					d.rotationalVelocity = plShip.rotationalVelocity;
 				}
+				pl.socket.send(d);
 			}
-
-			objControls.objKeyboardControl(game.ship,dt);
-
-		 	//update ship, center main camera on ship
-			//game.updateShip(game.ship,dt);
-			for(var i = 0; i<game.projectiles.length; i++){
-				updaters.updateMobile(game.projectiles[i], dt);
-			}
-			for(var i = 0;i<game.radials.length; i++){
-				updaters.updateRadial(game.radials[i], dt);
-			}
-			updaters.updateUpdatable(game.ship,dt);
-			game.otherShips.forEach(function(ship){
-				updaters.updateUpdatable(ship,dt);
-			},game);			
-
-			gameFunctions.checkCollisions(game, dt);
-
-			game.elapsedGameTime+=dt*1000;	
-
-			if(game.gameState == enums.GAME_STATES.TUTORIAL && myKeys.keydown[myKeys.KEYBOARD.KEY_ENTER]){
-				gameFunctions.resetGame(game);
-				game.gameState = enums.GAME_STATES.PLAYING;
-			}			
 		}
-		else if(game.gameState == enums.GAME_STATES.TITLE && myKeys.keydown[myKeys.KEYBOARD.KEY_ENTER])
-		{
-			game.gameState = enums.GAME_STATES.TUTORIAL;
-			myKeys.keydown[myKeys.KEYBOARD.KEY_ENTER] = false;
-			//game.resetGame();
-		}
-		else if((game.gameState == enums.GAME_STATES.WIN || game.gameState == enums.GAME_STATES.LOSE) && myKeys.keydown[myKeys.KEYBOARD.KEY_R])
-			gameFunctions.resetGame(game);
+
+		game.elapsedGameTime+=dt*1000;	
 
 	 	
 
 		//game needs to be done
-		//resetMouse();
+		//resetDirection();
 
-		if(game.thrusterSound && (game.gameState == enums.GAME_STATES.PLAYING || game.gameState == enums.GAME_STATES.TUTORIAL))
-			game.thrusterSound.volume = (game.paused)?0:game.ship.thrusterSystem.noiseLevel*2*(1-(1-game.camera.zoom)/game.soundLevel);
+		//if(game.thrusterSound && (game.gameState == enums.GAME_STATES.PLAYING || game.gameState == enums.GAME_STATES.TUTORIAL))
+		//	game.thrusterSound.volume = (game.paused)?0:game.ship.thrusterSystem.noiseLevel*2*(1-(1-game.camera.zoom)/game.soundLevel);
 
 		//because we might use the frame count for something at some point
 		game.frameCount++;
@@ -156,7 +137,7 @@ var gameFunctions = {
 	checkCollisions:function(game, dt){
 		//obj collisions
 			//var resolvedCollisions = [];
-			for(var i = -1;i<game.otherShips.length;i++){
+			for(var i = 0;i<game.otherShips.length;i++){
 				var currentObj = ((i==-1)?game.ship:game.otherShips[i]);
 				var currentObjNext = [currentObj.x+currentObj.velocityX*dt, currentObj.y+currentObj.velocityY*dt];
 				var currentObjCapsule = {center1:[currentObj.x,currentObj.y], center2:currentObjNext, radius:currentObj.destructible.radius};
@@ -208,7 +189,7 @@ var gameFunctions = {
 						}
 					}
 				//hitscan-ship
-					for(var c = -1;c<game.otherShips.length;c++){
+					for(var c = 0;c<game.otherShips.length;c++){
 						var gameObj = ((c==-1) ? game.ship : game.otherShips[c]); //lol
 						if(gameObj == hitscan.owner)
 							continue;
@@ -258,7 +239,7 @@ var gameFunctions = {
 				var prjCapsule = {center1:[prj.x,prj.y], center2:prjNext, radius:prj.destructible.radius};
 				//var prjCapsule = {center1:[prj.x,prj.y], center2:[prj.x+prj.prevX, prj.y+prj.prevY], radius:prj.destructible.radius};
 				//projectile-ship
-					for(var c = -1;c<game.otherShips.length;c++){
+					for(var c = 0;c<game.otherShips.length;c++){
 						var gameObj = ((c==-1) ? game.ship : game.otherShips[c]); //lol
 						var gameObjNext = [gameObj.x+gameObj.velocityX*dt, gameObj.y+gameObj.velocityY*dt];
 						if(gameObj == prj.owner)
@@ -290,7 +271,7 @@ var gameFunctions = {
 			}
 
 		//asteroid collisions
-			for(var c = -1;c<game.otherShips.length;c++){
+			for(var c = 0;c<game.otherShips.length;c++){
 				var ship = ((c==-1)? game.ship:game.otherShips[c]);
 				for(var n = 0;n<game.asteroids.objs.length;n++){
 					var asteroid = game.asteroids.objs[n];
@@ -320,7 +301,7 @@ var gameFunctions = {
 			for(var n = 0;n<game.radials.length;n++)
 			{
 				var rad = game.radials[n];
-				for(var c = -1;c<game.otherShips.length;c++)
+				for(var c = 0;c<game.otherShips.length;c++)
 				{
 					var gameObj = ((c==-1) ? game.ship : game.otherShips[c]); //lol
 					var gameObjNext = [gameObj.x+gameObj.velocityX*dt, gameObj.y+gameObj.velocityY*dt];
