@@ -113,6 +113,7 @@ function update(game, dt){
 }
 
 function messageHandler(data){
+	//data = JSON.parse(data);
 	if(data.x) playerInfo.x = data.x;
 	if(data.y) playerInfo.y = data.y;
 	if(data.rotation) playerInfo.rotation = data.rotation;
@@ -121,7 +122,7 @@ function messageHandler(data){
 	if(data.rotationalVelocity) playerInfo.rotationalVelocity = data.rotationalVelocity;
 	if(data.game) game = data.game;
 	if(data.velocityClamps) hudInfo.velocityClamps = data.velocityClamps;
-	if(data.stabilized) hudInfo.stabilized = data.stabilized;
+	if(data.stabilized || data.stabilized == false) hudInfo.stabilized = data.stabilized;
 	if(data.powerDistribution) hudInfo.powerDistribution = data.powerDistribution;
 	if(state==GAME_STATES.WAIT)
 		state = GAME_STATES.PLAYING;

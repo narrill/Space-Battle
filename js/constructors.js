@@ -350,8 +350,19 @@ var constructors = {
 		var ri = {
 			keyboard:[],
 			mouse:[],
-			mouseDirection:0
+			mouseDirection:0,
+			messageHandler:mh
 		};
+		function mh(data){
+			if(data.disconnect && ri.remoteSend)
+				delete ri.remoteSend;
+			if(data.keyCode)
+				ri.keyboard[data.keyCode] = data.pos;
+			if(data.mb || data.mb==0)
+				ri.mouse[data.mb] = data.pos;
+			if(data.md || data.md==0)
+				ri.mouseDirection = lerp(ri.mouseDirection, data.md, .5);
+		}
 		veryShallowObjectMerge(ri,objectParams);
 		return ri;
 	},
@@ -511,5 +522,8 @@ var destructors = {
 	},
 	queueRespawn:function(obj){
 		obj.game.respawnQueue.push({time:obj.game.elapsedGameTime+obj.respawnTime*1000,params:obj.constructionObject});
+	},
+	destroyRemoteInput:function(obj){
+		obj.remoteInput.remoteSend({destroyed:true});
 	}
 };

@@ -125,28 +125,44 @@ server.attachSocket = function(s){
 	socket.otherSocket = s;
 	socket.onmessage = function(data){
 		var player = server.players[pid];
-		if(data.gameId) server.addPlayerToGame(player, data.gameId);
+		if(data.destroyed)
+		{
+			player.remoteSend = undefined;
+		}
+		if(data.gameId)
+		{
+			var g = server.games[data.gameId];
+			if(g)
+				player.game = g;
+			delete data.gameId;
+		}
 		if(player.game && data.ship)
 		{
 			var chosenShip = ships[data.ship];
 			if(chosenShip){
 				chosenShip.remoteInput = {};
 				var sh = constructors.createShip(chosenShip,pl.game);
-				player.currentShip = sh;
 				player.game.otherShips.push(sh);
+				if(sh.remoteInput)
+				{
+					sh.remoteInput.remoteSend = function(data){player.socket.send(data)};
+					player.remoteSend = sh.remoteInput.messageHandler;
+				}
 			}
+			delete data.ship;
 		}
-		if(player.currentShip && player.currentShip.remoteInput)
+		if(player.remoteSend)
 		{
-			if(data.keyCode) player.currentShip.remoteInput.keyboard[data.keyCode] = data.pos;
-			if(data.mb || data.mb==0) player.currentShip.remoteInput.mouse[data.mb] = data.pos;
-			if(data.md || data.md==0) player.currentShip.remoteInput.mouseDirection = lerp(player.currentShip.remoteInput.mouseDirection, data.md, .5);
+			player.remoteSend(data);
 		}
 	};
 	socket.onclose = function(){
-		if(players[pid].game)
-			players[pid].game.players
-		server.removePlayerFromGame(server.players[pid]);
+		//server.removePlayerFromGame(server.players[pid]);
+		if(server.players[pid].remoteSend)
+		{
+			server.players[pid].remoteSend({disconnect:true});
+			delete server.players[pid].remoteSend; //destroy the player's reference to the ship
+		}
 		server.players[pid] = undefined;
 	};
 	var pl = constructors.createPlayer({socket:socket});
@@ -166,36 +182,6 @@ server.attachSocket = function(s){
 		}
 	}
 	return socket;
-}
-
-server.addPlayerToGame = function(pl, gid){
-	var g = server.games[gid];
-	if(!g)
-		return;
-	if(g!=pl.game)
-		server.removePlayerFromGame(pl);
-	for(var c = 0;c<=g.players.length;c++){
-		if(c==g.players.length)
-		{
-			g.players.push(pl);
-			pl.pid = c;
-			pl.game = g;
-			break;
-		}
-		if(!g.players[c])
-		{
-			g.players[c] = pl;
-			pl.pid = c;
-			pl.game = g;
-			break;
-		}
-	}
-};
-server.removePlayerFromGame = function(pl){
-	if(!pl.game)
-		return;
-	pl.game.players[pl.pid] = undefined;
-	pl.game = undefined;
 }
 
 server.players = [];

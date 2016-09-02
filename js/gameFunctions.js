@@ -103,24 +103,7 @@ var gameFunctions = {
 
 		for(var c = 0;c<game.players.length;c++)
 		{
-			var pl = game.players[c];
-			if(pl){
-				var d = {game:game};
-				var plShip = pl.currentShip;
-				if(plShip)
-				{
-					d.x = plShip.x;
-					d.y = plShip.y;
-					d.rotation = plShip.rotation;
-					d.velX = plShip.velocityX;
-					d.velY = plShip.velocityY;
-					d.rotationalVelocity = plShip.rotationalVelocity;
-					d.velocityClamps = plShip.stabilizer.clamps;
-					d.stabilized = plShip.stabilizer.enabled;
-					//d.powerDistribution = 
-				}
-				pl.socket.send(d);
-			}
+			
 		}
 
 		game.elapsedGameTime+=dt*1000;	

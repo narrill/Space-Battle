@@ -309,6 +309,16 @@ var updaters = {
 	},
 
 	updateRemoteInputComponent:function(obj, dt){
+		if(obj.remoteInput.keyboard[myKeys.KEYBOARD.KEY_TAB] && !obj.remoteInput.keyboard[myKeys.KEYBOARD.KEY_ALT])
+		{
+			obj.stabilizer.enabled = !obj.stabilizer.enabled;
+			obj.remoteInput.keyboard[myKeys.KEYBOARD.KEY_TAB] = false;
+		}
+		if(obj.remoteInput.keyboard[myKeys.KEYBOARD.KEY_C])
+		{
+			obj.stabilizer.clamps.enabled = !obj.stabilizer.clamps.enabled;
+			obj.remoteInput.keyboard[myKeys.KEYBOARD.KEY_C] = false;
+		}
 		//set obj thruster values
 			//medial motion
 				if(obj.remoteInput.keyboard[myKeys.KEYBOARD.KEY_W])
@@ -353,6 +363,20 @@ var updaters = {
 					obj.powerSystem.target[enums.SHIP_COMPONENTS.LASERS] = 1;
 				if(obj.remoteInput.keyboard[myKeys.KEYBOARD.KEY_ALT])
 					obj.powerSystem.target[enums.SHIP_COMPONENTS.SHIELDS] = 1;
+		if(obj.remoteInput.remoteSend)
+		{
+			var d = {game:obj.game};
+			d.x = obj.x;
+			d.y = obj.y;
+			d.rotation = obj.rotation;
+			d.velX = obj.velocityX;
+			d.velY = obj.velocityY;
+			d.rotationalVelocity = obj.rotationalVelocity;
+			d.velocityClamps = obj.stabilizer.clamps;
+			d.stabilized = obj.stabilizer.enabled;
+			//d.powerDistribution = 
+			obj.remoteInput.remoteSend(d);
+		}
 	},
 
 	updateUpdatable:function(obj,dt){
