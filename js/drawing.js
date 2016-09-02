@@ -13,6 +13,33 @@ var drawing = {
 		
 		if(state == GAME_STATES.PLAYING)
 		{
+			//cameras.camera.x = lerp(cameras.camera.x,playerInfo.x+playerInfo.velX/10,12*dt);// game.ship.forwardVectorX*(cameras.camera.height/6)*(1/cameras.camera.zoom);
+			//cameras.camera.y = lerp(cameras.camera.y,playerInfo.y+playerInfo.velY/10,12*dt);// game.ship.forwardVectorY*(cameras.camera.height/6)*(1/cameras.camera.zoom);
+			cameras.camera.x = playerInfo.x;
+			cameras.camera.y = playerInfo.y;
+			var rotDiff = playerInfo.rotation/*+playerInfo.rotationalVelocity/10*/ - cameras.camera.rotation;
+			if(rotDiff>180)
+				rotDiff-=360;
+			else if(rotDiff<-180)
+				rotDiff+=360;
+			//cameras.camera.rotation += lerp(0,rotDiff,12*dt);
+			cameras.camera.rotation+=rotDiff;
+			if(cameras.camera.rotation>180)
+				cameras.camera.rotation-=360;
+			else if(cameras.camera.rotation<-180)
+				cameras.camera.rotation+=360;
+			cameras.starCamera.x = cameras.camera.x;
+		 	cameras.starCamera.y = cameras.camera.y;
+		 	cameras.starCamera.rotation = cameras.camera.rotation;
+		 	cameras.gridCamera.x = cameras.camera.x;
+		 	cameras.gridCamera.y = cameras.camera.y;
+		 	cameras.gridCamera.rotation = cameras.camera.rotation;
+		 	var cameraDistance = 1/cameras.camera.zoom;
+		 	cameras.starCamera.zoom = 1/(cameraDistance+10000);
+		 	cameras.gridCamera.zoom = 1/(cameraDistance+5);
+		 	cameras.minimapCamera.x = playerInfo.x;
+		 	cameras.minimapCamera.y = playerInfo.y;
+		 	cameras.minimapCamera.rotation = playerInfo.rotation;
 			drawing.drawGrid(cameras.gridCamera, game.grid);
 			drawing.drawAsteroidsOverlay(worldInfo.asteroids,cameras.camera,cameras.gridCamera);
 			for(var n = game.otherShips.length-1;n>=0;n--){
