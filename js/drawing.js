@@ -2,7 +2,7 @@
 
 var drawing = {
 	//renders everything
-	draw:function(cameras, game, dt){		
+	draw:function(cameras, game,  dt){		
 
 		//clear cameras
 		drawing.clearCamera(cameras.camera);
@@ -14,22 +14,22 @@ var drawing = {
 		if(state == GAME_STATES.PLAYING)
 		{
 			drawing.drawGrid(cameras.gridCamera, game.grid);
-			drawing.drawAsteroidsOverlay(game.asteroids,cameras.camera,cameras.gridCamera);
+			drawing.drawAsteroidsOverlay(worldInfo.asteroids,cameras.camera,cameras.gridCamera);
 			for(var n = game.otherShips.length-1;n>=0;n--){
 				var ship = (n==-1)?game.ship:game.otherShips[n];
-				drawing.drawShipOverlay(ship,cameras.camera,cameras.gridCamera);
+				//drawing.drawShipOverlay(ship,cameras.camera,cameras.gridCamera);
 			}
-			drawing.drawProjectiles(game.projectiles, cameras.camera, dt);
-			drawing.drawHitscans(game.hitscans, cameras.camera);
-			for(var c = game.otherShips.length-1;c>=0;c--){
-				var ship = (c==-1)?game.ship:game.otherShips[c];
+			drawing.drawProjectiles(worldInfo.prjs, cameras.camera, dt);
+			drawing.drawHitscans(worldInfo.hitscans, cameras.camera);
+			for(var c = worldInfo.objs.length-1;c>=0;c--){
+				var ship = worldInfo.objs[c];
 				drawing.drawShip(ship,cameras.camera);
 			}
-			drawing.drawRadials(game.radials, cameras.camera, dt);
-			drawing.drawAsteroids(game.asteroids,cameras.camera, cameras.gridCamera);
-			drawing.drawHUD(cameras.camera, game.ship);
+			drawing.drawRadials(worldInfo.radials, cameras.camera, dt);
+			drawing.drawAsteroids(worldInfo.asteroids,cameras.camera, cameras.gridCamera);
+			drawing.drawHUD(cameras.camera);
 			drawing.drawMinimap(cameras.minimapCamera, game);
-			utilities.fillText(cameras.camera.ctx,'prjs: '+this.projectiles.length,15,30,"8pt Orbitron",'white');
+			utilities.fillText(cameras.camera.ctx,'prjs: '+worldInfo.prjs.length,15,30,"8pt Orbitron",'white');
 		}
 		else if(state == GAME_STATES.TITLE)
 		{
@@ -238,8 +238,8 @@ var drawing = {
 
 		var shipPosInCameraSpace = worldPointToCameraSpace(ship.x,ship.y,camera); //get ship's position in camera space
 
-		if(shipPosInCameraSpace[0] - ship.destructible.radius * camera.zoom > camera.width || shipPosInCameraSpace[0] + ship.destructible.radius * camera.zoom< 0
-			|| shipPosInCameraSpace[1] - ship.destructible.radius * camera.zoom> camera.height || shipPosInCameraSpace[1] + ship.destructible.radius * camera.zoom< 0)
+		if(shipPosInCameraSpace[0] - ship.radius * camera.zoom > camera.width || shipPosInCameraSpace[0] + ship.radius * camera.zoom< 0
+			|| shipPosInCameraSpace[1] - ship.radius * camera.zoom> camera.height || shipPosInCameraSpace[1] + ship.radius * camera.zoom< 0)
 			return;
 
 		var ctx = camera.ctx;
@@ -269,9 +269,9 @@ var drawing = {
 
 				//Medial Thrusters
 					//forward
-						var trailLength = 40*(ship.thrusterSystem.medial.currentStrength/ship.thrusterSystem.medial.efficiency)*(1-(c/(thrusterDetail+1)));
+						var trailLength = 40*(ship.thrusterSystem.medial)*(1-(c/(thrusterDetail+1)));
 
-						if(ship.thrusterSystem.medial.currentStrength>0){
+						if(ship.thrusterSystem.medial>0){
 							for(var n = 0; n<ship.model.thrusterPoints.medial.positive.length;n++)
 							{
 								var tp = ship.model.thrusterPoints.medial.positive[n];
@@ -282,7 +282,7 @@ var drawing = {
 							}
 						}
 					//backward
-						else if(ship.thrusterSystem.medial.currentStrength<0){
+						else if(ship.thrusterSystem.medial<0){
 							for(var n = 0; n<ship.model.thrusterPoints.medial.positive.length;n++)
 							{
 								var tp = ship.model.thrusterPoints.medial.negative[n];
@@ -294,9 +294,9 @@ var drawing = {
 						}	
 
 				//rotational thrusters	
-					trailLength = 40*(ship.thrusterSystem.rotational.currentStrength/ship.thrusterSystem.rotational.efficiency)*(1-(c/(thrusterDetail+1)));
+					trailLength = 40*(ship.thrusterSystem.rotational)*(1-(c/(thrusterDetail+1)));
 					//ccw
-						if(ship.thrusterSystem.rotational.currentStrength>0){
+						if(ship.thrusterSystem.rotational>0){
 							for(var n = 0; n<ship.model.thrusterPoints.rotational.positive.length;n++)
 							{
 								var tp = ship.model.thrusterPoints.rotational.positive[n];
@@ -307,7 +307,7 @@ var drawing = {
 							}
 						}
 					//cw
-						else if(ship.thrusterSystem.rotational.currentStrength<0){
+						else if(ship.thrusterSystem.rotational<0){
 							for(var n = 0; n<ship.model.thrusterPoints.rotational.negative.length;n++)
 							{
 								var tp = ship.model.thrusterPoints.rotational.negative[n];
@@ -319,9 +319,9 @@ var drawing = {
 						}
 
 				//lateral thrusters
-					trailLength = 40*(ship.thrusterSystem.lateral.currentStrength/ship.thrusterSystem.lateral.efficiency)*(1-(c/(thrusterDetail+1)));
+					trailLength = 40*(ship.thrusterSystem.lateral)*(1-(c/(thrusterDetail+1)));
 					//rightward
-						if(ship.thrusterSystem.lateral.currentStrength>0){
+						if(ship.thrusterSystem.lateral>0){
 							for(var n = 0; n<ship.model.thrusterPoints.lateral.positive.length;n++)
 							{
 								var tp = ship.model.thrusterPoints.lateral.positive[n];
@@ -332,7 +332,7 @@ var drawing = {
 							}
 						}
 					//leftward
-						else if(ship.thrusterSystem.lateral.currentStrength<0){
+						else if(ship.thrusterSystem.lateral<0){
 							//ctx.save();				
 							//ctx.beginPath();
 							/*ctx.moveTo(10,0);
@@ -358,8 +358,8 @@ var drawing = {
 			}
 
 		//shields
-			if(ship.destructible.shield.max>0){
-				var shieldCoeff = (ship.destructible.shield.max/ship.destructible.shield.efficiency);
+			if(ship.shp>0){
+				var shieldCoeff = (ship.shc);
 				ctx.save();
 				ctx.fillStyle = 'dodgerblue';
 				ctx.beginPath();
@@ -377,7 +377,7 @@ var drawing = {
 					else
 						ctx.lineTo(shieldVert[0],shieldVert[1]);
 				}
-				ctx.globalAlpha = ship.destructible.shield.current/ship.destructible.shield.max;
+				ctx.globalAlpha = ship.shp;
 				ctx.fill();
 				ctx.restore();
 			}
@@ -404,8 +404,8 @@ var drawing = {
 			//	return;
 			var start = worldPointToCameraSpace(hitscan.startX,hitscan.startY,camera);
 			var end = worldPointToCameraSpace(hitscan.endX,hitscan.endY,camera);
-			var startNext = worldPointToCameraSpace(hitscan.nextHitscan.startX,hitscan.nextHitscan.startY,camera);
-			var endNext = worldPointToCameraSpace(hitscan.nextHitscan.endX,hitscan.nextHitscan.endY,camera);
+			var startNext = worldPointToCameraSpace(hitscan.startX+hitscan.velocityX,hitscan.startY+hitscan.velocityY,camera);
+			var endNext = worldPointToCameraSpace(hitscan.endX+hitscan.velocityX,hitscan.endY+hitscan.velocityY,camera);
 			var angle = angleBetweenVectors(end[0]-start[0],end[1]-start[1],1,0);
 			var rightVector = rotate(0,0,1,0,angle+90	);
 			var width = (hitscan.power && hitscan.efficiency) ? (hitscan.power/hitscan.efficiency)*camera.zoom : 0;
@@ -437,12 +437,10 @@ var drawing = {
 		var ctx = camera.ctx;
 		for(var c = 0;c< projectiles.length;c++){
 			var prj = projectiles[c];
-			if(!prj.visible)
-				continue;
 			var start = worldPointToCameraSpace(prj.x, prj.y, camera);
 			var end = worldPointToCameraSpace(prj.x+prj.velocityX*dt, prj.y+prj.velocityY*dt, camera);
 
-			if(start[0] > camera.width+prj.destructible.radius || start[0] < 0 - prj.destructible.radius || start[1] > camera.height + prj.destructible.radius || start[1] < 0 - prj.destructible.radius)
+			if(start[0] > camera.width+prj.radius || start[0] < 0 - prj.radius || start[1] > camera.height + prj.radius || start[1] < 0 - prj.radius)
 				continue;
 
 			ctx.save();
@@ -450,7 +448,7 @@ var drawing = {
 			ctx.moveTo(start[0], start[1]);
 			ctx.lineTo(end[0], end[1]);
 			ctx.strokeStyle = prj.color;
-			var width = prj.destructible.radius*camera.zoom;
+			var width = prj.radius*camera.zoom;
 			ctx.lineWidth = (width>1)?width:1;
 			ctx.stroke();
 			ctx.restore();
@@ -491,14 +489,14 @@ var drawing = {
 			{
 				var asteroid = asteroids.objs[c];
 				var gridPosition = worldPointToCameraSpace(asteroid.x,asteroid.y,gridCamera);
-				if(gridPosition[0] + asteroid.destructible.radius*gridCamera.zoom<start[0] || gridPosition[0] - asteroid.destructible.radius*gridCamera.zoom>end[0] || gridPosition[1] + asteroid.destructible.radius*gridCamera.zoom<start[1] || gridPosition[1] - asteroid.destructible.radius*gridCamera.zoom>end[1])
+				if(gridPosition[0] + asteroid.radius*gridCamera.zoom<start[0] || gridPosition[0] - asteroid.radius*gridCamera.zoom>end[0] || gridPosition[1] + asteroid.radius*gridCamera.zoom<start[1] || gridPosition[1] - asteroid.radius*gridCamera.zoom>end[1])
 					continue;			
 				cameraPositions[c] =(worldPointToCameraSpace(asteroid.x,asteroid.y,camera));
 				ctx.moveTo(cameraPositions[c][0],cameraPositions[c][1]);
 				ctx.lineTo(gridPosition[0],gridPosition[1]);
 				ctx.moveTo(gridPosition[0],gridPosition[1]);
 				//ctx.beginPath();
-				ctx.arc(gridPosition[0],gridPosition[1], asteroid.destructible.radius*gridCamera.zoom,0,Math.PI*2);
+				ctx.arc(gridPosition[0],gridPosition[1], asteroid.radius*gridCamera.zoom,0,Math.PI*2);
 			}	
 			ctx.strokeStyle = 'grey';
 			ctx.lineWidth = .5;
@@ -587,9 +585,9 @@ var drawing = {
 		ctx.translate((viewportStart[0]+viewportDimensions[0]/2-camera.width/2),(viewportStart[1]+viewportDimensions[1]/2-camera.height/2));
 		//ctx.translate(600,300);
 		drawing.drawGrid(camera, game.grid, true);
-		drawing.drawAsteroids(game.asteroids,camera);
+		drawing.drawAsteroids(worldInfo.asteroids,camera);
 		for(var n = game.otherShips.length-1;n>=0;n--){
-			var ship = (n==-1)?game.ship:game.otherShips[n];
+			var ship = worldInfo.objs[n];
 			drawing.drawShipMinimap(ship,camera);
 		}
 		ctx.restore();

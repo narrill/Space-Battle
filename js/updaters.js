@@ -359,7 +359,7 @@ var updaters = {
 			//power system
 				if(obj.remoteInput.keyboard[myKeys.KEYBOARD.KEY_SHIFT])
 					obj.powerSystem.target[enums.SHIP_COMPONENTS.THRUSTERS] = 1;
-				if(obj.remoteInput.keyboard.mouseRight)
+				if(obj.remoteInput.mouse[myMouse.BUTTONS.RIGHT])
 					obj.powerSystem.target[enums.SHIP_COMPONENTS.LASERS] = 1;
 				if(obj.remoteInput.keyboard[myKeys.KEYBOARD.KEY_ALT])
 					obj.powerSystem.target[enums.SHIP_COMPONENTS.SHIELDS] = 1;
@@ -374,6 +374,77 @@ var updaters = {
 			d.rotationalVelocity = obj.rotationalVelocity;
 			d.velocityClamps = obj.stabilizer.clamps;
 			d.stabilized = obj.stabilizer.enabled;
+			var worldInfo = {objs:[],asteroids:{objs:[],colors:[]},radials:[],prjs:[],hitscans:[]};
+			for(var c = 0;c<obj.game.otherShips.length;c++){
+				var o = obj.game.otherShips[c];
+				worldInfo.objs.push({
+					x:o.x,
+					y:o.y,
+					rotation:o.rotation,
+					radius:o.destructible.radius,
+					shp:(o.destructible.shield.max>0)? o.destructible.shield.current/o.destructible.shield.max : 0,
+					shc:o.destructible.shield.max/o.destructible.shield.efficiency,
+					hp:o.destructible.hp/o.destructible.maxHp,
+					color:o.color,
+					model:o.model,
+					thrusterSystem:{
+						medial:o.thrusterSystem.medial.currentStrength/o.thrusterSystem.medial.efficiency,
+						lateral:o.thrusterSystem.lateral.currentStrength/o.thrusterSystem.lateral.efficiency,
+						rotational:o.thrusterSystem.rotational.currentStrength/o.thrusterSystem.rotational.efficiency,
+						color:o.thrusterSystem.color
+					}
+				});
+			}
+			for(var c = 0;c<obj.game.asteroids.colors.length;c++){
+				worldInfo.asteroids.colors.push(obj.game.asteroids.colors[c]);
+			}
+			for(var c = 0;c<obj.game.asteroids.objs.length;c++){
+				var a = obj.game.asteroids.objs[c];
+				worldInfo.asteroids.objs.push({
+					x:a.x,
+					y:a.y,
+					colorIndex:a.colorIndex,
+					radius:a.destructible.radius
+				});
+			}
+			for(var c = 0;c<obj.game.projectiles.length;c++){
+				var p = obj.game.projectiles[c];
+				if(!p.visible)
+					continue;
+				worldInfo.prjs.push({
+					x:p.x,
+					y:p.y,
+					velocityX:p.velocityX,
+					velocityY:p.velocityY,
+					color:p.color,
+					radius:p.destructible.radius
+				});
+			}
+			for(var c = 0;c<obj.game.hitscans.length;c++){
+				var h = obj.game.hitscans[c];
+				worldInfo.hitscans.push({
+					startX:h.startX,
+					startY:h.startY,
+					endX:h.endX,
+					endY:h.endY,
+					velocityX:h.velocityX,
+					velocityY:h.velocityY,
+					color:h.color,
+					power:h.power,
+					efficiency:h.efficiency
+				});
+			}
+			for(var c = 0;c<obj.game.radials.length;c++){
+				var r = obj.game.radials[c];
+				worldInfo.radials.push({
+					x:r.x,
+					y:r.y,
+					velocity:r.velocity,
+					radius:r.radius,
+					color:r.color
+				});
+			}
+			d.worldInfo = worldInfo;
 			//d.powerDistribution = 
 			obj.remoteInput.remoteSend(d);
 		}

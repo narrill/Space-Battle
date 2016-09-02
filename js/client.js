@@ -7,6 +7,7 @@ var accumulator = 0;
 var socket;
 var playerInfo = {x:0,y:0, rotation:0,velX:0,velY:0,rotationalVelocity:0};
 var hudInfo = {};
+var worldInfo = {objs:[],asteroids:[],radials:[],prjs:[],hitscans:[]};
 var state;
 var GAME_STATES = {
 	TITLE:0,
@@ -124,6 +125,7 @@ function messageHandler(data){
 	if(data.velocityClamps) hudInfo.velocityClamps = data.velocityClamps;
 	if(data.stabilized || data.stabilized == false) hudInfo.stabilized = data.stabilized;
 	if(data.powerDistribution) hudInfo.powerDistribution = data.powerDistribution;
+	if(data.worldInfo) worldInfo = data.worldInfo;
 	if(state==GAME_STATES.WAIT)
 		state = GAME_STATES.PLAYING;
 }

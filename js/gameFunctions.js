@@ -14,6 +14,7 @@ var gameFunctions = {
 	init : function(game) {
 		// initialize properties			
 			constructors.generateStarField.bind(game, game.stars)();
+			constructors.makeAsteroids.bind(game,game.asteroids,game.grid)();
 			//game.ship = constructors.createShip(ships.cheetah, game);
 			var hue = Math.round(Math.random()*360);
 			for(var c = 0;c<game.factions;c++){
@@ -150,7 +151,7 @@ var gameFunctions = {
 			game.hitscans.forEach(function(hitscan){
 				if(hitscan.power == 0)
 					return;
-				hitscan.nextHitscan = constructors.createNextHitscanObject(hitscan, dt);
+				//hitscan.nextHitscan = constructors.createNextHitscanObject(hitscan, dt);
 				var obj; //the chosen object
 				var tValOfObj = Number.MAX_VALUE;
 				var xInv = hitscan.endX<hitscan.startX;
@@ -160,8 +161,8 @@ var gameFunctions = {
 				var hitscanVertices = [
 					[hitscan.startX, hitscan.startY],
 					[hitscan.endX, hitscan.endY],
-					[hitscan.nextHitscan.endX,hitscan.nextHitscan.endY],
-					[hitscan.nextHitscan.startX, hitscan.nextHitscan.startY]
+					[hitscan.endX+hitscan.velocityX,hitscan.endY+hitscan.velocityY],
+					[hitscan.startX+hitscan.velocityX,hitscan.startY+hitscan.velocityY]
 				];
 				//hitscan-asteroid
 					for(var c = 0;c<game.asteroids.objs.length;c++){
@@ -305,7 +306,7 @@ var gameFunctions = {
 		clearFunctions.clearProjectiles(game.projectiles);
 		game.ship = {};
 		game.ship = constructors.createShip(ships.gull,game);
-		constructors.makeAsteroids.bind(game,game.asteroids,game.grid)();
+		
 		game.otherShips = [];
 		game.otherShipCount = 1;
 		for(var c = 0;c<game.maxOtherShips-1;c++)

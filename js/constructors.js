@@ -391,6 +391,8 @@ var constructors = {
 			color:color,
 			//previousLaser:previousLaser,
 			owner:owner,
+			velocityX:owner.velocityX,
+			velocityY:owner.velocityY,
 			collisionFunction:collisionFunction
 		};
 
