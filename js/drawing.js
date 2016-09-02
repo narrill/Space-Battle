@@ -2,7 +2,7 @@
 
 var drawing = {
 	//renders everything
-	draw:function(cameras, game,  dt){		
+	draw:function(cameras,  dt){		
 
 		//clear cameras
 		drawing.clearCamera(cameras.camera);
@@ -40,7 +40,7 @@ var drawing = {
 		 	cameras.minimapCamera.x = playerInfo.x;
 		 	cameras.minimapCamera.y = playerInfo.y;
 		 	cameras.minimapCamera.rotation = playerInfo.rotation;
-			drawing.drawGrid(cameras.gridCamera, game.grid);
+			if(grid) drawing.drawGrid(cameras.gridCamera, grid);
 			drawing.drawAsteroidsOverlay(worldInfo.asteroids,cameras.camera,cameras.gridCamera);
 			for(var n = worldInfo.objs.length-1;n>=0;n--){
 				var ship = worldInfo.objs[n];
@@ -55,7 +55,7 @@ var drawing = {
 			drawing.drawRadials(worldInfo.radials, cameras.camera, dt);
 			drawing.drawAsteroids(worldInfo.asteroids,cameras.camera, cameras.gridCamera);
 			drawing.drawHUD(cameras.camera);
-			drawing.drawMinimap(cameras.minimapCamera, game);
+			drawing.drawMinimap(cameras.minimapCamera);
 			utilities.fillText(cameras.camera.ctx,'prjs: '+worldInfo.prjs.length,15,30,"8pt Orbitron",'white');
 		}
 		else if(state == GAME_STATES.TITLE)
@@ -593,7 +593,7 @@ var drawing = {
 
 	//draws the minimap to the given camera
 	//note that the minimap camera has a viewport
-	drawMinimap:function(camera, game){
+	drawMinimap:function(camera){
 		var ctx = camera.viewport.parent.ctx;
 		var viewportStart = [camera.viewport.parent.width*camera.viewport.startX,camera.viewport.parent.height*camera.viewport.startY];
 		var viewportEnd = [camera.viewport.parent.width*camera.viewport.endX,camera.viewport.parent.height*camera.viewport.endY];
@@ -609,7 +609,7 @@ var drawing = {
 		ctx.clip();
 		ctx.translate((viewportStart[0]+viewportDimensions[0]/2-camera.width/2),(viewportStart[1]+viewportDimensions[1]/2-camera.height/2));
 		//ctx.translate(600,300);
-		drawing.drawGrid(camera, game.grid, true);
+		if(grid) drawing.drawGrid(camera, grid, true);
 		drawing.drawAsteroids(worldInfo.asteroids,camera);
 		for(var n = worldInfo.objs.length-1;n>=0;n--){
 			var ship = worldInfo.objs[n];

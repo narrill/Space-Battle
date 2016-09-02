@@ -131,9 +131,14 @@ server.attachSocket = function(s){
 		}
 		if(data.gameId)
 		{
+			server.disconnectPlayer(player);
+
 			var g = server.games[data.gameId];
 			if(g)
+			{
 				player.game = g;
+				player.socket.send({grid:g.grid});
+			}
 			delete data.gameId;
 		}
 		if(player.game && data.ship)
@@ -158,11 +163,7 @@ server.attachSocket = function(s){
 	};
 	socket.onclose = function(){
 		//server.removePlayerFromGame(server.players[pid]);
-		if(server.players[pid].remoteSend)
-		{
-			server.players[pid].remoteSend({disconnect:true});
-			delete server.players[pid].remoteSend; //destroy the player's reference to the ship
-		}
+		disconnectPlayer(server.players[pid]);
 		server.players[pid] = undefined;
 	};
 	var pl = constructors.createPlayer({socket:socket});
@@ -183,5 +184,13 @@ server.attachSocket = function(s){
 	}
 	return socket;
 }
+
+server.disconnectPlayer = function(player){
+	if(player.remoteSend)
+	{
+		player.remoteSend({disconnect:true});
+		delete player.remoteSend;
+	}
+};
 
 server.players = [];

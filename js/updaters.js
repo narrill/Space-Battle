@@ -365,7 +365,7 @@ var updaters = {
 					obj.powerSystem.target[enums.SHIP_COMPONENTS.SHIELDS] = 1;
 		if(obj.remoteInput.remoteSend)
 		{
-			var d = {game:obj.game};
+			var d = {};
 			d.x = obj.x;
 			d.y = obj.y;
 			d.rotation = obj.rotation;

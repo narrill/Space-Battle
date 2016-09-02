@@ -1,6 +1,5 @@
 'use strict'
 var animationID = 0;
-var game = undefined;
 var lastTime = 0;
 var cameras = {};
 var accumulator = 0;
@@ -8,6 +7,7 @@ var socket;
 var playerInfo = {x:0,y:0, rotation:0,velX:0,velY:0,rotationalVelocity:0};
 var hudInfo = {};
 var worldInfo = {objs:[],asteroids:[],radials:[],prjs:[],hitscans:[]};
+var grid;
 var state;
 var GAME_STATES = {
 	TITLE:0,
@@ -43,9 +43,9 @@ function frame(){
 	var dt = (now-lastTime)/1000;
 
 	lastTime = Date.now().valueOf();
-	drawing.draw.bind(game)(cameras,game,dt);
+	drawing.draw(cameras,dt);
 
-	var step = (game)?game.timeStep:.004;
+	var step = .004;
 	if(dt>step*4)
 	{
 			dt = step;
@@ -53,12 +53,12 @@ function frame(){
 	}
 	accumulator+=dt;
 	while(accumulator>=step){
-		update(game,step);
+		update(step);
 		accumulator-= step;
 	}	
 }
 
-function update(game, dt){
+function update(dt){
 	if(state == GAME_STATES.TITLE && myKeys.keydown[myKeys.KEYBOARD.KEY_ENTER])
 	{
 		state = GAME_STATES.WAIT;
@@ -92,13 +92,13 @@ function update(game, dt){
 
 function messageHandler(data){
 	//data = JSON.parse(data);
+	if(data.grid) grid = data.grid;
 	if(data.x) playerInfo.x = data.x;
 	if(data.y) playerInfo.y = data.y;
 	if(data.rotation) playerInfo.rotation = data.rotation;
 	if(data.velX) playerInfo.velX = data.velX;
 	if(data.velY) playerInfo.velY = data.velY;
 	if(data.rotationalVelocity) playerInfo.rotationalVelocity = data.rotationalVelocity;
-	if(data.game) game = data.game;
 	if(data.velocityClamps) hudInfo.velocityClamps = data.velocityClamps;
 	if(data.stabilized || data.stabilized == false) hudInfo.stabilized = data.stabilized;
 	if(data.powerDistribution) hudInfo.powerDistribution = data.powerDistribution;
