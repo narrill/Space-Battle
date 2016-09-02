@@ -23,6 +23,21 @@ var gameFunctions = {
 				if(hue>=360)
 					hue-=360;
 			}
+			for(var c = 0;c<game.maxOtherShips-1;c++)
+			{
+				//var newShip = deepObjectMerge({},(Math.round(Math.random())) ? ships.gull : ships.cheetah);
+				var newShip = deepObjectMerge({}, ships.cheetah);
+				newShip.ai = {
+					aiFunction:'basic',
+					followMin:2500,
+					followMax:3000,
+					accuracy:.5,
+					fireSpread:5
+				};
+				newShip.faction = Math.floor(Math.random()*game.factions);
+				newShip.respawnTime = 5;
+				game.otherShips.push(constructors.createShip(newShip, game));
+			}
 		// start the game loop		
 			game.lastTime = Date.now();
 			game.elapsedGameTime = 0;
@@ -161,8 +176,8 @@ var gameFunctions = {
 				var hitscanVertices = [
 					[hitscan.startX, hitscan.startY],
 					[hitscan.endX, hitscan.endY],
-					[hitscan.endX+hitscan.velocityX,hitscan.endY+hitscan.velocityY],
-					[hitscan.startX+hitscan.velocityX,hitscan.startY+hitscan.velocityY]
+					[hitscan.endX+hitscan.velocityX*dt,hitscan.endY+hitscan.velocityY*dt],
+					[hitscan.startX+hitscan.velocityX*dt,hitscan.startY+hitscan.velocityY*dt]
 				];
 				//hitscan-asteroid
 					for(var c = 0;c<game.asteroids.objs.length;c++){

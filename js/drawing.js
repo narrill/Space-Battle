@@ -42,9 +42,9 @@ var drawing = {
 		 	cameras.minimapCamera.rotation = playerInfo.rotation;
 			drawing.drawGrid(cameras.gridCamera, game.grid);
 			drawing.drawAsteroidsOverlay(worldInfo.asteroids,cameras.camera,cameras.gridCamera);
-			for(var n = game.otherShips.length-1;n>=0;n--){
-				var ship = (n==-1)?game.ship:game.otherShips[n];
-				//drawing.drawShipOverlay(ship,cameras.camera,cameras.gridCamera);
+			for(var n = worldInfo.objs.length-1;n>=0;n--){
+				var ship = worldInfo.objs[n];
+				drawing.drawShipOverlay(ship,cameras.camera,cameras.gridCamera);
 			}
 			drawing.drawProjectiles(worldInfo.prjs, cameras.camera, dt);
 			drawing.drawHitscans(worldInfo.hitscans, cameras.camera);
@@ -154,7 +154,7 @@ var drawing = {
 		ctx.beginPath();
 		ctx.moveTo(shipPosInCameraSpace[0],shipPosInCameraSpace[1]);
 		ctx.lineTo(shipPosInGridCameraSpace[0],shipPosInGridCameraSpace[1]);
-		if(ship==ship.game.ship && ship.targetingSystem)
+		/*if(ship==ship.game.ship && ship.targetingSystem)
 		{
 			for(var c = 0;c<ship.targetingSystem.lockedTargets.length;c++)
 			{
@@ -163,15 +163,12 @@ var drawing = {
 				var otherShipPosInGridCameraSpace = worldPointToCameraSpace(otherShip.x,otherShip.y,gridCamera);
 				ctx.lineTo(otherShipPosInGridCameraSpace[0], otherShipPosInGridCameraSpace[1]);
 			}
-		}
+		}*/
 		ctx.translate(shipPosInGridCameraSpace[0],shipPosInGridCameraSpace[1]);
 		ctx.rotate((ship.rotation-gridCamera.rotation) * (Math.PI / 180));
 		for(var type in ship.model.overlay.ranges)
 		{
-			var component = ship[type];
-			if(!component || !component.range)
-				continue;
-			ctx.arc(0,0,component.range*gridCamera.zoom,-Math.PI/2,Math.PI*2-Math.PI/2);
+			ctx.arc(0,0,ship.model.overlay.ranges[type]*gridCamera.zoom,-Math.PI/2,Math.PI*2-Math.PI/2);
 		}			
 		ctx.rotate(-(ship.rotation-gridCamera.rotation) * (Math.PI / 180));
 		ctx.translate(-shipPosInGridCameraSpace[0],-shipPosInGridCameraSpace[1]);
@@ -180,7 +177,7 @@ var drawing = {
 		ctx.globalAlpha = .2;
 		ctx.stroke();
 
-		if(ship==ship.game.ship && ship.targetingSystem)
+		/*if(ship==ship.game.ship && ship.targetingSystem)
 		{
 			ctx.beginPath();
 			for(var c = 0;c<ship.targetingSystem.targets.length;c++)
@@ -195,19 +192,19 @@ var drawing = {
 			ctx.globalAlpha = .2;
 			ctx.stroke();
 			ctx.strokeStyle = 'grey';
-		}
+		}*/
 
 		ctx.globalAlpha = .5;
 		ctx.translate(shipPosInGridCameraSpace[0],shipPosInGridCameraSpace[1]);
 		ctx.scale(gridCamera.zoom,gridCamera.zoom);
 		if(ship.model.overlay.destructible){
 			ctx.beginPath();
-			ctx.arc(0,0,750,-Math.PI/2,-Math.PI*2*(ship.destructible.shield.current/ship.destructible.shield.max)-Math.PI/2,true);
+			ctx.arc(0,0,750,-Math.PI/2,-Math.PI*2*(ship.shp)-Math.PI/2,true);
 			ctx.strokeStyle = 'dodgerblue';
 			ctx.lineWidth = 100;
 			ctx.stroke();
 			ctx.beginPath();
-			ctx.arc(0,0,600,-Math.PI/2,-Math.PI*2*(ship.destructible.hp/ship.destructible.maxHp)-Math.PI/2,true);
+			ctx.arc(0,0,600,-Math.PI/2,-Math.PI*2*(ship.hp)-Math.PI/2,true);
 			ctx.strokeStyle = 'green';
 			ctx.stroke();
 		}
@@ -217,7 +214,7 @@ var drawing = {
 			ctx.fillStyle = ship.color;
 			ctx.fill();	
 			ctx.beginPath();
-			ctx.arc(0,0,ship.destructible.radius,0,Math.PI*2);
+			ctx.arc(0,0,ship.radius,0,Math.PI*2);
 			ctx.fillStyle = 'black';
 			ctx.globalAlpha = 1;
 			ctx.fill();
@@ -225,8 +222,8 @@ var drawing = {
 		else{
 			ctx.scale(1/gridCamera.zoom,1/gridCamera.zoom);
 			ctx.beginPath();
-			ctx.moveTo(ship.destructible.radius*gridCamera.zoom,0);
-			ctx.arc(0,0,ship.destructible.radius*gridCamera.zoom,0,Math.PI*2);
+			ctx.moveTo(ship.radius*gridCamera.zoom,0);
+			ctx.arc(0,0,ship.radius*gridCamera.zoom,0,Math.PI*2);
 			ctx.globalAlpha = .2;
 			ctx.lineWidth = .5;
 			ctx.strokeStyle = 'grey';
@@ -386,6 +383,7 @@ var drawing = {
 
 		//shields
 			if(ship.shp>0){
+				console.log(ship.shp+', '+ship.shc);
 				var shieldCoeff = (ship.shc);
 				ctx.save();
 				ctx.fillStyle = 'dodgerblue';
@@ -613,7 +611,7 @@ var drawing = {
 		//ctx.translate(600,300);
 		drawing.drawGrid(camera, game.grid, true);
 		drawing.drawAsteroids(worldInfo.asteroids,camera);
-		for(var n = game.otherShips.length-1;n>=0;n--){
+		for(var n = worldInfo.objs.length-1;n>=0;n--){
 			var ship = worldInfo.objs[n];
 			drawing.drawShipMinimap(ship,camera);
 		}

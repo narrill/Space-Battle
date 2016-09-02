@@ -219,9 +219,9 @@ var updaters = {
 		}
 	},
 
-	updateShieldComponent:function(obj,dt){
+	updateDestructibleComponent:function(obj,dt){
 		//refresh shields
-			if(obj.destructible.shield.current<obj.destructible.shield.max)
+			if(obj.destructible.shield.current<obj.destructible.shield.max && obj.destructible.shield.recharge>0)
 			{
 				obj.destructible.shield.current+=obj.destructible.shield.recharge*dt;
 				if(obj.destructible.shield.current>obj.destructible.shield.max)
@@ -377,7 +377,8 @@ var updaters = {
 			var worldInfo = {objs:[],asteroids:{objs:[],colors:[]},radials:[],prjs:[],hitscans:[]};
 			for(var c = 0;c<obj.game.otherShips.length;c++){
 				var o = obj.game.otherShips[c];
-				worldInfo.objs.push({
+				var mine = o == obj;
+				var wi = {
 					x:o.x,
 					y:o.y,
 					rotation:o.rotation,
@@ -386,14 +387,24 @@ var updaters = {
 					shc:o.destructible.shield.max/o.destructible.shield.efficiency,
 					hp:o.destructible.hp/o.destructible.maxHp,
 					color:o.color,
-					model:o.model,
+					model:deepObjectMerge({},o.model),
 					thrusterSystem:{
 						medial:o.thrusterSystem.medial.currentStrength/o.thrusterSystem.medial.efficiency,
 						lateral:o.thrusterSystem.lateral.currentStrength/o.thrusterSystem.lateral.efficiency,
 						rotational:o.thrusterSystem.rotational.currentStrength/o.thrusterSystem.rotational.efficiency,
 						color:o.thrusterSystem.color
 					}
-				});
+				};
+				if(mine && wi.model.overlay.ranges)
+					for(var key2 in wi.model.overlay.ranges)
+					{
+						var r = obj[key2];
+						if(r) r = r.range;
+						if(r) wi.model.overlay.ranges[key2] = r;
+					}
+				else if(wi.model.overlay.ranges)
+					delete wi.model.overlay.ranges;
+				worldInfo.objs.push(wi);
 			}
 			for(var c = 0;c<obj.game.asteroids.colors.length;c++){
 				worldInfo.asteroids.colors.push(obj.game.asteroids.colors[c]);
@@ -550,7 +561,7 @@ var collisions = {
 	},
 	basicLaserCollision:function(laser, obj, tValOfObj, dt){
 		collisions.dealDamage(obj, laser.power*dt*(1-tValOfObj));
-		obj.destructible.shield.current-=laser.power*dt*(1-tValOfObj);
+		//obj.destructible.shield.current-=laser.power*dt*(1-tValOfObj);
 		//console.log('damage: '+laser.power*dt*(1-tValOfObj));
 		/*if(obj.destructible.shield.current<0)
 		{

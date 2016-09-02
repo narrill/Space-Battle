@@ -38,7 +38,7 @@ server.games = {mainGame:gameFunctions.init({
 	ship:{},
 	otherShips:[],
 	otherShipCount:0,
-	maxOtherShips:8,
+	maxOtherShips:2,
 	factions:4,
 	players:[],
 	respawnQueue:[],

@@ -78,9 +78,9 @@ var ships = {
 			},
 
 			overlay:{
-				colorCircle:{},
-				destructible:{},
-				targetingSystem:{}
+				colorCircle:true,
+				destructible:true,
+				targetingSystem:true
 			}
 		},
 		cannon:{},
