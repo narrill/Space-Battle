@@ -13,17 +13,17 @@ var drawing = {
 		
 		if(state == GAME_STATES.PLAYING)
 		{
-			//cameras.camera.x = lerp(cameras.camera.x,playerInfo.x+playerInfo.velX/10,12*dt);// game.ship.forwardVectorX*(cameras.camera.height/6)*(1/cameras.camera.zoom);
-			//cameras.camera.y = lerp(cameras.camera.y,playerInfo.y+playerInfo.velY/10,12*dt);// game.ship.forwardVectorY*(cameras.camera.height/6)*(1/cameras.camera.zoom);
-			cameras.camera.x = playerInfo.x;
-			cameras.camera.y = playerInfo.y;
-			var rotDiff = playerInfo.rotation/*+playerInfo.rotationalVelocity/10*/ - cameras.camera.rotation;
+			cameras.camera.x = lerp(cameras.camera.x,playerInfo.x+playerInfo.velX/10,12*dt);// game.ship.forwardVectorX*(cameras.camera.height/6)*(1/cameras.camera.zoom);
+			cameras.camera.y = lerp(cameras.camera.y,playerInfo.y+playerInfo.velY/10,12*dt);// game.ship.forwardVectorY*(cameras.camera.height/6)*(1/cameras.camera.zoom);
+			//cameras.camera.x = playerInfo.x;
+			//cameras.camera.y = playerInfo.y;
+			var rotDiff = playerInfo.rotation+playerInfo.rotationalVelocity/10 - cameras.camera.rotation;
 			if(rotDiff>180)
 				rotDiff-=360;
 			else if(rotDiff<-180)
 				rotDiff+=360;
-			//cameras.camera.rotation += lerp(0,rotDiff,12*dt);
-			cameras.camera.rotation+=rotDiff;
+			cameras.camera.rotation += lerp(0,rotDiff,12*dt);
+			//cameras.camera.rotation+=rotDiff;
 			if(cameras.camera.rotation>180)
 				cameras.camera.rotation-=360;
 			else if(cameras.camera.rotation<-180)
@@ -37,20 +37,29 @@ var drawing = {
 		 	var cameraDistance = 1/cameras.camera.zoom;
 		 	cameras.starCamera.zoom = 1/(cameraDistance+10000);
 		 	cameras.gridCamera.zoom = 1/(cameraDistance+5);
-		 	cameras.minimapCamera.x = playerInfo.x;
-		 	cameras.minimapCamera.y = playerInfo.y;
-		 	cameras.minimapCamera.rotation = playerInfo.rotation;
+		 	cameras.minimapCamera.x = cameras.camera.x;
+		 	cameras.minimapCamera.y = cameras.camera.y;
+		 	cameras.minimapCamera.rotation = cameras.camera.rotation;
 			if(grid) drawing.drawGrid(cameras.gridCamera, grid);
 			drawing.drawAsteroidsOverlay(worldInfo.asteroids,cameras.camera,cameras.gridCamera);
 			for(var n = worldInfo.objs.length-1;n>=0;n--){
 				var ship = worldInfo.objs[n];
+				if(!worldInfo.drawing[ship.id])
+					continue;
+				if(!worldInfo.targets[ship.id])
+				{
+					removeIndexFromWiCollection(n,worldInfo.objs);
+					n--;
+					continue;
+				}
 				drawing.drawShipOverlay(ship,cameras.camera,cameras.gridCamera);
 			}
 			drawing.drawProjectiles(worldInfo.prjs, cameras.camera, dt);
 			drawing.drawHitscans(worldInfo.hitscans, cameras.camera);
 			for(var c = worldInfo.objs.length-1;c>=0;c--){
 				var ship = worldInfo.objs[c];
-				drawing.drawShip(ship,cameras.camera);
+				if(worldInfo.drawing[ship.id])
+					drawing.drawShip(ship,cameras.camera);
 			}
 			drawing.drawRadials(worldInfo.radials, cameras.camera, dt);
 			drawing.drawAsteroids(worldInfo.asteroids,cameras.camera, cameras.gridCamera);
@@ -63,6 +72,8 @@ var drawing = {
 			//drawing.drawAsteroids(game.asteroids,cameras.camera,cameras.gridCamera);
 			drawing.drawTitleScreen(cameras.camera);
 		}	
+		else if(state == GAME_STATES.DISCONNECTED)
+			drawing.drawDisconnectScreen(cameras.camera);
 
 		drawing.drawLockedGraphic(cameras.camera);
 
@@ -204,7 +215,7 @@ var drawing = {
 			ctx.lineWidth = 100;
 			ctx.stroke();
 			ctx.beginPath();
-			ctx.arc(0,0,600,-Math.PI/2,-Math.PI*2*(ship.hp)-Math.PI/2,true);
+			ctx.arc(0,0,600,-Math.PI/2,-Math.PI*2*(interpolateWiValue(ship,'hp'))-Math.PI/2,true);
 			ctx.strokeStyle = 'green';
 			ctx.stroke();
 		}
@@ -260,6 +271,9 @@ var drawing = {
 	drawShip: function(ship, camera){
 		//var shipArray = (Array.isArray(ship))?ship:[ship];
 
+		interpolateWiValue(ship,'x');
+		interpolateWiValue(ship,'y');
+		interpolateWiValue(ship,'rotation');
 		var shipPosInCameraSpace = worldPointToCameraSpace(ship.x,ship.y,camera); //get ship's position in camera space
 
 		if(shipPosInCameraSpace[0] - ship.radius * camera.zoom > camera.width || shipPosInCameraSpace[0] + ship.radius * camera.zoom< 0
@@ -287,15 +301,16 @@ var drawing = {
 		var width = ship.model.thrusterPoints.width;
 			//forward thrust
 			for(var c = 0;c<=thrusterDetail;c++){
-				ctx.fillStyle = shadeRGBColor(ship.thrusterSystem.color,.5*c);
+				ctx.fillStyle = shadeRGBColor(worldInfo.targets[ship.id].thrusterColor,.5*c);
 				ctx.save();
 				ctx.beginPath();
 
 				//Medial Thrusters
 					//forward
-						var trailLength = 40*(ship.thrusterSystem.medial)*(1-(c/(thrusterDetail+1)));
+						interpolateWiValue(ship, 'medial');
+						var trailLength = 40*(ship.medial)*(1-(c/(thrusterDetail+1)));
 
-						if(ship.thrusterSystem.medial>0){
+						if(ship.medial>0){
 							for(var n = 0; n<ship.model.thrusterPoints.medial.positive.length;n++)
 							{
 								var tp = ship.model.thrusterPoints.medial.positive[n];
@@ -306,7 +321,7 @@ var drawing = {
 							}
 						}
 					//backward
-						else if(ship.thrusterSystem.medial<0){
+						else if(ship.medial<0){
 							for(var n = 0; n<ship.model.thrusterPoints.medial.positive.length;n++)
 							{
 								var tp = ship.model.thrusterPoints.medial.negative[n];
@@ -318,9 +333,10 @@ var drawing = {
 						}	
 
 				//rotational thrusters	
-					trailLength = 40*(ship.thrusterSystem.rotational)*(1-(c/(thrusterDetail+1)));
+					interpolateWiValue(ship, 'rotational');
+					trailLength = 40*(ship.rotational)*(1-(c/(thrusterDetail+1)));
 					//ccw
-						if(ship.thrusterSystem.rotational>0){
+						if(ship.rotational>0){
 							for(var n = 0; n<ship.model.thrusterPoints.rotational.positive.length;n++)
 							{
 								var tp = ship.model.thrusterPoints.rotational.positive[n];
@@ -331,7 +347,7 @@ var drawing = {
 							}
 						}
 					//cw
-						else if(ship.thrusterSystem.rotational<0){
+						else if(ship.rotational<0){
 							for(var n = 0; n<ship.model.thrusterPoints.rotational.negative.length;n++)
 							{
 								var tp = ship.model.thrusterPoints.rotational.negative[n];
@@ -343,9 +359,10 @@ var drawing = {
 						}
 
 				//lateral thrusters
-					trailLength = 40*(ship.thrusterSystem.lateral)*(1-(c/(thrusterDetail+1)));
+					interpolateWiValue(ship, 'lateral');
+					trailLength = 40*(ship.lateral)*(1-(c/(thrusterDetail+1)));
 					//rightward
-						if(ship.thrusterSystem.lateral>0){
+						if(ship.lateral>0){
 							for(var n = 0; n<ship.model.thrusterPoints.lateral.positive.length;n++)
 							{
 								var tp = ship.model.thrusterPoints.lateral.positive[n];
@@ -356,7 +373,7 @@ var drawing = {
 							}
 						}
 					//leftward
-						else if(ship.thrusterSystem.lateral<0){
+						else if(ship.lateral<0){
 							//ctx.save();				
 							//ctx.beginPath();
 							/*ctx.moveTo(10,0);
@@ -382,8 +399,10 @@ var drawing = {
 			}
 
 		//shields
+			interpolateWiValue(ship, 'shp');
+			interpolateWiValue(ship, 'shc');
 			if(ship.shp>0){
-				console.log(ship.shp+', '+ship.shc);
+				//console.log(ship.shp+', '+ship.shc);
 				var shieldCoeff = (ship.shc);
 				ctx.save();
 				ctx.fillStyle = 'dodgerblue';
@@ -416,7 +435,7 @@ var drawing = {
 				ctx.lineTo(vert[0],vert[1]);
 			}
 			ctx.closePath();
-			ctx.fillStyle = ship.color;
+			ctx.fillStyle = worldInfo.targets[ship.id].color;
 			ctx.fill();
 			ctx.restore();
 	},
@@ -424,13 +443,26 @@ var drawing = {
 	//draws all laser objects in the given array to the given camera
 	drawHitscans:function(hitscans,camera){
 		var ctx = camera.ctx;
-		hitscans.forEach(function(hitscan){
+		for(var n = 0;n<hitscans.length;n++){
 			//if(hitscan.power == 0)
 			//	return;
+			var hitscan = hitscans[n];
+			if(!worldInfo.drawing[hitscan.id])
+				return;
+			if(!worldInfo.targets[hitscan.id])
+			{
+				removeIndexFromWiCollection(n,worldInfo.hitscans);
+				n--;
+				continue;
+			}
+			interpolateWiValue(hitscan,'startX');
+			interpolateWiValue(hitscan,'startY');
+			interpolateWiValue(hitscan,'endX');
+			interpolateWiValue(hitscan,'endY');
+			interpolateWiValue(hitscan,'power');
+			interpolateWiValue(hitscan,'efficiency');
 			var start = worldPointToCameraSpace(hitscan.startX,hitscan.startY,camera);
 			var end = worldPointToCameraSpace(hitscan.endX,hitscan.endY,camera);
-			var startNext = worldPointToCameraSpace(hitscan.startX+hitscan.velocityX,hitscan.startY+hitscan.velocityY,camera);
-			var endNext = worldPointToCameraSpace(hitscan.endX+hitscan.velocityX,hitscan.endY+hitscan.velocityY,camera);
 			var angle = angleBetweenVectors(end[0]-start[0],end[1]-start[1],1,0);
 			var rightVector = rotate(0,0,1,0,angle+90	);
 			var width = (hitscan.power && hitscan.efficiency) ? (hitscan.power/hitscan.efficiency)*camera.zoom : 0;
@@ -446,7 +478,7 @@ var drawing = {
 				ctx.lineTo(end[0],end[1]);
 				ctx.lineTo(start[0]-coeff*width*rightVector[0]/2,start[1]-width*rightVector[1]/2);
 				ctx.arc(start[0],start[1],coeff*width/2,-(angle-90)*(Math.PI/180),(angle-90)*(Math.PI/180)-90,false);
-				ctx.fillStyle = shadeRGBColor(hitscan.color,0+c/(hitscanDetail+1));
+				ctx.fillStyle = shadeRGBColor(worldInfo.targets[hitscan.id].color,0+c/(hitscanDetail+1));
 				/*ctx.lineTo(end[0], end[1]);
 				ctx.lineTo(endNext[0], endNext[1]);
 				ctx.lineTo(startNext[0], startNext[1]);
@@ -454,7 +486,7 @@ var drawing = {
 				ctx.fill();
 				ctx.restore();
 			}
-		},this);
+		}
 	},
 
 	//draws all projectile objects in the given array to the given camera
@@ -462,18 +494,29 @@ var drawing = {
 		var ctx = camera.ctx;
 		for(var c = 0;c< projectiles.length;c++){
 			var prj = projectiles[c];
+			if(!worldInfo.drawing[prj.id])
+				return;
+			if(!worldInfo.targets[prj.id])
+			{
+				removeIndexFromWiCollection(c,worldInfo.prjs);
+				c--;
+				continue;
+			}
+			interpolateWiValue(prj, 'x');
+			interpolateWiValue(prj,'y');
 			var start = worldPointToCameraSpace(prj.x, prj.y, camera);
-			var end = worldPointToCameraSpace(prj.x+prj.velocityX*dt, prj.y+prj.velocityY*dt, camera);
+			var end = worldPointToCameraSpace(prj.x+worldInfo.targets[prj.id].velocityX*dt, prj.y+worldInfo.targets[prj.id].velocityY*dt, camera);
+			var radius = worldInfo.targets[prj.id].radius;
 
-			if(start[0] > camera.width+prj.radius || start[0] < 0 - prj.radius || start[1] > camera.height + prj.radius || start[1] < 0 - prj.radius)
+			if(start[0] > camera.width+radius || start[0] < 0 - radius || start[1] > camera.height + radius || start[1] < 0 - radius)
 				continue;
 
 			ctx.save();
 			ctx.beginPath();
 			ctx.moveTo(start[0], start[1]);
 			ctx.lineTo(end[0], end[1]);
-			ctx.strokeStyle = prj.color;
-			var width = prj.radius*camera.zoom;
+			ctx.strokeStyle = worldInfo.targets[prj.id].color;
+			var width = radius*camera.zoom;
 			ctx.lineWidth = (width>1)?width:1;
 			ctx.stroke();
 			ctx.restore();
@@ -482,7 +525,20 @@ var drawing = {
 
 	drawRadials:function(radials, camera, dt){
 		var ctx = camera.ctx;
-		radials.forEach(function(radial){
+		for(var c = 0;c<radials.length;c++){
+			var radial = radials[c];
+			if(!worldInfo.drawing[radial.id])
+				return;
+			if(!worldInfo.targets[radial.id])
+			{
+				removeIndexFromWiCollection(c,worldInfo.radials);
+				c--;
+				continue;
+			}
+			interpolateWiValue(radial,'x');
+			interpolateWiValue(radial,'y');
+			interpolateWiValue(radial,'radius');
+			interpolateWiValue(radial,'velocity');
 			var center = worldPointToCameraSpace(radial.x, radial.y, camera);
 			var frameVelocity = radial.velocity * dt;
 
@@ -492,12 +548,12 @@ var drawing = {
 			ctx.save();
 			ctx.beginPath();
 			ctx.arc(center[0], center[1], (radial.radius+frameVelocity/2)*camera.zoom, 0, Math.PI*2);
-			ctx.strokeStyle = radial.color;
+			ctx.strokeStyle = worldInfo.targets[radial.id].color;
 			var width = frameVelocity*camera.zoom
 			ctx.lineWidth = (width>.3)?width:.1;
 			ctx.stroke();
 			ctx.restore();
-		});
+		};
 	},
 
 	//draws the projected overlay for all asteroids in the given array to the given main and projected cameras
@@ -647,7 +703,7 @@ var drawing = {
 		ctx.restore();		
 	},
 
-	drawLoseScreen:function(camera){
+	drawDisconnectScreen:function(camera){
 		var ctx = camera.ctx;
 		ctx.save();
 		ctx.fillStyle = 'black';
@@ -656,8 +712,7 @@ var drawing = {
 		ctx.textAlign = 'center';
 		ctx.textBaseline = 'middle';
 		ctx.globalAlpha = 1;
-		utilities.fillText(ctx,"You lose!",camera.width/2,camera.height/5,"24pt Aroma",'white');
-		utilities.fillText(ctx,"Sucks to be you. Press R to try again.",camera.width/2,4*camera.height/5,"12pt Orbitron",'white');
+		utilities.fillText(ctx,"Connection lost",camera.width/2,2*camera.height/5,"24pt Aroma",'white');
 		ctx.restore();		
 	},
 

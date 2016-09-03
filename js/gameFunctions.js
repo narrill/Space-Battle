@@ -26,7 +26,7 @@ var gameFunctions = {
 			for(var c = 0;c<game.maxOtherShips-1;c++)
 			{
 				//var newShip = deepObjectMerge({},(Math.round(Math.random())) ? ships.gull : ships.cheetah);
-				var newShip = deepObjectMerge({}, ships.cheetah);
+				var newShip = deepObjectMerge({}, ships.gull);
 				newShip.ai = {
 					aiFunction:'basic',
 					followMin:2500,

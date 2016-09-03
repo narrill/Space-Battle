@@ -126,7 +126,11 @@ var updaters = {
 				endX:obj.x+obj.velocityX*dt+nextLaserVector[0],
 				endX:obj.x+obj.velocityX*dt+nextLaserVector[1]
 			};*/
-			if(obj.laser.currentPower>0) constructors.createHitscan(obj.game.hitscans,obj.x+forwardVector[0]*(30),obj.y+forwardVector[1]*30,obj.x+currentLaserVector[0],obj.y+currentLaserVector[1],obj.laser.color, obj, collisions[obj.laser.collisionFunction], {power:obj.laser.currentPower, efficiency:obj.laser.efficiency});
+			if(obj.laser.currentPower>0)
+			{
+				//console.log(obj.laser.id);
+				constructors.createHitscan(obj.game,obj.x+forwardVector[0]*(30),obj.y+forwardVector[1]*30,obj.x+currentLaserVector[0],obj.y+currentLaserVector[1],obj.laser.color, obj, collisions[obj.laser.collisionFunction], {power:obj.laser.currentPower, efficiency:obj.laser.efficiency},obj.laser.id);
+			}
 			obj.laser.currentPower -= obj.laser.maxPower*(1-obj.laser.coherence)*dt*1000;
 			if(obj.laser.currentPower<0)
 				obj.laser.currentPower=0;
@@ -141,7 +145,7 @@ var updaters = {
 				//var forwardVector = this.getForwardVector(obj);
 				var prjVelocity = [forwardVector[0] * obj.cannon.power, forwardVector[1] * obj.cannon.power];
 				var ammo = obj.cannon.ammo;
-				constructors.createProjectile(obj.game.projectiles, obj.x+forwardVector[0]*(30), obj.y+forwardVector[1]*30, prjVelocity[0] + obj.velocityX, prjVelocity[1] + obj.velocityY, constructors.createComponentDestructible(ammo.destructible), ammo.color, obj, ammo.tracerSeed%ammo.tracerInterval==0, collisions[ammo.collisionFunction]);
+				constructors.createProjectile(obj.game, obj.x+forwardVector[0]*(30), obj.y+forwardVector[1]*30, prjVelocity[0] + obj.velocityX, prjVelocity[1] + obj.velocityY, constructors.createComponentDestructible(ammo.destructible), ammo.color, obj, ammo.tracerSeed%ammo.tracerInterval==0, collisions[ammo.collisionFunction]);
 				obj.cannon.firing = false;
 				ammo.tracerSeed++;
 			}
@@ -214,7 +218,7 @@ var updaters = {
 
 		if(ts.firing){
 			var rangeVector = [forwardVector[0]*ts.range, forwardVector[1]*ts.range];
-			constructors.createHitscan(obj.game.hitscans,obj.x+forwardVector[0]*(30),obj.y+forwardVector[1]*30,obj.x+rangeVector[0],obj.y+rangeVector[1], 'rgb(255,0,0)', obj, collisions.targetingLaserCollision);
+			constructors.createHitscan(obj.game,obj.x+forwardVector[0]*(30),obj.y+forwardVector[1]*30,obj.x+rangeVector[0],obj.y+rangeVector[1], 'rgb(255,0,0)', obj, collisions.targetingLaserCollision,obj.targetingSystem.id);
 			ts.firing = false;
 		}
 	},
@@ -363,9 +367,19 @@ var updaters = {
 					obj.powerSystem.target[enums.SHIP_COMPONENTS.LASERS] = 1;
 				if(obj.remoteInput.keyboard[myKeys.KEYBOARD.KEY_ALT])
 					obj.powerSystem.target[enums.SHIP_COMPONENTS.SHIELDS] = 1;
-		if(obj.remoteInput.remoteSend)
+		var sinceLastSend = obj.game.elapsedGameTime - obj.remoteInput.lastSend;
+		if(obj.remoteInput.remoteSend && sinceLastSend>=obj.remoteInput.sendInterval)
 		{
+			if(sinceLastSend>=2*obj.remoteInput.sendInterval)
+				obj.remoteInput.lastSend = obj.game.elapsedGameTime;
+			else
+				obj.remoteInput.lastSend += obj.remoteInput.sendInterval;
 			var d = {};
+			if(!obj.remoteInput.sentInterval)
+			{
+				d.interval = obj.remoteInput.sendInterval;
+				obj.remoteInput.sentInterval = true;
+			}
 			d.x = obj.x;
 			d.y = obj.y;
 			d.rotation = obj.rotation;
@@ -379,6 +393,7 @@ var updaters = {
 				var o = obj.game.otherShips[c];
 				var mine = o == obj;
 				var wi = {
+					id:o.id,
 					x:o.x,
 					y:o.y,
 					rotation:o.rotation,
@@ -388,12 +403,10 @@ var updaters = {
 					hp:o.destructible.hp/o.destructible.maxHp,
 					color:o.color,
 					model:deepObjectMerge({},o.model),
-					thrusterSystem:{
-						medial:o.thrusterSystem.medial.currentStrength/o.thrusterSystem.medial.efficiency,
-						lateral:o.thrusterSystem.lateral.currentStrength/o.thrusterSystem.lateral.efficiency,
-						rotational:o.thrusterSystem.rotational.currentStrength/o.thrusterSystem.rotational.efficiency,
-						color:o.thrusterSystem.color
-					}
+					medial:o.thrusterSystem.medial.currentStrength/o.thrusterSystem.medial.efficiency,
+					lateral:o.thrusterSystem.lateral.currentStrength/o.thrusterSystem.lateral.efficiency,
+					rotational:o.thrusterSystem.rotational.currentStrength/o.thrusterSystem.rotational.efficiency,
+					thrusterColor:o.thrusterSystem.color
 				};
 				if(mine && wi.model.overlay.ranges)
 					for(var key2 in wi.model.overlay.ranges)
@@ -423,6 +436,7 @@ var updaters = {
 				if(!p.visible)
 					continue;
 				worldInfo.prjs.push({
+					id:p.id,
 					x:p.x,
 					y:p.y,
 					velocityX:p.velocityX,
@@ -434,12 +448,11 @@ var updaters = {
 			for(var c = 0;c<obj.game.hitscans.length;c++){
 				var h = obj.game.hitscans[c];
 				worldInfo.hitscans.push({
+					id:h.id,
 					startX:h.startX,
 					startY:h.startY,
 					endX:h.endX,
 					endY:h.endY,
-					velocityX:h.velocityX,
-					velocityY:h.velocityY,
 					color:h.color,
 					power:h.power,
 					efficiency:h.efficiency
@@ -448,6 +461,7 @@ var updaters = {
 			for(var c = 0;c<obj.game.radials.length;c++){
 				var r = obj.game.radials[c];
 				worldInfo.radials.push({
+					id:r.id,
 					x:r.x,
 					y:r.y,
 					velocity:r.velocity,
@@ -457,6 +471,7 @@ var updaters = {
 			}
 			d.worldInfo = worldInfo;
 			//d.powerDistribution = 
+			//console.log('remote send');
 			obj.remoteInput.remoteSend(d);
 		}
 	},
@@ -500,7 +515,9 @@ var updaters = {
 			onDestroyFunctions.push(destructors.destroyWarhead);
 		if(obj.respawnTime)
 			onDestroyFunctions.push(destructors.queueRespawn);
-
+		if(obj.remoteInput)
+			onDestroyFunctions.push(destructors.destroyRemoteInput);
+		onDestroyFunctions.push(destructors.returnIdTag);
 		obj.onDestroy = onDestroyFunctions;
 	}
 };

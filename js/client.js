@@ -6,17 +6,25 @@ var accumulator = 0;
 var socket;
 var playerInfo = {x:0,y:0, rotation:0,velX:0,velY:0,rotationalVelocity:0};
 var hudInfo = {};
-var worldInfo = {objs:[],asteroids:[],radials:[],prjs:[],hitscans:[]};
+var worldInfo = {
+	objs:[],
+	asteroids:[],
+	radials:[],
+	prjs:[],
+	hitscans:[],
+	drawing:{},
+	targets:{},
+	previousTargets:{}
+};
 var grid;
 var state;
 var GAME_STATES = {
 	TITLE:0,
 	PLAYING:1,
-	WIN:2,
-	LOSE:3,
-	MENU:4,
-	TUTORIAL:5
+	DISCONNECTED:2
 };
+var lastWorldUpdate;
+var wiInterval = 33;
 
 function startClient(){
 	//game = g;
@@ -29,6 +37,7 @@ function startClient(){
 	cameras.gridCamera = constructors.createCamera(canvas);
 	cameras.minimapCamera = constructors.createCamera(canvas,{zoom:.001,viewport:{startX:.83,startY:.7,endX:1,endY:1,parent:cameras.camera}});
 	lastTime = Date.now().valueOf();
+	resetWi();
 	socket = new FalseSocket(server);
 	socket.onmessage = messageHandler;	
 	
@@ -63,7 +72,7 @@ function update(dt){
 	{
 		state = GAME_STATES.WAIT;
 		myKeys.keydown[myKeys.KEYBOARD.KEY_ENTER] = false;
-		socket.send({gameId:'mainGame',ship:'cheetah'});
+		socket.send({gameId:'mainGame',ship:'gull'});
 		//game.resetGame();
 	}
 	else if(state == GAME_STATES.PLAYING)
@@ -92,7 +101,15 @@ function update(dt){
 
 function messageHandler(data){
 	//data = JSON.parse(data);
-	if(data.grid) grid = data.grid;
+	if(data.destroyed)
+		state = GAME_STATES.DISCONNECTED;
+	if(data.grid)
+	{
+		resetWi();
+		lastWorldUpdate = Date.now().valueOf();
+		grid = data.grid;
+	}
+	if(data.interval) wiInterval = data.interval;
 	if(data.x) playerInfo.x = data.x;
 	if(data.y) playerInfo.y = data.y;
 	if(data.rotation) playerInfo.rotation = data.rotation;
@@ -102,9 +119,73 @@ function messageHandler(data){
 	if(data.velocityClamps) hudInfo.velocityClamps = data.velocityClamps;
 	if(data.stabilized || data.stabilized == false) hudInfo.stabilized = data.stabilized;
 	if(data.powerDistribution) hudInfo.powerDistribution = data.powerDistribution;
-	if(data.worldInfo) worldInfo = data.worldInfo;
+	if(data.worldInfo) 
+	{
+		for(var id in worldInfo.targets)
+			worldInfo.previousTargets[id] = worldInfo.targets[id];
+		worldInfo.targets = {};
+		var now = Date.now().valueOf();
+		lastWorldUpdate = now;
+		//console.log('last: '+lastWorldUpdate+'\nnow: '+nextWorldUpdate+'\nnext: '+nextWorldUpdate);
+		pushCollectionFromDataToWI(data.worldInfo,'objs');
+		pushCollectionFromDataToWI(data.worldInfo,'prjs');
+		pushCollectionFromDataToWI(data.worldInfo,'hitscans');
+		pushCollectionFromDataToWI(data.worldInfo,'radials');
+		worldInfo.asteroids = data.worldInfo.asteroids;
+	}
 	if(state==GAME_STATES.WAIT)
 		state = GAME_STATES.PLAYING;
+}
+
+function resetWi(){
+	worldInfo = {
+		objs:[],
+		asteroids:[],
+		radials:[],
+		prjs:[],
+		hitscans:[],
+		drawing:{},
+		targets:{},
+		previousTargets:{}
+	};
+}
+
+function pushCollectionFromDataToWI(dwi, type){
+	for(var c = 0;c<dwi[type].length;c++)
+		{
+			if(type == 'hitscans')
+				console.log(dwi[type].length);
+			var obj = dwi[type][c];
+			if(worldInfo.drawing.hasOwnProperty(obj.id))
+			{
+				//if(worldInfo.targets[obj.id])
+				//	worldInfo.previousTargets[obj.id] = worldInfo.targets[obj.id];
+				worldInfo.targets[obj.id] = obj;
+				worldInfo.drawing[obj.id] = true;
+			}
+			else
+			{
+				worldInfo.previousTargets[obj.id] = deepObjectMerge({}, obj);
+				worldInfo[type].push(obj);
+				worldInfo.drawing[obj.id] = false;
+			}
+		}
+}
+
+function interpolateWiValue(obj, val){
+	var now = Date.now().valueOf();
+	//console.log(updateInterval);
+	var perc = (now - lastWorldUpdate)/wiInterval;
+	obj[val] = lerp(worldInfo.previousTargets[obj.id][val], worldInfo.targets[obj.id][val], clamp(0,perc,1));
+	return obj[val];
+}
+
+function removeIndexFromWiCollection(index, collection){
+	var obj = collection[index];
+	delete worldInfo.targets[obj.id];
+	delete worldInfo.previousTargets[obj.id];
+	delete worldInfo.drawing[obj.id];
+	collection.splice(index,1);
 }
 
 function FalseSocket(server){

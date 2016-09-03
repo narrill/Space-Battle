@@ -13,6 +13,95 @@ var hitscanDetail = 3;
 // else create a new object literal
 var server = server || {};
 
+server.attachSocket = function(s){
+	var pid;
+	var socket = new FalseSocket();
+	socket.otherSocket = s;
+	socket.onmessage = function(data){
+		var player = server.players[pid];
+		if(data.destroyed)
+		{
+			player.remoteSend = undefined;
+			player.socket.send({destroyed:true});
+		}
+		if(data.gameId)
+		{
+			server.disconnectPlayer(player);
+
+			var g = server.games[data.gameId];
+			if(g)
+			{
+				player.game = g;
+				player.socket.send({grid:g.grid});
+			}
+			delete data.gameId;
+		}
+		if(player.game && data.ship)
+		{
+			var chosenShip = ships[data.ship];
+			if(chosenShip){
+				chosenShip.remoteInput = {};
+				var sh = constructors.createShip(chosenShip,pl.game);
+				player.game.otherShips.push(sh);
+				if(sh.remoteInput)
+				{
+					sh.remoteInput.remoteSend = function(data){player.socket.send(data)};
+					player.remoteSend = sh.remoteInput.messageHandler;
+				}
+			}
+			delete data.ship;
+		}
+		if(player.remoteSend)
+		{
+			player.remoteSend(data);
+		}
+	};
+	socket.onclose = function(){
+		//server.removePlayerFromGame(server.players[pid]);
+		disconnectPlayer(server.players[pid]);
+		server.players[pid] = undefined;
+	};
+	var pl = constructors.createPlayer({socket:socket});
+	for(var c = 0;c<=server.players.length;c++)
+	{
+		if(c==server.players.length)
+		{
+			server.players.push(pl);
+			pid = c;
+			break;
+		}
+		if(!server.players[c])
+		{
+			server.players[c] = pl;
+			pid = c;
+			break;
+		}
+	}
+	return socket;
+}
+
+server.disconnectPlayer = function(player){
+	if(player.remoteSend)
+	{
+		player.remoteSend({disconnect:true});
+		delete player.remoteSend;
+	}
+};
+server.idCounter = 0;
+server.takeIdTag = function(){
+	var id;
+	while(server.idDictionary.hasOwnProperty(server.idCounter))
+		server.idCounter++;
+	id = server.idCounter;
+	if(!Number.isSafeInteger(server.idCounter))
+		server.idCounter = 0;
+	server.idDictionary[id] = true;
+	return id;
+}
+server.idDictionary = {};
+
+server.players = [];
+
 /*
  .main is an object literal that is a property of the app global
  This object literal has its own properties and methods (functions)
@@ -34,6 +123,7 @@ server.games = {mainGame:gameFunctions.init({
 	frameTimeout:undefined,
 	frameCount:0,
 	runningTime:0,
+	idCounter:0,
 	updatables:[],
 	ship:{},
 	otherShips:[],
@@ -118,79 +208,3 @@ server.games = {mainGame:gameFunctions.init({
 	baseStarCameraZoom:.0001,
 	playerWeaponToggle:false,	
 })}; // end app.main
-
-server.attachSocket = function(s){
-	var pid;
-	var socket = new FalseSocket();
-	socket.otherSocket = s;
-	socket.onmessage = function(data){
-		var player = server.players[pid];
-		if(data.destroyed)
-		{
-			player.remoteSend = undefined;
-		}
-		if(data.gameId)
-		{
-			server.disconnectPlayer(player);
-
-			var g = server.games[data.gameId];
-			if(g)
-			{
-				player.game = g;
-				player.socket.send({grid:g.grid});
-			}
-			delete data.gameId;
-		}
-		if(player.game && data.ship)
-		{
-			var chosenShip = ships[data.ship];
-			if(chosenShip){
-				chosenShip.remoteInput = {};
-				var sh = constructors.createShip(chosenShip,pl.game);
-				player.game.otherShips.push(sh);
-				if(sh.remoteInput)
-				{
-					sh.remoteInput.remoteSend = function(data){player.socket.send(data)};
-					player.remoteSend = sh.remoteInput.messageHandler;
-				}
-			}
-			delete data.ship;
-		}
-		if(player.remoteSend)
-		{
-			player.remoteSend(data);
-		}
-	};
-	socket.onclose = function(){
-		//server.removePlayerFromGame(server.players[pid]);
-		disconnectPlayer(server.players[pid]);
-		server.players[pid] = undefined;
-	};
-	var pl = constructors.createPlayer({socket:socket});
-	for(var c = 0;c<=server.players.length;c++)
-	{
-		if(c==server.players.length)
-		{
-			server.players.push(pl);
-			pid = c;
-			break;
-		}
-		if(!server.players[c])
-		{
-			server.players[c] = pl;
-			pid = c;
-			break;
-		}
-	}
-	return socket;
-}
-
-server.disconnectPlayer = function(player){
-	if(player.remoteSend)
-	{
-		player.remoteSend({disconnect:true});
-		delete player.remoteSend;
-	}
-};
-
-server.players = [];

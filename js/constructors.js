@@ -18,6 +18,7 @@ var constructors = {
 			objectParams = {};
 		var gridPosition = gridFunctions.randomGridPosition(game.grid);
 		var ship = {
+			id:server.takeIdTag(),
 			game:game,
 			faction:-1,
 			//position/rotation
@@ -104,6 +105,7 @@ var constructors = {
 		if(!objectParams)
 			objectParams = {};
 		var ts = {
+			id:server.takeIdTag(),
 			color:getRandomBrightColor(),
 			noiseLevel:0,
 			medial:constructors.createComponentThruster(deepObjectMerge({
@@ -130,6 +132,7 @@ var constructors = {
 		if(!objectParams)
 			objectParams = {};
 		var t = {
+			id:server.takeIdTag(),
 			currentStrength:0,
 			targetStrength:0,
 			maxStrength: 1000,
@@ -148,6 +151,7 @@ var constructors = {
 		if(!objectParams)
 			objectParams = {};
 		var ps = {
+			id:server.takeIdTag(),
 			current:[0,0,0],
 			target:[0,0,0],
 			transferRate:6
@@ -163,6 +167,7 @@ var constructors = {
 		if(!objectParams)
 			objectParams = {};
 		var stab = {
+			id:server.takeIdTag(),
 			enabled: true,
 			strength: 1200,
 			thrustRatio: 1.5,
@@ -180,6 +185,7 @@ var constructors = {
 		if(!objectParams)
 			objectParams = {};
 		var clamps = {
+			id:server.takeIdTag(),
 			enabled: true,
 			medial:3000,
 			lateral:2000,
@@ -195,6 +201,7 @@ var constructors = {
 		if(!objectParams)
 			objectParams = {};
 		var lsr = {
+			id:server.takeIdTag(),
 			lastFireTime:0,
 			cd:.3,
 			range:10000,
@@ -217,6 +224,7 @@ var constructors = {
 		if(!objectParams)
 			objectParams = {};
 		var cn = {
+			id:server.takeIdTag(),
 			firing:false,
 			lastFireTime:0,
 			cd:.02,
@@ -233,6 +241,7 @@ var constructors = {
 		if(!objectParams)
 			objectParams = {};
 		var am = {
+			id:server.takeIdTag(),
 			destructible:constructors.createComponentDestructible(deepObjectMerge({
 				hp:50,
 				radius:2
@@ -252,6 +261,7 @@ var constructors = {
 		if(!objectParams)
 			objectParams = {};
 		var ln = {
+			id:server.takeIdTag(),
 			tubes:[
 				{ammo:missiles.tomcat, lastFireTime:0}
 			],
@@ -270,6 +280,7 @@ var constructors = {
 		if(!objectParams)
 			objectParams = {};
 		var ts = {
+			id:server.takeIdTag(),
 			targets:[],
 			maxTargets:1,
 			range:50000,
@@ -287,6 +298,7 @@ var constructors = {
 		if(!objectParams)
 			objectParams = {};
 		var wh = {
+			id:server.takeIdTag(),
 			radial:deepObjectMerge({
 				velocity:1000,
 				decay:.99,
@@ -306,6 +318,7 @@ var constructors = {
 		if(!objectParams)
 			objectParams = {};
 		var ds = {
+			id:server.takeIdTag(),
 			hp:500,
 			maxHp: (objectParams.hp)?objectParams.hp: 500,
 			radius:500,
@@ -322,6 +335,7 @@ var constructors = {
 		if(!objectParams)
 			objectParams = {};
 		var sh = {
+			id:server.takeIdTag(),
 			current:(objectParams.max)?objectParams.max: 0,
 			max:0,
 			efficiency:0,
@@ -338,6 +352,7 @@ var constructors = {
 		if(!objectParams)
 			objectParams = {};
 		var ai = {
+			id:server.takeIdTag(),
 			aiFunction:undefined
 		};
 
@@ -348,10 +363,13 @@ var constructors = {
 
 	createComponentRemoteInput:function(objectParams){
 		var ri = {
+			id:server.takeIdTag(),
 			keyboard:[],
 			mouse:[],
 			mouseDirection:0,
-			messageHandler:mh
+			messageHandler:mh,
+			lastSend:0,
+			sendInterval:15
 		};
 		function mh(data){
 			if(data.disconnect && ri.remoteSend)
@@ -382,8 +400,9 @@ var constructors = {
 	},
 
 	//constructor for laser object
-	createHitscan:function(hitscans, startX,startY,endX,endY,color, owner, collisionFunction, collisionProperties){
+	createHitscan:function(game, startX,startY,endX,endY,color, owner, collisionFunction, collisionProperties,id){
 		var hitscan = {
+			id:id,
 			startX:startX,
 			startY:startY,
 			endX:endX,
@@ -398,30 +417,14 @@ var constructors = {
 
 		if(collisionProperties) veryShallowObjectMerge(hitscan, collisionProperties);
 		//lsr.nextLaser = constructors.createNextLaserObject(lsr)
-		if(hitscans) hitscans.push(hitscan);
+		if(game.hitscans) game.hitscans.push(hitscan);
 		return hitscan;
 	},
 
-	createNextHitscanObject:function(hitscan, dt){
-		var obj = hitscan.owner;
-		//var anchorPoint = [hitscan.startX - obj.x, hitscan.startY - obj.y];
-		var nextEnd = rotate(obj.x, obj.y, hitscan.endX, hitscan.endY, -obj.rotationalVelocity*dt);
-		var nextStart = rotate(obj.x, obj.y, hitscan.startX, hitscan.startY, -obj.rotationalVelocity*dt);
-		nextStart[0]+=obj.velocityX*dt;
-		nextStart[1]+=obj.velocityY*dt;
-		nextEnd[0]+=obj.velocityX*dt;
-		nextEnd[1]+=obj.velocityY*dt;
-		return {
-			startX:nextStart[0],
-			startY:nextStart[1],
-			endX:nextEnd[0],
-			endY:nextEnd[1]
-		};
-	},
-
 	//constructor for projectile object
-	createProjectile:function(projectiles, startX, startY, velX, velY, destructible, color, owner, visible, collisionFunction){
+	createProjectile:function(game, startX, startY, velX, velY, destructible, color, owner, visible, collisionFunction){
 		var prj = {
+			id:server.takeIdTag(),
 			cullTolerance:.3,
 			x:startX,
 			y:startY,
@@ -435,11 +438,12 @@ var constructors = {
 			visible: visible,
 			collisionFunction:collisionFunction
 		};
-		projectiles.push(prj);
+		game.projectiles.push(prj);
 	},
 
-	createRadial:function(radials, x, y, vel, decay, color, owner, collisionFunction, collisionProperties){
+	createRadial:function(game, x, y, vel, decay, color, owner, collisionFunction, collisionProperties){
 		var rad = {
+			id:server.takeIdTag(),
 			x:x,
 			y:y,
 			radius:0,
@@ -450,7 +454,7 @@ var constructors = {
 			collisionFunction:collisionFunction,
 			collisionProperties:collisionProperties
 		};
-		radials.push(rad);
+		game.radials.push(rad);
 	},
 
 	//returns a camera object with the given values and the context from the given canvas
@@ -520,12 +524,31 @@ var constructors = {
 var destructors = {
 	destroyWarhead:function(obj){
 		var radial = obj.warhead.radial;
-		constructors.createRadial(obj.game.radials, obj.x, obj.y, radial.velocity, radial.decay, radial.color, obj, collisions[radial.collisionFunction], radial.collisionProperties);
+		constructors.createRadial(obj.game, obj.x, obj.y, radial.velocity, radial.decay, radial.color, obj, collisions[radial.collisionFunction], radial.collisionProperties);
 	},
 	queueRespawn:function(obj){
 		obj.game.respawnQueue.push({time:obj.game.elapsedGameTime+obj.respawnTime*1000,params:obj.constructionObject});
 	},
 	destroyRemoteInput:function(obj){
 		obj.remoteInput.remoteSend({destroyed:true});
+	},
+	returnIdTag:function(src){
+		if(!src)
+			return;
+		//loop through source's attributes
+		for(var key in src){
+			//if the attribute is up the prototype chain, skip it
+			if(!src.hasOwnProperty(key))
+				continue;
+			//if the current attribute is an object in the source
+			if(src[key] instanceof Object && !(src[key] instanceof Array))
+			{
+				//then deep merge the two
+				destructors.returnIdTag(src[key]);
+			}
+			else if(key=='id' && server.idDictionary[src[key]])
+				delete server.idDictionary[src[key]];
+		}
 	}
+
 };
