@@ -510,7 +510,7 @@ var constructors = {
 		var maxRadius = 8000;
 		var minRadius = 2000;
 		for(var c=0;c<500;c++){
-			var group = Math.floor(Math.random()*this.stars.colors.length);
+			var group = Math.floor(Math.random()*stars.colors.length);
 			stars.objs.push({
 				x: Math.random()*(upper-lower)+lower,
 				y: Math.random()*(upper-lower)+lower,

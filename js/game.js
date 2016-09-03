@@ -206,13 +206,6 @@ server.games = {mainGame:gameFunctions.init({
 		],
 		objs:[]
 	},
-	stars:{
-		objs:[],
-		colors:[
-			'white'//,
-			//'yellow'
-		]
-	},
 	baseStarCameraZoom:.0001,
 	playerWeaponToggle:false,	
 })}; // end app.main

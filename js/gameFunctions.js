@@ -13,7 +13,7 @@ var gameFunctions = {
 	//initialize the stuff
 	init : function(game) {
 		// initialize properties			
-			constructors.generateStarField.bind(game, game.stars)();
+			//constructors.generateStarField.bind(game, game.stars)();
 			constructors.makeAsteroids.bind(game,game.asteroids,game.grid)();
 			//game.ship = constructors.createShip(ships.cheetah, game);
 			var hue = Math.round(Math.random()*360);

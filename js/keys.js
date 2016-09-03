@@ -88,7 +88,8 @@ window.addEventListener("keydown",function(e){
 	
 window.addEventListener("keyup",function(e){
 	//console.log("keyup=" + e.keyCode);
-	
+	if(e.keyCode == myKeys.KEYBOARD.KEY_F)
+		drawStarField = !drawStarField;
 	myKeys.keydown[e.keyCode] = false;
 	socket.send({keyCode:e.keyCode,pos:0});
 	e.preventDefault();

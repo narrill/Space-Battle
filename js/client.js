@@ -30,6 +30,14 @@ var lastWorldUpdate;
 var wiInterval = 33;
 var entry = "";
 var shipList = [];
+var drawStarField = true;
+var stars = {
+		objs:[],
+		colors:[
+			'white'//,
+			//'yellow'
+		]
+	};
 
 function startClient(){
 	//game = g;
@@ -45,7 +53,7 @@ function startClient(){
 	resetWi();
 	socket = new FalseSocket(server);
 	socket.onmessage = messageHandler;	
-	
+	constructors.generateStarField(stars);
 	pointerInit(canvas);
 	state = GAME_STATES.TITLE;
 	animationID = requestAnimationFrame(frame);
