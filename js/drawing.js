@@ -74,6 +74,8 @@ var drawing = {
 		}	
 		else if(state == GAME_STATES.DISCONNECTED)
 			drawing.drawDisconnectScreen(cameras.camera);
+		else if(state == GAME_STATES.CHOOSESHIP)
+			drawing.drawChooseShipScreen(cameras.camera);
 
 		drawing.drawLockedGraphic(cameras.camera);
 
@@ -495,7 +497,7 @@ var drawing = {
 		for(var c = 0;c< projectiles.length;c++){
 			var prj = projectiles[c];
 			if(!worldInfo.drawing[prj.id])
-				return;
+				continue;
 			if(!worldInfo.targets[prj.id])
 			{
 				removeIndexFromWiCollection(c,worldInfo.prjs);
@@ -713,11 +715,12 @@ var drawing = {
 		ctx.textBaseline = 'middle';
 		ctx.globalAlpha = 1;
 		utilities.fillText(ctx,"Connection lost",camera.width/2,2*camera.height/5,"24pt Aroma",'white');
+		utilities.fillText(ctx,"Press ENTER to send another ship",camera.width/2,3*camera.height/5,"12pt Orbitron",'white');
 		ctx.restore();		
 	},
 
 	//draw pause screen in the given camera
-	drawPauseScreen:function(camera){
+	drawChooseShipScreen:function(camera){
 		var ctx = camera.ctx;
 		ctx.save();
 		ctx.fillStyle = "black",
@@ -726,7 +729,14 @@ var drawing = {
 		ctx.textAlign = 'center';
 		ctx.textBaseline = 'middle';
 		ctx.globalAlpha = 1;
-		utilities.fillText(ctx,"Paused",camera.width/2,camera.height/5,"24pt Aroma",'white');
+		utilities.fillText(ctx,"Enter ship name: "+entry,camera.width/2,camera.height/2 - 30,"24pt Aroma",'white');
+		var list = "Options: ";
+		for(var c = 0;c<shipList.length;c++)
+		{
+			if(c>0)list+=', ';
+			list+=shipList[c];
+		}
+		utilities.fillText(ctx,list,camera.width/2,camera.height/2 +30,"10pt Orbitron",'white');
 		ctx.restore();
 	},
 

@@ -12,7 +12,9 @@ var hitscanDetail = 3;
 // if app exists use the existing copy
 // else create a new object literal
 var server = server || {};
-
+server.shipList = [];
+for (var key in ships)
+	if(ships.hasOwnProperty(key)) server.shipList.push(key);
 server.attachSocket = function(s){
 	var pid;
 	var socket = new FalseSocket();
@@ -23,6 +25,10 @@ server.attachSocket = function(s){
 		{
 			player.remoteSend = undefined;
 			player.socket.send({destroyed:true});
+		}
+		if(data.requestShipList)
+		{
+			player.socket.send({shipList:server.shipList});
 		}
 		if(data.gameId)
 		{
@@ -38,7 +44,7 @@ server.attachSocket = function(s){
 		}
 		if(player.game && data.ship)
 		{
-			var chosenShip = ships[data.ship];
+			var chosenShip = ships[data.ship.toLowerCase().valueOf()];
 			if(chosenShip){
 				chosenShip.remoteInput = {};
 				var sh = constructors.createShip(chosenShip,pl.game);
@@ -49,6 +55,8 @@ server.attachSocket = function(s){
 					player.remoteSend = sh.remoteInput.messageHandler;
 				}
 			}
+			else
+				player.socket.send({badShipError:true});
 			delete data.ship;
 		}
 		if(player.remoteSend)

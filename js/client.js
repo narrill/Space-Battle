@@ -5,6 +5,7 @@ var cameras = {};
 var accumulator = 0;
 var socket;
 var playerInfo = {x:0,y:0, rotation:0,velX:0,velY:0,rotationalVelocity:0};
+var lastPlayerInfo = {x:0,y:0, rotation:0,velX:0,velY:0,rotationalVelocity:0};
 var hudInfo = {};
 var worldInfo = {
 	objs:[],
@@ -21,10 +22,14 @@ var state;
 var GAME_STATES = {
 	TITLE:0,
 	PLAYING:1,
-	DISCONNECTED:2
+	DISCONNECTED:2,
+	CHOOSESHIP:3,
+	WAIT:4
 };
 var lastWorldUpdate;
 var wiInterval = 33;
+var entry = "";
+var shipList = [];
 
 function startClient(){
 	//game = g;
@@ -68,12 +73,19 @@ function frame(){
 }
 
 function update(dt){
-	if(state == GAME_STATES.TITLE && myKeys.keydown[myKeys.KEYBOARD.KEY_ENTER])
+	if((state == GAME_STATES.TITLE || state == GAME_STATES.DISCONNECTED) && myKeys.keydown[myKeys.KEYBOARD.KEY_ENTER])
+	{
+		state = GAME_STATES.CHOOSESHIP;
+		myKeys.keydown[myKeys.KEYBOARD.KEY_ENTER] = false;
+		entry = "";
+		socket.send({requestShipList:true});
+		//game.resetGame();
+	}
+	else if(state == GAME_STATES.CHOOSESHIP && myKeys.keydown[myKeys.KEYBOARD.KEY_ENTER])
 	{
 		state = GAME_STATES.WAIT;
 		myKeys.keydown[myKeys.KEYBOARD.KEY_ENTER] = false;
-		socket.send({gameId:'mainGame',ship:'gull'});
-		//game.resetGame();
+		socket.send({gameId:'mainGame',ship:entry});
 	}
 	else if(state == GAME_STATES.PLAYING)
 	{
@@ -100,7 +112,19 @@ function update(dt){
 }
 
 function messageHandler(data){
-	//data = JSON.parse(data);
+	//data = JSON.parse(data);	
+	if(state==GAME_STATES.WAIT)
+	{
+		if(data.interval) state = GAME_STATES.PLAYING;
+		else if(data.badShipError)
+		{
+			entry = "";
+			state = GAME_STATES.CHOOSESHIP;
+			return;
+		}
+	}
+	if(data.shipList)
+		shipList = data.shipList;
 	if(data.destroyed)
 		state = GAME_STATES.DISCONNECTED;
 	if(data.grid)
@@ -110,12 +134,36 @@ function messageHandler(data){
 		grid = data.grid;
 	}
 	if(data.interval) wiInterval = data.interval;
-	if(data.x) playerInfo.x = data.x;
-	if(data.y) playerInfo.y = data.y;
-	if(data.rotation) playerInfo.rotation = data.rotation;
-	if(data.velX) playerInfo.velX = data.velX;
-	if(data.velY) playerInfo.velY = data.velY;
-	if(data.rotationalVelocity) playerInfo.rotationalVelocity = data.rotationalVelocity;
+	if(data.x) 
+	{
+		lastPlayerInfo.x = playerInfo.x;
+		playerInfo.x = data.x;
+	}
+	if(data.y) 
+	{
+		lastPlayerInfo.y = playerInfo.y;
+		playerInfo.y = data.y;
+	}
+	if(data.rotation) 
+	{
+		lastPlayerInfo.rotation = playerInfo.rotation;
+		playerInfo.rotation = data.rotation;
+	}
+	if(data.velX) 
+	{
+		lastPlayerInfo.velX = playerInfo.velX;
+		playerInfo.velX = data.velX;
+	}
+	if(data.velY) 
+	{
+		lastPlayerInfo.velY = playerInfo.velY;
+		playerInfo.velY = data.velY;
+	}
+	if(data.rotationalVelocity) 
+	{
+		lastPlayerInfo.rotationalVelocity = playerInfo.rotationalVelocity;
+		playerInfo.rotationalVelocity = data.rotationalVelocity;
+	}
 	if(data.velocityClamps) hudInfo.velocityClamps = data.velocityClamps;
 	if(data.stabilized || data.stabilized == false) hudInfo.stabilized = data.stabilized;
 	if(data.powerDistribution) hudInfo.powerDistribution = data.powerDistribution;
@@ -133,8 +181,6 @@ function messageHandler(data){
 		pushCollectionFromDataToWI(data.worldInfo,'radials');
 		worldInfo.asteroids = data.worldInfo.asteroids;
 	}
-	if(state==GAME_STATES.WAIT)
-		state = GAME_STATES.PLAYING;
 }
 
 function resetWi(){
@@ -170,6 +216,10 @@ function pushCollectionFromDataToWI(dwi, type){
 				worldInfo.drawing[obj.id] = false;
 			}
 		}
+}
+
+function interpolatePiValue(val){
+	
 }
 
 function interpolateWiValue(obj, val){

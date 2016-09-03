@@ -369,7 +369,7 @@ var constructors = {
 			mouseDirection:0,
 			messageHandler:mh,
 			lastSend:0,
-			sendInterval:15
+			sendInterval:12.5
 		};
 		function mh(data){
 			if(data.disconnect && ri.remoteSend)

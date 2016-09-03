@@ -70,6 +70,11 @@ myKeys.keydown = [];
 // event listeners
 window.addEventListener("keydown",function(e){
 	//console.log("keydown=" + e.keyCode);
+	if(state==GAME_STATES.CHOOSESHIP){
+		if(e.keyCode == 8 && entry.length>0)
+			entry = entry.slice(0,-1);
+		else if(e.keyCode!=13) entry+=String.fromCharCode(e.keyCode);
+	}
 	myKeys.keydown[e.keyCode] = true;
 	socket.send({keyCode:e.keyCode,pos:1});
 	e.preventDefault();
@@ -83,6 +88,7 @@ window.addEventListener("keydown",function(e){
 	
 window.addEventListener("keyup",function(e){
 	//console.log("keyup=" + e.keyCode);
+	
 	myKeys.keydown[e.keyCode] = false;
 	socket.send({keyCode:e.keyCode,pos:0});
 	e.preventDefault();
