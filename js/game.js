@@ -144,6 +144,7 @@ server.games = {mainGame:gameFunctions.init({
 	hitscans:[],
 	projectiles:[],
 	radials:[],
+	functionQueue:[],
 	camera:{
 		//position/rotation
 		x:0,
@@ -172,7 +173,7 @@ server.games = {mainGame:gameFunctions.init({
 	minimapCamera:{},
 	grid:{
 		gridLines: 1000, //number of grid lines
-		gridSpacing: 500, //pixels per grid unit
+		gridSpacing: 2000, //pixels per grid unit
 		gridStart: [-125000,-125000], //corner anchor in world coordinates
 		colors:[
 			{

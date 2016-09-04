@@ -370,109 +370,111 @@ var updaters = {
 		var sinceLastSend = obj.game.elapsedGameTime - obj.remoteInput.lastSend;
 		if(obj.remoteInput.remoteSend && sinceLastSend>=obj.remoteInput.sendInterval)
 		{
-			if(sinceLastSend>=2*obj.remoteInput.sendInterval)
-				obj.remoteInput.lastSend = obj.game.elapsedGameTime;
-			else
-				obj.remoteInput.lastSend += obj.remoteInput.sendInterval;
-			var d = {};
-			if(!obj.remoteInput.sentInterval)
-			{
-				d.interval = obj.remoteInput.sendInterval;
-				obj.remoteInput.sentInterval = true;
-			}
-			d.x = obj.x;
-			d.y = obj.y;
-			d.rotation = obj.rotation;
-			d.velX = obj.velocityX;
-			d.velY = obj.velocityY;
-			d.rotationalVelocity = obj.rotationalVelocity;
-			d.velocityClamps = obj.stabilizer.clamps;
-			d.stabilized = obj.stabilizer.enabled;
-			var worldInfo = {objs:[],asteroids:{objs:[],colors:[]},radials:[],prjs:[],hitscans:[]};
-			for(var c = 0;c<obj.game.otherShips.length;c++){
-				var o = obj.game.otherShips[c];
-				var mine = o == obj;
-				var wi = {
-					id:o.id,
-					x:o.x,
-					y:o.y,
-					rotation:o.rotation,
-					radius:o.destructible.radius,
-					shp:(o.destructible.shield.max>0)? o.destructible.shield.current/o.destructible.shield.max : 0,
-					shc:o.destructible.shield.max/o.destructible.shield.efficiency,
-					hp:o.destructible.hp/o.destructible.maxHp,
-					color:o.color,
-					model:deepObjectMerge({},o.model),
-					medial:o.thrusterSystem.medial.currentStrength/o.thrusterSystem.medial.efficiency,
-					lateral:o.thrusterSystem.lateral.currentStrength/o.thrusterSystem.lateral.efficiency,
-					rotational:o.thrusterSystem.rotational.currentStrength/o.thrusterSystem.rotational.efficiency,
-					thrusterColor:o.thrusterSystem.color
-				};
-				if(mine && wi.model.overlay.ranges)
-					for(var key2 in wi.model.overlay.ranges)
-					{
-						var r = obj[key2];
-						if(r) r = r.range;
-						if(r) wi.model.overlay.ranges[key2] = r;
-					}
-				else if(wi.model.overlay.ranges)
-					delete wi.model.overlay.ranges;
-				worldInfo.objs.push(wi);
-			}
-			for(var c = 0;c<obj.game.asteroids.colors.length;c++){
-				worldInfo.asteroids.colors.push(obj.game.asteroids.colors[c]);
-			}
-			for(var c = 0;c<obj.game.asteroids.objs.length;c++){
-				var a = obj.game.asteroids.objs[c];
-				worldInfo.asteroids.objs.push({
-					x:a.x,
-					y:a.y,
-					colorIndex:a.colorIndex,
-					radius:a.destructible.radius
-				});
-			}
-			for(var c = 0;c<obj.game.projectiles.length;c++){
-				var p = obj.game.projectiles[c];
-				if(!p.visible)
-					continue;
-				worldInfo.prjs.push({
-					id:p.id,
-					x:p.x,
-					y:p.y,
-					velocityX:p.velocityX,
-					velocityY:p.velocityY,
-					color:p.color,
-					radius:p.destructible.radius
-				});
-			}
-			for(var c = 0;c<obj.game.hitscans.length;c++){
-				var h = obj.game.hitscans[c];
-				worldInfo.hitscans.push({
-					id:h.id,
-					startX:h.startX,
-					startY:h.startY,
-					endX:h.endX,
-					endY:h.endY,
-					color:h.color,
-					power:h.power,
-					efficiency:h.efficiency
-				});
-			}
-			for(var c = 0;c<obj.game.radials.length;c++){
-				var r = obj.game.radials[c];
-				worldInfo.radials.push({
-					id:r.id,
-					x:r.x,
-					y:r.y,
-					velocity:r.velocity,
-					radius:r.radius,
-					color:r.color
-				});
-			}
-			d.worldInfo = worldInfo;
-			//d.powerDistribution = 
-			//console.log('remote send');
-			obj.remoteInput.remoteSend(d);
+			gameFunctions.queueFunction(obj.game, function(){
+				if(sinceLastSend>=2*obj.remoteInput.sendInterval)
+					obj.remoteInput.lastSend = obj.game.elapsedGameTime;
+				else
+					obj.remoteInput.lastSend += obj.remoteInput.sendInterval;
+				var d = {};
+				if(!obj.remoteInput.sentInterval)
+				{
+					d.interval = obj.remoteInput.sendInterval;
+					obj.remoteInput.sentInterval = true;
+				}
+				d.x = obj.x;
+				d.y = obj.y;
+				d.rotation = obj.rotation;
+				d.velX = obj.velocityX;
+				d.velY = obj.velocityY;
+				d.rotationalVelocity = obj.rotationalVelocity;
+				d.velocityClamps = obj.stabilizer.clamps;
+				d.stabilized = obj.stabilizer.enabled;
+				var worldInfo = {objs:[],asteroids:{objs:[],colors:[]},radials:[],prjs:[],hitscans:[]};
+				for(var c = 0;c<obj.game.otherShips.length;c++){
+					var o = obj.game.otherShips[c];
+					var mine = o == obj;
+					var wi = {
+						id:o.id,
+						x:o.x,
+						y:o.y,
+						rotation:o.rotation,
+						radius:o.destructible.radius,
+						shp:(o.destructible.shield.max>0)? o.destructible.shield.current/o.destructible.shield.max : 0,
+						shc:o.destructible.shield.max/o.destructible.shield.efficiency,
+						hp:o.destructible.hp/o.destructible.maxHp,
+						color:o.color,
+						model:deepObjectMerge({},o.model),
+						medial:o.thrusterSystem.medial.currentStrength/o.thrusterSystem.medial.efficiency,
+						lateral:o.thrusterSystem.lateral.currentStrength/o.thrusterSystem.lateral.efficiency,
+						rotational:o.thrusterSystem.rotational.currentStrength/o.thrusterSystem.rotational.efficiency,
+						thrusterColor:o.thrusterSystem.color
+					};
+					if(mine && wi.model.overlay.ranges)
+						for(var key2 in wi.model.overlay.ranges)
+						{
+							var r = obj[key2];
+							if(r) r = r.range;
+							if(r) wi.model.overlay.ranges[key2] = r;
+						}
+					else if(wi.model.overlay.ranges)
+						delete wi.model.overlay.ranges;
+					worldInfo.objs.push(wi);
+				}
+				for(var c = 0;c<obj.game.asteroids.colors.length;c++){
+					worldInfo.asteroids.colors.push(obj.game.asteroids.colors[c]);
+				}
+				for(var c = 0;c<obj.game.asteroids.objs.length;c++){
+					var a = obj.game.asteroids.objs[c];
+					worldInfo.asteroids.objs.push({
+						x:a.x,
+						y:a.y,
+						colorIndex:a.colorIndex,
+						radius:a.destructible.radius
+					});
+				}
+				for(var c = 0;c<obj.game.projectiles.length;c++){
+					var p = obj.game.projectiles[c];
+					if(!p.visible)
+						continue;
+					worldInfo.prjs.push({
+						id:p.id,
+						x:p.x,
+						y:p.y,
+						velocityX:p.velocityX,
+						velocityY:p.velocityY,
+						color:p.color,
+						radius:p.destructible.radius
+					});
+				}
+				for(var c = 0;c<obj.game.hitscans.length;c++){
+					var h = obj.game.hitscans[c];
+					worldInfo.hitscans.push({
+						id:h.id,
+						startX:h.startX,
+						startY:h.startY,
+						endX:h.endX,
+						endY:h.endY,
+						color:h.color,
+						power:h.power,
+						efficiency:h.efficiency
+					});
+				}
+				for(var c = 0;c<obj.game.radials.length;c++){
+					var r = obj.game.radials[c];
+					worldInfo.radials.push({
+						id:r.id,
+						x:r.x,
+						y:r.y,
+						velocity:r.velocity,
+						radius:r.radius,
+						color:r.color
+					});
+				}
+				d.worldInfo = worldInfo;
+				//d.powerDistribution = 
+				//console.log('remote send');
+				obj.remoteInput.remoteSend(d);
+			});
 		}
 	},
 

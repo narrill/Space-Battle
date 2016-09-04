@@ -117,9 +117,10 @@ var gameFunctions = {
 
 		gameFunctions.checkCollisions(game, dt);
 
-		for(var c = 0;c<game.players.length;c++)
+		for(var c = 0;c<game.functionQueue.length;c++)
 		{
-			
+			game.functionQueue[c]();
+			game.functionQueue.splice(c--,1);
 		}
 
 		game.elapsedGameTime+=dt*1000;	
@@ -314,7 +315,11 @@ var gameFunctions = {
 						rad.collisionFunction(rad, gameObj,dt);
 				}
 			}
-	},		
+	},	
+
+	queueFunction:function(game, f){
+		game.functionQueue.push(f);
+	},
 
 	//resets the game state
 	resetGame:function(game){
