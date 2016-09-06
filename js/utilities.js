@@ -219,12 +219,12 @@ function distanceSqr(p1, p2){
 //http://stackoverflow.com/questions/17410809/how-to-calculate-rotation-in-2d-in-javascript
 //point to rotate around, point to rotate, angle to rotate by
 function rotate(cx, cy, x, y, angle) {
-    var radians = (Math.PI / 180) * angle,
-        cos = Math.cos(radians),
-        sin = Math.sin(radians),
-        nx = (cos * (x - cx)) + (sin * (y - cy)) + cx,
-        ny = (cos * (y - cy)) - (sin * (x - cx)) + cy;
-    return [nx, ny];
+    var radians = (Math.PI / 180) * angle;
+        //cos = Math.cos(radians),
+        //sin = Math.sin(radians),
+        //nx = (Math.cos(radians) * (x - cx)) + (Math.sin(radians) * (y - cy)) + cx,
+        //ny = (Math.cos(radians) * (y - cy)) - (Math.sin(radians) * (x - cx)) + cy;
+    return [((Math.cos((Math.PI / 180) * angle) * (x - cx)) + (Math.sin((Math.PI / 180) * angle) * (y - cy)) + cx), ((Math.cos((Math.PI / 180) * angle) * (y - cy)) - (Math.sin((Math.PI / 180) * angle) * (x - cx)) + cy)];
 }
 
 function dotProduct(x1,y1,x2,y2){
@@ -258,9 +258,16 @@ function scalarComponentOf1InDirectionOf2(x1,y1,x2,y2){
 }
 
 //converts given x,y from world space to camera space using the given camera
-function worldPointToCameraSpace (xw,yw, camera){
+/*function worldPointToCameraSpace (xw,yw, camera){
 	var cameraToPointVector = [(xw-camera.x)*camera.zoom,(yw-camera.y)*camera.zoom];
 	var rotatedVector = rotate(0,0,cameraToPointVector[0],cameraToPointVector[1],camera.rotation);
+	return [camera.width/2+rotatedVector[0],camera.height/2+rotatedVector[1]];
+}*/
+
+//converts given x,y from world space to camera space using the given camera
+function worldPointToCameraSpace (xw,yw, camera){
+	//var cameraToPointVector = [(xw-camera.x)*camera.zoom,(yw-camera.y)*camera.zoom];
+	var rotatedVector = rotate(0,0,(xw-camera.x)*camera.zoom,(yw-camera.y)*camera.zoom,camera.rotation);
 	return [camera.width/2+rotatedVector[0],camera.height/2+rotatedVector[1]];
 }
 

@@ -226,8 +226,6 @@ function SuperArray(size){
 		}
 	};
 	this.clear = function(){
-		for(var c = 0;c<this.array.length;c++)
-			this.array[c] = undefined;
 		this.count = 0;
 	};
 	this.forEach = function(f){

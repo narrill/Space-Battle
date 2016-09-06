@@ -349,41 +349,50 @@ var gameFunctions = {
 		var map = {};
 		map.position = [game.tileArray.min[0],game.tileArray.min[1]];
 		map.size = [game.tileArray.max[0]-game.tileArray.min[0], game.tileArray.max[1]-game.tileArray.min[1]];
-		map.precision = 30000;
+		map.precision = 300000;
 		var taSize = mapFunctions.posTo1dIndex([map.position[0]+map.size[0],map.position[1]+map.size[1]],map);
-		for(var c = 0;c<=taSize;c++)
-		{
-			//console.log('adding tile '+c);
-			if(c>=game.tileArray.count)
-				game.tileArray.push({
-					asteroids: new SuperArray(),
-					objs: new SuperArray(),
-					prjs: new SuperArray(),
-					hitscans: new SuperArray(),
-					radials: new SuperArray()
-				});
-			game.tileArray.get(c)['asteroids'].clear();
-			game.tileArray.get(c)['objs'].clear();
-			game.tileArray.get(c)['prjs'].clear();
-			game.tileArray.get(c)['hitscans'].clear();
-			game.tileArray.get(c)['radials'].clear();
-		}
-		var info = {};
-		for(var c = 0;c<game.reportQueue.count;c++){
-			var item = game.reportQueue.get(c);
-			var velX = (item.velocityX)?item.velocityX:0;
-			var velY = (item.velocityY)?item.velocityY:0;
-			var min = [item.x-item.destructible.radius-velX,item.y-item.destructible.radius-velY];
-			var max = [item.x+item.destructible.radius+velX,item.y+item.destructible.radius+velY];
-			mapFunctions.minMaxToInfo(min, max, map, info);
-			for(var row = 0;row<info.repetitions;row++)
-				for(var col = 0;col<info.len;col++)
-				{
-					var theTile = game.tileArray.get(info.start+col+info.offset*row)
-					if(theTile)
-						theTile[item.type+'s'].push(item);
+		function expand(){
+			for(var c = 0;c<=taSize;c++)
+			{
+				//console.log('adding tile '+c);
+				if(c>=game.tileArray.count)
+					game.tileArray.push({
+						asteroids: new SuperArray(),
+						objs: new SuperArray(),
+						prjs: new SuperArray(),
+						hitscans: new SuperArray(),
+						radials: new SuperArray()
+					});
+				else{
+					game.tileArray.get(c)['asteroids'].clear();
+					game.tileArray.get(c)['objs'].clear();
+					game.tileArray.get(c)['prjs'].clear();
+					game.tileArray.get(c)['hitscans'].clear();
+					game.tileArray.get(c)['radials'].clear();
 				}
+			}
 		}
+		expand();
+		var info = {};
+		var item, velY, velX, min, max, theTile;
+		function process(){
+			for(var c = 0;c<game.reportQueue.count;c++){
+				item = game.reportQueue.array[c];//game.reportQueue.get(c);
+				velX = (item.velocityX)?item.velocityX:0;
+				velY = (item.velocityY)?item.velocityY:0;
+				min = [item.x-item.destructible.radius-velX,item.y-item.destructible.radius-velY];
+				max = [item.x+item.destructible.radius+velX,item.y+item.destructible.radius+velY];
+				mapFunctions.minMaxToInfo(min, max, map, info);
+				for(var row = 0;row<info.repetitions;row++)
+					for(var col = 0;col<info.len;col++)
+					{
+						theTile = game.tileArray.array[info.start+col+info.offset*row];
+						if(theTile)
+							theTile[item.type+'s'].push(item);
+					}
+			}
+		};
+		process();
 		game.tileArray.map = map;
 		game.reportQueue.clear();
 		game.tileArray.min = [Number.MAX_VALUE, Number.MAX_VALUE];

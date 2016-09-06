@@ -229,7 +229,7 @@ var constructors = {
 			id:server.takeIdTag(),
 			firing:false,
 			lastFireTime:0,
-			cd:.02,
+			cd:.04,
 			power:24000,
 			ammo:constructors.createComponentAmmo(deepObjectMerge({},objectParams.ammo))
 		};
@@ -246,7 +246,7 @@ var constructors = {
 			id:server.takeIdTag(),
 			destructible:constructors.createComponentDestructible(deepObjectMerge({
 				hp:50,
-				radius:2
+				radius:3
 			},objectParams.destructible)),
 			color:'yellow',
 			tracerInterval:5,

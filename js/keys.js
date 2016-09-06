@@ -173,7 +173,7 @@ function moveCallback(e){
   	var movementY = e.movementY ||
 		e.mozMovementY      ||
 		0;
-		myMouse.direction += movementX;
+	myMouse.direction += movementX;
 }
 function resetMouse(){
 	myMouse.wheel = 0;
