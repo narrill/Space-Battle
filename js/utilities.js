@@ -668,7 +668,7 @@ var mapFunctions = {
 		var twod = [Math.floor(gridSpace[0]),Math.floor(gridSpace[1])];
 		return (twod[1]*Math.ceil(map.size[0]/map.precision)) + twod[0];
 	},
-	posTo2dIndex:function(pos){
+	posTo2dIndex:function(pos, map){
 		var gridSpace = mapFunctions.worldToGridSpace(pos,map, map.precision);
 		return [Math.floor(gridSpace[0]),Math.floor(gridSpace[1])];
 	},
@@ -680,12 +680,14 @@ var mapFunctions = {
 			container.len = maxIndex[0]-minIndex[0];
 			container.offset = Math.ceil(map.size[0]/map.precision);
 			container.repetitions = maxIndex[1]-minIndex[1] + 1;
+			container.start = (minIndex[1]*Math.ceil(map.size[0]/map.precision)) + minIndex[0];
 		}
 		else
 			return {
 				len : maxIndex[0]-minIndex[0],
 				offset : Math.ceil(map.size[0]/map.precision),
-				count : maxIndex[1]-minIndex[1] + 1
+				count : maxIndex[1]-minIndex[1] + 1,
+				start: (minIndex[1]*Math.ceil(map.size[0]/map.precision)) + minIndex[0]
 			};
 	}
 };

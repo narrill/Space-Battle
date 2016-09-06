@@ -20,6 +20,7 @@ var gameFunctions = {
 			game.tileArray = new SuperArray();
 			game.tileArray.min = [Number.MAX_VALUE, Number.MAX_VALUE];
 			game.tileArray.max = [-Number.MAX_VALUE, -Number.MAX_VALUE];
+			game.tileArray.map = {position:[0,0],size:[0,0],precision:0};
 			var hue = Math.round(Math.random()*360);
 			for(var c = 0;c<game.factions;c++){
 				game.factionColors[c] = 'hsl('+hue+',100%,65%)';
@@ -358,9 +359,21 @@ var gameFunctions = {
 			game.tileArray.get(c)['hitscans'].clear();
 			game.tileArray.get(c)['radials'].clear();
 		}
+		var info = {};
 		for(var c = 0;c<game.reportQueue.count;c++){
 			var item = game.reportQueue.get(c);
-			game.tileArray.get(mapFunctions.posTo1dIndex([item.x,item.y],map))[item.type+'s'].push(item);
+			var velX = (item.velocityX)?item.velocityX:0;
+			var velY = (item.velocityY)?item.velocityY:0;
+			var min = [item.x-item.destructible.radius-velX,item.y-item.destructible.radius-velY];
+			var max = [item.x+item.destructible.radius+velX,item.y+item.destructible.radius+velY];
+			mapFunctions.minMaxToInfo(min, max, map, info);
+			for(var row = 0;row<info.repetitions;row++)
+				for(var col = 0;col<info.len;col++)
+				{
+					var theTile = game.tileArray.get(info.start+col+info.offset*row)
+					if(theTile)
+						theTile[item.type+'s'].push(item);
+				}
 		}
 		game.tileArray.map = map;
 		game.reportQueue.clear();
@@ -368,10 +381,30 @@ var gameFunctions = {
 		game.tileArray.max = [-Number.MAX_VALUE, -Number.MAX_VALUE];
 	},
 
-	fetchFromTileArray:function(game, pos, radius){
+	fetchFromTileArray:function(game, pos, radius, objectList){
 		var min = [pos[0]-radius, pos[1]-radius];
 		var max = [pos[0]+radius, pos[1]+radius];
-		//var info = mapFunctions.minMaxToInfo(min, max, game.tileArray.map);
+		var info = mapFunctions.minMaxToInfo(min, max, game.tileArray.map);
+		if(!objectList)
+			objectList = {
+				asteroids:[],
+				objs:[],
+				prjs:[],
+				hitscans:[],
+				radials:[]
+			};
+		for(var row = 0;row<info.repetitions;row++)
+			for(var col = 0;col<info.len;col++)
+			{
+				var theTile = game.tileArray.get(info.start+col+info.offset*row)
+				if(theTile)
+				{
+					for(var key in objectList)
+						for(var c = 0;c<theTile.[key].count;c++)
+							objectList.asteroids.push(theTile.[key].get(c));
+				}
+			}
+		return objectList;
 	},
 
 	//resets the game state
