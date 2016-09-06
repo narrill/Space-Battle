@@ -144,6 +144,7 @@ server.games = {mainGame:gameFunctions.init({
 	hitscans:[],
 	projectiles:[],
 	radials:[],
+	reportQueue:undefined,
 	functionQueue:[],
 	camera:{
 		//position/rotation
@@ -199,6 +200,7 @@ server.games = {mainGame:gameFunctions.init({
 			}
 		]
 	},
+	tileArray:undefined,
 	asteroids:{
 		total:60,
 		colors:[
@@ -210,3 +212,35 @@ server.games = {mainGame:gameFunctions.init({
 	baseStarCameraZoom:.0001,
 	playerWeaponToggle:false,	
 })}; // end app.main
+
+function SuperArray(size){
+	this.count = size;
+	this.array = [];
+	this.push = function(ob){
+		this.array[this.count] = ob;
+		this.count++;
+	};
+	this.clean = function(){
+		for(var c = this.count; c<this.array.length;c++){
+			this.array[c] = undefined;
+		}
+	};
+	this.clear = function(){
+		for(var c = 0;c<this.array.length;c++)
+			this.array[c] = undefined;
+		this.count = 0;
+	};
+	this.forEach = function(f){
+		for(var c = 0;c<this.count && c<this.array.length;c++)
+			f(this.array[c]);
+	};
+	this.get = function(index){
+		return this.array[index];
+	};
+	this.set = function(index, val){
+		if(index>this.count)
+			this.count = index;
+		this.array[index] = val;
+	};
+	this.clear();
+}

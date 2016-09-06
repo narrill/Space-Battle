@@ -85,6 +85,7 @@ var constructors = {
 		//updaters.populateUpdaters(ship);
 		ship.updaters = [];
 		ship.updaters.push(updaters.updateMobile);
+		ship.updaters.push(updaters.queueReport);
 		for(var key in ship)
 		{
 			var capitalized = key.charAt(0).toUpperCase() + key.slice(1);

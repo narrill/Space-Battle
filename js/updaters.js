@@ -478,6 +478,19 @@ var updaters = {
 		}
 	},
 
+	queueReport:function(obj){
+		var game = (obj.game)?obj.game:obj.owner.game;
+		if(obj.x <game.tileArray.min.x)
+			game.tileArray.min.x = obj.x;
+		if(obj.y <game.tileArray.min.y)
+			game.tileArray.min.y = obj.y;
+		if(obj.x >game.tileArray.max.x)
+			game.tileArray.max.x = obj.x;
+		if(obj.y >game.tileArray.max.y)
+			game.tileArray.max.y = obj.y;
+		game.reportQueue.push(obj);
+	},
+
 	updateUpdatable:function(obj,dt){
 		var test = this;
 		for(var c = 0;c<obj.updaters.length;c++){

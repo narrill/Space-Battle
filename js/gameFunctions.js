@@ -16,6 +16,10 @@ var gameFunctions = {
 			//constructors.generateStarField.bind(game, game.stars)();
 			constructors.makeAsteroids.bind(game,game.asteroids,game.grid)();
 			//game.ship = constructors.createShip(ships.cheetah, game);
+			game.reportQueue = new SuperArray();
+			game.tileArray = new SuperArray();
+			game.tileArray.min = [Number.MAX_VALUE, Number.MAX_VALUE];
+			game.tileArray.max = [-Number.MAX_VALUE, -Number.MAX_VALUE];
 			var hue = Math.round(Math.random()*360);
 			for(var c = 0;c<game.factions;c++){
 				game.factionColors[c] = 'hsl('+hue+',100%,65%)';
@@ -106,14 +110,22 @@ var gameFunctions = {
 		//game.updateShip(game.ship,dt);
 		for(var i = 0; i<game.projectiles.length; i++){
 			updaters.updateMobile(game.projectiles[i], dt);
+			updaters.queueReport(game.projectiles[i]);
 		}
 		for(var i = 0;i<game.radials.length; i++){
 			updaters.updateRadial(game.radials[i], dt);
+			updaters.queueReport(game.radials[i]);
+		}
+		for(var i = 0;i<game.hitscans.length;i++)
+		{
+			updaters.queueReport(game.hitscans[i]);
 		}
 		//updaters.updateUpdatable(game.ship,dt);
 		game.otherShips.forEach(function(ship){
 			updaters.updateUpdatable(ship,dt);
-		},game);			
+		},game);	
+
+		gameFunctions.processReportQueue(game);		
 
 		gameFunctions.checkCollisions(game, dt);
 
@@ -319,6 +331,13 @@ var gameFunctions = {
 
 	queueFunction:function(game, f){
 		game.functionQueue.push(f);
+	},
+
+	processReportQueue:function(game){
+		console.log(game.reportQueue.count);
+		game.reportQueue.clear();
+		game.tileArray.min = [Number.MAX_VALUE, Number.MAX_VALUE];
+		game.tileArray.max = [-Number.MAX_VALUE, -Number.MAX_VALUE];
 	},
 
 	//resets the game state
