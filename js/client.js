@@ -68,7 +68,7 @@ function frame(){
 	drawing.draw(cameras,dt);
 
 	var step = .004;
-	if(dt>step*4)
+	if(dt>step*8)
 	{
 			dt = step;
 			console.log('throttle');
@@ -207,8 +207,6 @@ function resetWi(){
 function pushCollectionFromDataToWI(dwi, type){
 	for(var c = 0;c<dwi[type].length;c++)
 		{
-			if(type == 'hitscans')
-				console.log(dwi[type].length);
 			var obj = dwi[type][c];
 			if(worldInfo.drawing.hasOwnProperty(obj.id))
 			{

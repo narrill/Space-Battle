@@ -58,7 +58,8 @@ var constructors = {
 			/*onDestroy:function(obj){
 				constructors.createRadial(obj.game.radials,obj.x, obj.y, 500, .99, 'red', obj, undefined, {});
 			}*/
-			constructionObject:deepObjectMerge({},objectParams)
+			constructionObject:deepObjectMerge({},objectParams),
+			type:'obj'
 		};
 
 		//this is for adding additional components. also it's super janky
@@ -413,7 +414,8 @@ var constructors = {
 			owner:owner,
 			velocityX:owner.velocityX,
 			velocityY:owner.velocityY,
-			collisionFunction:collisionFunction
+			collisionFunction:collisionFunction,
+			type:'hitscan'
 		};
 
 		if(collisionProperties) veryShallowObjectMerge(hitscan, collisionProperties);
@@ -437,7 +439,8 @@ var constructors = {
 			color:color,
 			owner:owner,
 			visible: visible,
-			collisionFunction:collisionFunction
+			collisionFunction:collisionFunction,
+			type:'prj'
 		};
 		game.projectiles.push(prj);
 	},
@@ -453,7 +456,8 @@ var constructors = {
 			color:color,
 			owner:owner,
 			collisionFunction:collisionFunction,
-			collisionProperties:collisionProperties
+			collisionProperties:collisionProperties,
+			type:'radial'
 		};
 		game.radials.push(rad);
 	},
@@ -482,7 +486,8 @@ var constructors = {
 	},
 
 	//generates the field of asteroids
-	makeAsteroids:function(asteroids, grid){
+	makeAsteroids:function(game, grid){
+		var asteroids = game.asteroids;
 		var lower = [grid.gridStart[0],grid.gridStart[1]];
 		var upper = [lower[0]+grid.gridLines*grid.gridSpacing,lower[1]+grid.gridLines*grid.gridSpacing];
 		var maxRadius = 3000;
@@ -499,7 +504,9 @@ var constructors = {
 					hp:radius*radius/1000,
 					radius:radius //collider radius
 				}),
-				colorIndex:group
+				colorIndex:group,
+				game:game,
+				type:'asteroid'
 			});
 		}
 	},

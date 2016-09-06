@@ -14,7 +14,7 @@ var gameFunctions = {
 	init : function(game) {
 		// initialize properties			
 			//constructors.generateStarField.bind(game, game.stars)();
-			constructors.makeAsteroids.bind(game,game.asteroids,game.grid)();
+			constructors.makeAsteroids.bind(game,game,game.grid)();
 			//game.ship = constructors.createShip(ships.cheetah, game);
 			game.reportQueue = new SuperArray();
 			game.tileArray = new SuperArray();
@@ -105,6 +105,8 @@ var gameFunctions = {
 				game.respawnQueue.splice(c--,1);
 			}
 		}
+		for(var c = 0;c<game.asteroids.objs.length;c++)
+			updaters.queueReport(game.asteroids.objs[c]);
 
 	 	//update ship, center main camera on ship
 		//game.updateShip(game.ship,dt);
@@ -334,7 +336,32 @@ var gameFunctions = {
 	},
 
 	processReportQueue:function(game){
-		console.log(game.reportQueue.count);
+		var map = {};
+		map.position = [game.tileArray.min[0],game.tileArray.min[1]];
+		map.size = [game.tileArray.max[0]-game.tileArray.min[0], game.tileArray.max[1]-game.tileArray.min[1]];
+		var precision = 30000;
+		var taSize = mapFunctions.posTo1dIndex([map.position[0]+map.size[0],map.position[1]+map.size[1]],map, precision);
+		for(var c = 0;c<=taSize;c++)
+		{
+			//console.log('adding tile '+c);
+			if(c>=game.tileArray.count)
+				game.tileArray.push({
+					asteroids: new SuperArray(),
+					objs: new SuperArray(),
+					prjs: new SuperArray(),
+					hitscans: new SuperArray(),
+					radials: new SuperArray()
+				});
+			game.tileArray.get(c)['asteroids'].clear();
+			game.tileArray.get(c)['objs'].clear();
+			game.tileArray.get(c)['prjs'].clear();
+			game.tileArray.get(c)['hitscans'].clear();
+			game.tileArray.get(c)['radials'].clear();
+		}
+		for(var c = 0;c<game.reportQueue.count;c++){
+			var item = game.reportQueue.get(c);
+			game.tileArray.get(mapFunctions.posTo1dIndex([item.x,item.y],map, precision))[item.type+'s'].push(item);
+		}
 		game.reportQueue.clear();
 		game.tileArray.min = [Number.MAX_VALUE, Number.MAX_VALUE];
 		game.tileArray.max = [-Number.MAX_VALUE, -Number.MAX_VALUE];

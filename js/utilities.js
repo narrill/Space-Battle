@@ -657,14 +657,20 @@ var mapFunctions = {
 		return [(worldPos[0]- map.position[0])/gridPrecision, (worldPos[1]- map.position[1])/gridPrecision];
 	},
 	gridToWorldSpace:function(gridPos, map, gridPrecision){
-		return [(gridPos[0]*gridPrecision)+map.position]
+		return [(gridPos[0]*gridPrecision)+map.position[0],(gridPos[1]*gridPrecision)+map.position[1]];
 	},
 	/*worldPosTo1DGridIndex:function(worldPos, map, gridPrecision){
 		var gridPos = [(worldPos[0]- map.position[0])/gridPrecision, (worldPos[1]- map.position[1])/gridPrecision];
 		return Math.floor(gridPos[1]) * map.size
 	},*/
-	PosTo1DIndex:function(){
-		
+	posTo1dIndex:function(pos, map, gridPrecision){
+		var gridSpace = mapFunctions.worldToGridSpace(pos,map, gridPrecision);
+		var twod = [Math.floor(gridSpace[0]),Math.floor(gridSpace[1])];
+		return (twod[1]*Math.ceil(map.size[0]/gridPrecision)) + twod[0];
+	},
+	posTo2dIndex:function(pos){
+		var gridSpace = mapFunctions.worldToGridSpace(pos,map, gridPrecision);
+		return [Math.floor(gridSpace[0]),Math.floor(gridSpace[1])];
 	}
 };
 
