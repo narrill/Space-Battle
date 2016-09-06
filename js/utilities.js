@@ -653,24 +653,40 @@ function shallowObjectMerge(target, src){
 }
 
 var mapFunctions = {
-	worldToGridSpace:function(worldPos, map, gridPrecision){
-		return [(worldPos[0]- map.position[0])/gridPrecision, (worldPos[1]- map.position[1])/gridPrecision];
+	worldToGridSpace:function(worldPos, map){
+		return [(worldPos[0]- map.position[0])/map.precision, (worldPos[1]- map.position[1])/map.precision];
 	},
-	gridToWorldSpace:function(gridPos, map, gridPrecision){
-		return [(gridPos[0]*gridPrecision)+map.position[0],(gridPos[1]*gridPrecision)+map.position[1]];
+	gridToWorldSpace:function(gridPos, map){
+		return [(gridPos[0]*map.precision)+map.position[0],(gridPos[1]*map.precision)+map.position[1]];
 	},
 	/*worldPosTo1DGridIndex:function(worldPos, map, gridPrecision){
 		var gridPos = [(worldPos[0]- map.position[0])/gridPrecision, (worldPos[1]- map.position[1])/gridPrecision];
 		return Math.floor(gridPos[1]) * map.size
 	},*/
-	posTo1dIndex:function(pos, map, gridPrecision){
-		var gridSpace = mapFunctions.worldToGridSpace(pos,map, gridPrecision);
+	posTo1dIndex:function(pos, map){
+		var gridSpace = mapFunctions.worldToGridSpace(pos,map, map.precision);
 		var twod = [Math.floor(gridSpace[0]),Math.floor(gridSpace[1])];
-		return (twod[1]*Math.ceil(map.size[0]/gridPrecision)) + twod[0];
+		return (twod[1]*Math.ceil(map.size[0]/map.precision)) + twod[0];
 	},
 	posTo2dIndex:function(pos){
-		var gridSpace = mapFunctions.worldToGridSpace(pos,map, gridPrecision);
+		var gridSpace = mapFunctions.worldToGridSpace(pos,map, map.precision);
 		return [Math.floor(gridSpace[0]),Math.floor(gridSpace[1])];
+	},
+	minMaxToInfo:function(min, max, map, container){
+		var minIndex = mapFunctions.posTo2dIndex(min, map, map.precision);
+		var maxIndex = mapFunctions.posTo2dIndex(max, map, map.precision);
+		if(container)
+		{
+			container.len = maxIndex[0]-minIndex[0];
+			container.offset = Math.ceil(map.size[0]/map.precision);
+			container.repetitions = maxIndex[1]-minIndex[1] + 1;
+		}
+		else
+			return {
+				len : maxIndex[0]-minIndex[0],
+				offset : Math.ceil(map.size[0]/map.precision),
+				count : maxIndex[1]-minIndex[1] + 1
+			};
 	}
 };
 

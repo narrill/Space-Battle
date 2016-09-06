@@ -339,8 +339,8 @@ var gameFunctions = {
 		var map = {};
 		map.position = [game.tileArray.min[0],game.tileArray.min[1]];
 		map.size = [game.tileArray.max[0]-game.tileArray.min[0], game.tileArray.max[1]-game.tileArray.min[1]];
-		var precision = 30000;
-		var taSize = mapFunctions.posTo1dIndex([map.position[0]+map.size[0],map.position[1]+map.size[1]],map, precision);
+		map.precision = 30000;
+		var taSize = mapFunctions.posTo1dIndex([map.position[0]+map.size[0],map.position[1]+map.size[1]],map);
 		for(var c = 0;c<=taSize;c++)
 		{
 			//console.log('adding tile '+c);
@@ -360,11 +360,18 @@ var gameFunctions = {
 		}
 		for(var c = 0;c<game.reportQueue.count;c++){
 			var item = game.reportQueue.get(c);
-			game.tileArray.get(mapFunctions.posTo1dIndex([item.x,item.y],map, precision))[item.type+'s'].push(item);
+			game.tileArray.get(mapFunctions.posTo1dIndex([item.x,item.y],map))[item.type+'s'].push(item);
 		}
+		game.tileArray.map = map;
 		game.reportQueue.clear();
 		game.tileArray.min = [Number.MAX_VALUE, Number.MAX_VALUE];
 		game.tileArray.max = [-Number.MAX_VALUE, -Number.MAX_VALUE];
+	},
+
+	fetchFromTileArray:function(game, pos, radius){
+		var min = [pos[0]-radius, pos[1]-radius];
+		var max = [pos[0]+radius, pos[1]+radius];
+		//var info = mapFunctions.minMaxToInfo(min, max, game.tileArray.map);
 	},
 
 	//resets the game state
