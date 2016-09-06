@@ -177,6 +177,19 @@ var gameFunctions = {
 						//console.log(damage+' damage, '+magnitude+' magnitude');
 					}
 				}
+				var projectiles = gameFunctions.fetchFromTileArray(game, [currentObj.x,currentObj.y],currentObj.destructible.radius,{prjs:[]});
+				for(var c = 0;projectiles.prjs.length;c++)
+				{
+					var prj = projectiles.prjs[c];
+					var prjNext = [prj.x+prj.velocityX*dt, prj.y+prj.velocityY*dt];
+					var prjCapsule = {center1:[prj.x,prj.y], center2:prjNext, radius:prj.destructible.radius};
+					if(currentObj == prj.owner)
+							continue;
+					if(capsuleCapsuleSAT({center1:[currentObj.x,currentObj.y], center2:currentObjNext, radius:currentObj.destructible.radius}, prjCapsule))
+					{
+						prj.collisionFunction(prj, currentObj, dt);
+					}
+				}
 			}
 		//hitscan collisions
 			game.hitscans.forEach(function(hitscan){
@@ -251,7 +264,7 @@ var gameFunctions = {
 			},game);
 
 		//projectile collisions
-			for(var n = 0; n<game.projectiles.length; n++){
+			/*for(var n = 0; n<game.projectiles.length; n++){
 				var prj = game.projectiles[n];
 				var prjNext = [prj.x+prj.velocityX*dt, prj.y+prj.velocityY*dt];
 				var prjCapsule = {center1:[prj.x,prj.y], center2:prjNext, radius:prj.destructible.radius};
@@ -279,14 +292,10 @@ var gameFunctions = {
 						var distanceSqr = Math.abs((prj.x - gameObj.x)*(prj.x - gameObj.x) + (prj.y - gameObj.y)*(prj.y - gameObj.y));
 						if(distanceSqr<=(prj.destructible.radius+gameObj.destructible.radius)*(prj.destructible.radius+gameObj.destructible.radius))
 						{
-							/*var magnitude = Math.sqrt(prj.velocityX * prj.velocityX + prj.velocityY * prj.velocityY);
-							var damage = magnitude * prj.destructible.maxHp * prj.destructible.radius/gameObj.destructible.radius;
-							prj.destructible.hp-=damage;
-							gameObj.destructible.hp-=damage;*/
 							prj.collisionFunction(prj, gameObj, dt);
 						}
 					}
-			}
+			}*/
 
 		//asteroid collisions
 			for(var c = 0;c<game.otherShips.length;c++){
@@ -400,8 +409,8 @@ var gameFunctions = {
 				if(theTile)
 				{
 					for(var key in objectList)
-						for(var c = 0;c<theTile.[key].count;c++)
-							objectList.asteroids.push(theTile.[key].get(c));
+						for(var c = 0;c<theTile[key].count;c++)
+							objectList.asteroids.push(theTile[key].get(c));
 				}
 			}
 		return objectList;
