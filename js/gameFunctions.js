@@ -28,10 +28,10 @@ var gameFunctions = {
 				if(hue>=360)
 					hue-=360;
 			}
-			for(var c = 0;c<game.maxOtherShips-1;c++)
+			for(var c = 0;c<game.maxOtherShips;c++)
 			{
 				//var newShip = deepObjectMerge({},(Math.round(Math.random())) ? ships.gull : ships.cheetah);
-				var newShip = deepObjectMerge({}, ships.gull);
+				var newShip = deepObjectMerge({}, (Math.random()>=.5)?ships.gull:ships.cheetah);
 				newShip.ai = {
 					aiFunction:'basic',
 					followMin:2500,
@@ -54,10 +54,13 @@ var gameFunctions = {
 	//the main this function - called once per frame
 	loop:function(){
 		//this.animationID = requestAnimationFrame(gameFunctions.frame.bind(this));
-		this.frameTimeout = setTimeout(gameFunctions.loop.bind(this),this.timeStep*1000);
+		this.frameTimeout = setTimeout(gameFunctions.loop.bind(this),this.timeStep*500);
 		var dt = utilities.calculateDeltaTime(this);
 		if(dt>this.timeStep*4)
+		{
+			console.log('server throttle');
 			dt = this.timeStep;
+		}
 		this.accumulator+=dt;
 		while(this.accumulator>=this.timeStep){
 			gameFunctions.update(this,this.timeStep);
@@ -119,14 +122,16 @@ var gameFunctions = {
 			updaters.updateRadial(game.radials[i], dt);
 			updaters.queueReport(game.radials[i]);
 		}
-		for(var i = 0;i<game.hitscans.length;i++)
-		{
-			updaters.queueReport(game.hitscans[i]);
-		}
 		//updaters.updateUpdatable(game.ship,dt);
 		game.otherShips.forEach(function(ship){
 			updaters.updateUpdatable(ship,dt);
 		},game);	
+
+
+		for(var i = 0;i<game.hitscans.length;i++)
+		{
+			updaters.queueReport(game.hitscans[i]);
+		}
 
 		gameFunctions.processReportQueue(game);		
 
@@ -178,11 +183,12 @@ var gameFunctions = {
 					}
 				}
 				var projectiles = gameFunctions.fetchFromTileArray(game, [currentObj.x,currentObj.y],currentObj.destructible.radius,{prjs:[]});
-				for(var c = 0;projectiles.prjs.length;c++)
+				var prj, prjNext = [], prjCapsule;
+				for(var c = 0;c<projectiles.prjs.length;c++)
 				{
-					var prj = projectiles.prjs[c];
-					var prjNext = [prj.x+prj.velocityX*dt, prj.y+prj.velocityY*dt];
-					var prjCapsule = {center1:[prj.x,prj.y], center2:prjNext, radius:prj.destructible.radius};
+					prj = projectiles.prjs[c];
+					prjNext[0]=prj.x+prj.velocityX*dt, prjNext[1] = prj.y+prj.velocityY*dt;
+					prjCapsule = {center1:[prj.x,prj.y], center2:prjNext, radius:prj.destructible.radius};
 					if(currentObj == prj.owner)
 							continue;
 					if(capsuleCapsuleSAT({center1:[currentObj.x,currentObj.y], center2:currentObjNext, radius:currentObj.destructible.radius}, prjCapsule))
@@ -349,7 +355,7 @@ var gameFunctions = {
 		var map = {};
 		map.position = [game.tileArray.min[0],game.tileArray.min[1]];
 		map.size = [game.tileArray.max[0]-game.tileArray.min[0], game.tileArray.max[1]-game.tileArray.min[1]];
-		map.precision = 300000;
+		map.precision = 30000;
 		var taSize = mapFunctions.posTo1dIndex([map.position[0]+map.size[0],map.position[1]+map.size[1]],map);
 		function expand(){
 			for(var c = 0;c<=taSize;c++)
@@ -374,22 +380,22 @@ var gameFunctions = {
 		}
 		expand();
 		var info = {};
-		var item, velY, velX, min, max, theTile;
+		var item, velY, velX, min = [], max = [], theTile, rqArray = game.reportQueue.array, mmfo = gameFunctions.getMinMaxFromObject, mmti = mapFunctions.minMaxToInfo, taa = game.tileArray.array, c = 0, row = 0, col = 0, reps, len, counter;
 		function process(){
-			for(var c = 0;c<game.reportQueue.count;c++){
-				item = game.reportQueue.array[c];//game.reportQueue.get(c);
-				velX = (item.velocityX)?item.velocityX:0;
-				velY = (item.velocityY)?item.velocityY:0;
-				min = [item.x-item.destructible.radius-velX,item.y-item.destructible.radius-velY];
-				max = [item.x+item.destructible.radius+velX,item.y+item.destructible.radius+velY];
-				mapFunctions.minMaxToInfo(min, max, map, info);
-				for(var row = 0;row<info.repetitions;row++)
-					for(var col = 0;col<info.len;col++)
+			console.log(game.reportQueue.count);
+			for(c = 0, counter = game.reportQueue.count;c<counter;c++){
+				item = rqArray[c];//game.reportQueue.get(c);
+				mmfo(item,min,max);
+				mmti(min, max, map, info);
+				for(row = 0, reps = info.repetitions; row<reps; row++)
+				{
+					for(col = 0, len = info.len; col<len; col++)
 					{
 						theTile = game.tileArray.array[info.start+col+info.offset*row];
 						if(theTile)
 							theTile[item.type+'s'].push(item);
 					}
+				}
 			}
 		};
 		process();
@@ -419,10 +425,31 @@ var gameFunctions = {
 				{
 					for(var key in objectList)
 						for(var c = 0;c<theTile[key].count;c++)
-							objectList.asteroids.push(theTile[key].get(c));
+							objectList[key].push(theTile[key].get(c));
 				}
 			}
 		return objectList;
+	},
+
+	getMinMaxFromObject:function(object, min, max){
+		if(object.type=='hitscan')
+		{
+			min[0] = (object.startX<object.endX)?object.startX:object.endX, min[1] = (object.startY<object.endY)?object.startY:object.endY;
+			max[0] = (object.startX>object.endX)?object.startX:object.endX, max[1] = (object.startY>object.endY)?object.startY:object.endY;
+		}
+		else if(object.type =='radial')
+		{
+			var vel = Math.abs(object.velocity);
+			min[0] = object.x-object.radius-vel, min[1] = object.y-object.radius-vel;
+			max[0] = object.x+object.radius+vel, max[1] = object.y+object.radius+vel;
+		}
+		else
+		{
+			var velX = (object.velocityX)?Math.abs(object.velocityX):0;
+			var velY = (object.velocityY)?Math.abs(object.velocityY):0;
+			min[0] = object.x-object.destructible.radius-velX, min[1] = object.y-object.destructible.radius-velY;
+			max[0] = object.x+object.destructible.radius+velX, max[1] = object.y+object.destructible.radius+velY;
+		}
 	},
 
 	//resets the game state

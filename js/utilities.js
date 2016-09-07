@@ -684,16 +684,16 @@ var mapFunctions = {
 		var maxIndex = mapFunctions.posTo2dIndex(max, map, map.precision);
 		if(container)
 		{
-			container.len = maxIndex[0]-minIndex[0];
+			container.len = maxIndex[0]-minIndex[0]+1;
 			container.offset = Math.ceil(map.size[0]/map.precision);
 			container.repetitions = maxIndex[1]-minIndex[1] + 1;
 			container.start = (minIndex[1]*Math.ceil(map.size[0]/map.precision)) + minIndex[0];
 		}
 		else
 			return {
-				len : maxIndex[0]-minIndex[0],
+				len : maxIndex[0]-minIndex[0]+1,
 				offset : Math.ceil(map.size[0]/map.precision),
-				count : maxIndex[1]-minIndex[1] + 1,
+				repetitions : maxIndex[1]-minIndex[1] + 1,
 				start: (minIndex[1]*Math.ceil(map.size[0]/map.precision)) + minIndex[0]
 			};
 	}

@@ -113,7 +113,7 @@ window.addEventListener("keyup",function(e){
 });
 
 function requestLock(){
-	console.log('request');
+	//console.log('request');
 	// Ask the browser to lock the pointer
 	canvas.requestPointerLock();
 }

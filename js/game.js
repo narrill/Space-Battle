@@ -136,7 +136,7 @@ server.games = {mainGame:gameFunctions.init({
 	ship:{},
 	otherShips:[],
 	otherShipCount:0,
-	maxOtherShips:2,
+	maxOtherShips:15,
 	factions:4,
 	players:[],
 	respawnQueue:[],
@@ -174,7 +174,7 @@ server.games = {mainGame:gameFunctions.init({
 	minimapCamera:{},
 	grid:{
 		gridLines: 1000, //number of grid lines
-		gridSpacing: 2000, //pixels per grid unit
+		gridSpacing: 1000, //pixels per grid unit
 		gridStart: [-125000,-125000], //corner anchor in world coordinates
 		colors:[
 			{
