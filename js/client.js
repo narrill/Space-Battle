@@ -100,9 +100,9 @@ function update(dt){
 	//camera shenanigans
 	//camera zoom controls
 		if(myKeys.keydown[myKeys.KEYBOARD.KEY_UP] && cameras.camera.zoom<=cameras.camera.maxZoom)
-			cameras.camera.zoom*=1+(1.05-1)*dt;
+			cameras.camera.zoom*=1+(3-1)*dt;
 		if(myKeys.keydown[myKeys.KEYBOARD.KEY_DOWN] && cameras.camera.zoom>=cameras.camera.minZoom)
-			cameras.camera.zoom*=1+(.95-1)*dt;
+			cameras.camera.zoom*=1+(.33-1)*dt;
 		if(myMouse.wheel)
 			cameras.camera.zoom*=1+(myMouse.wheel/500);
 		if(cameras.camera.zoom>cameras.camera.maxZoom)

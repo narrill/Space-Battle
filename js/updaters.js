@@ -391,8 +391,8 @@ var updaters = {
 				d.stabilized = obj.stabilizer.enabled;
 				var fetchInfo = gameFunctions.fetchFromTileArray(obj.game, [obj.x,obj.y], 200000);
 				var worldInfo = {objs:[],asteroids:{objs:[],colors:[]},radials:[],prjs:[],hitscans:[]};
-				for(var c = 0;c<fetchInfo.objs.length;c++){
-					var o = fetchInfo.objs[c];
+				for(var c = 0;c<fetchInfo.obj.length;c++){
+					var o = fetchInfo.obj[c];
 					var mine = o == obj;
 					var wi = {
 						id:o.id,
@@ -423,8 +423,8 @@ var updaters = {
 				}
 				for(var c = 0;c<obj.game.asteroids.colors.length;c++)
 					worldInfo.asteroids.colors.push(obj.game.asteroids.colors[c]);
-				for(var c = 0;c<fetchInfo.asteroids.length;c++){
-					var a = fetchInfo.asteroids[c];
+				for(var c = 0;c<fetchInfo.asteroid.length;c++){
+					var a = fetchInfo.asteroid[c];
 					worldInfo.asteroids.objs.push({
 						x:a.x,
 						y:a.y,
@@ -432,8 +432,8 @@ var updaters = {
 						radius:a.destructible.radius
 					});
 				}
-				for(var c = 0;c<fetchInfo.prjs.length;c++){
-					var p = fetchInfo.prjs[c];
+				for(var c = 0;c<fetchInfo.prj.length;c++){
+					var p = fetchInfo.prj[c];
 					if(!p.visible)
 						continue;
 					worldInfo.prjs.push({
@@ -446,8 +446,8 @@ var updaters = {
 						radius:p.destructible.radius
 					});
 				}
-				for(var c = 0;c<fetchInfo.hitscans.length;c++){
-					var h = fetchInfo.hitscans[c];
+				for(var c = 0;c<fetchInfo.hitscan.length;c++){
+					var h = fetchInfo.hitscan[c];
 					worldInfo.hitscans.push({
 						id:h.id,
 						startX:h.startX,
@@ -459,8 +459,8 @@ var updaters = {
 						efficiency:h.efficiency
 					});
 				}
-				for(var c = 0;c<fetchInfo.radials.length;c++){
-					var r = fetchInfo.radials[c];
+				for(var c = 0;c<fetchInfo.radial.length;c++){
+					var r = fetchInfo.radial[c];
 					worldInfo.radials.push({
 						id:r.id,
 						x:r.x,

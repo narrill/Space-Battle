@@ -133,7 +133,7 @@ var gameFunctions = {
 			updaters.queueReport(game.hitscans[i]);
 		}
 
-		gameFunctions.processReportQueue(game);		
+		gameFunctions.processReportQueue(game, dt);		
 
 		gameFunctions.checkCollisions(game, dt);
 
@@ -182,11 +182,11 @@ var gameFunctions = {
 						//console.log(damage+' damage, '+magnitude+' magnitude');
 					}
 				}
-				var projectiles = gameFunctions.fetchFromTileArray(game, [currentObj.x,currentObj.y],currentObj.destructible.radius,{prjs:[]});
+				var projectiles = gameFunctions.fetchFromTileArray(game, [currentObj.x,currentObj.y],currentObj.destructible.radius,{prj:[]});
 				var prj, prjNext = [], prjCapsule;
-				for(var c = 0;c<projectiles.prjs.length;c++)
+				for(var c = 0;c<projectiles.prj.length;c++)
 				{
-					prj = projectiles.prjs[c];
+					prj = projectiles.prj[c];
 					prjNext[0]=prj.x+prj.velocityX*dt, prjNext[1] = prj.y+prj.velocityY*dt;
 					prjCapsule = {center1:[prj.x,prj.y], center2:prjNext, radius:prj.destructible.radius};
 					if(currentObj == prj.owner)
@@ -351,54 +351,69 @@ var gameFunctions = {
 		game.functionQueue.push(f);
 	},
 
-	processReportQueue:function(game){
+	processReportQueue:function(game, dt){
 		var map = {};
 		map.position = [game.tileArray.min[0],game.tileArray.min[1]];
 		map.size = [game.tileArray.max[0]-game.tileArray.min[0], game.tileArray.max[1]-game.tileArray.min[1]];
-		map.precision = 30000;
+		map.precision = 120000;
 		var taSize = mapFunctions.posTo1dIndex([map.position[0]+map.size[0],map.position[1]+map.size[1]],map);
-		function expand(){
-			for(var c = 0;c<=taSize;c++)
-			{
-				//console.log('adding tile '+c);
-				if(c>=game.tileArray.count)
-					game.tileArray.push({
-						asteroids: new SuperArray(),
-						objs: new SuperArray(),
-						prjs: new SuperArray(),
-						hitscans: new SuperArray(),
-						radials: new SuperArray()
-					});
-				else{
-					game.tileArray.get(c)['asteroids'].clear();
-					game.tileArray.get(c)['objs'].clear();
-					game.tileArray.get(c)['prjs'].clear();
-					game.tileArray.get(c)['hitscans'].clear();
-					game.tileArray.get(c)['radials'].clear();
-				}
+		for(var c = 0;c<=taSize;c++)
+		{
+			//console.log('adding tile '+c);
+			if(c>=game.tileArray.count)
+				game.tileArray.push({
+					asteroid: new SuperArray(),
+					obj: new SuperArray(),
+					prj: new SuperArray(),
+					hitscan: new SuperArray(),
+					radial: new SuperArray()
+				});
+			else{
+				game.tileArray.get(c)['asteroid'].clear();
+				game.tileArray.get(c)['obj'].clear();
+				game.tileArray.get(c)['prj'].clear();
+				game.tileArray.get(c)['hitscan'].clear();
+				game.tileArray.get(c)['radial'].clear();
 			}
 		}
-		expand();
 		var info = {};
-		var item, velY, velX, min = [], max = [], theTile, rqArray = game.reportQueue.array, mmfo = gameFunctions.getMinMaxFromObject, mmti = mapFunctions.minMaxToInfo, taa = game.tileArray.array, c = 0, row = 0, col = 0, reps, len, counter;
-		function process(){
-			console.log(game.reportQueue.count);
-			for(c = 0, counter = game.reportQueue.count;c<counter;c++){
-				item = rqArray[c];//game.reportQueue.get(c);
-				mmfo(item,min,max);
-				mmti(min, max, map, info);
-				for(row = 0, reps = info.repetitions; row<reps; row++)
-				{
-					for(col = 0, len = info.len; col<len; col++)
-					{
-						theTile = game.tileArray.array[info.start+col+info.offset*row];
-						if(theTile)
-							theTile[item.type+'s'].push(item);
-					}
-				}
+		var item, currentIndex, tiles = [], velY, velX, min = [], max = [], rqArray = game.reportQueue.array, mmfo = gameFunctions.getMinMaxFromObject, taa = game.tileArray.array, p21d = mapFunctions.posTo1dIndex;
+		console.log(game.reportQueue.count+', '+taSize);
+		for(var c = 0, counter = game.reportQueue.count;c<counter;c++){
+			item = rqArray[c];//game.reportQueue.get(c);
+			mmfo(item,min,max);
+			tiles = [];
+			if(item.x && item.y)
+			{
+				currentIndex = p21d([(item.x) ? item.x : item.startX,(item.y) ? item.y : item.startY],map);
+				tiles[0] = currentIndex;
+				taa[currentIndex][item.type].push(item);
 			}
-		};
-		process();
+			currentIndex = p21d([min[0],min[1]],map);
+			if(currentIndex<=taSize && currentIndex>=0 && !tiles.includes(currentIndex))
+			{
+				tiles[1] = currentIndex;
+				taa[currentIndex][item.type].push(item);
+			}
+			currentIndex = p21d([min[0],max[1]],map);
+			if(currentIndex<=taSize && currentIndex>=0 && !tiles.includes(currentIndex))
+			{
+				tiles[2] = currentIndex;
+				taa[currentIndex][item.type].push(item);
+			}
+			currentIndex = p21d([max[0],min[1]],map);
+			if(currentIndex<=taSize && currentIndex>=0 && !tiles.includes(currentIndex))
+			{
+				tiles[3] = currentIndex;
+				taa[currentIndex][item.type].push(item);
+			}
+			currentIndex = p21d([max[0],max[1]],map);
+			if(currentIndex<=taSize && currentIndex>=0 && !tiles.includes(currentIndex))
+			{
+				tiles[4] = currentIndex;
+				taa[currentIndex][item.type].push(item);
+			}
+		}
 		game.tileArray.map = map;
 		game.reportQueue.clear();
 		game.tileArray.min = [Number.MAX_VALUE, Number.MAX_VALUE];
@@ -411,11 +426,11 @@ var gameFunctions = {
 		var info = mapFunctions.minMaxToInfo(min, max, game.tileArray.map);
 		if(!objectList)
 			objectList = {
-				asteroids:[],
-				objs:[],
-				prjs:[],
-				hitscans:[],
-				radials:[]
+				asteroid:[],
+				obj:[],
+				prj:[],
+				hitscan:[],
+				radial:[]
 			};
 		for(var row = 0;row<info.repetitions;row++)
 			for(var col = 0;col<info.len;col++)
@@ -431,7 +446,7 @@ var gameFunctions = {
 		return objectList;
 	},
 
-	getMinMaxFromObject:function(object, min, max){
+	getMinMaxFromObject:function(object, min, max, dt){
 		if(object.type=='hitscan')
 		{
 			min[0] = (object.startX<object.endX)?object.startX:object.endX, min[1] = (object.startY<object.endY)?object.startY:object.endY;
@@ -439,14 +454,14 @@ var gameFunctions = {
 		}
 		else if(object.type =='radial')
 		{
-			var vel = Math.abs(object.velocity);
+			var vel = Math.abs(object.velocity)*dt;
 			min[0] = object.x-object.radius-vel, min[1] = object.y-object.radius-vel;
 			max[0] = object.x+object.radius+vel, max[1] = object.y+object.radius+vel;
 		}
 		else
 		{
-			var velX = (object.velocityX)?Math.abs(object.velocityX):0;
-			var velY = (object.velocityY)?Math.abs(object.velocityY):0;
+			var velX = (object.velocityX)?Math.abs(object.velocityX)*dt:0;
+			var velY = (object.velocityY)?Math.abs(object.velocityY)*dt:0;
 			min[0] = object.x-object.destructible.radius-velX, min[1] = object.y-object.destructible.radius-velY;
 			max[0] = object.x+object.destructible.radius+velX, max[1] = object.y+object.destructible.radius+velY;
 		}
