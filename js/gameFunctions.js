@@ -378,7 +378,7 @@ var gameFunctions = {
 		}
 		var info = {};
 		var item, currentIndex, tiles = [], velY, velX, min = [], max = [], rqArray = game.reportQueue.array, mmfo = gameFunctions.getMinMaxFromObject, taa = game.tileArray.array, p21d = mapFunctions.posTo1dIndex;
-		console.log(game.reportQueue.count+', '+taSize);
+		//console.log(game.reportQueue.count+', '+taSize);
 		for(var c = 0, counter = game.reportQueue.count;c<counter;c++){
 			item = rqArray[c];//game.reportQueue.get(c);
 			mmfo(item,min,max);

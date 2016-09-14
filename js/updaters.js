@@ -370,11 +370,12 @@ var updaters = {
 		var sinceLastSend = obj.game.elapsedGameTime - obj.remoteInput.lastSend;
 		if(obj.remoteInput.remoteSend && sinceLastSend>=obj.remoteInput.sendInterval)
 		{
+			obj.remoteInput.lastSend = obj.game.elapsedGameTime;
 			gameFunctions.queueFunction(obj.game, function(){
-				if(sinceLastSend>=2*obj.remoteInput.sendInterval)
+				/*if(sinceLastSend>=2*obj.remoteInput.sendInterval)
 					obj.remoteInput.lastSend = obj.game.elapsedGameTime;
 				else
-					obj.remoteInput.lastSend += obj.remoteInput.sendInterval;
+					obj.remoteInput.lastSend += obj.remoteInput.sendInterval;*/
 				var d = {};
 				if(!obj.remoteInput.sentInterval)
 				{

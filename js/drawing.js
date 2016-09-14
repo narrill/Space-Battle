@@ -59,6 +59,12 @@ var drawing = {
 			drawing.drawHitscans(worldInfo.hitscans, cameras.camera);
 			for(var c = worldInfo.objs.length-1;c>=0;c--){
 				var ship = worldInfo.objs[c];
+				if(!worldInfo.targets[ship.id])
+				{
+					removeIndexFromWiCollection(c,worldInfo.objs);
+					c--;
+					continue;
+				}
 				if(worldInfo.drawing[ship.id])
 					drawing.drawShip(ship,cameras.camera);
 			}

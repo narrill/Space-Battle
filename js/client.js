@@ -115,6 +115,16 @@ function update(dt){
 		//game.clearCamera(cameras.minimapCamera);
 		//console.log(myMouse.direction);
 		socket.send({md:(myMouse.direction*myMouse.sensitivity)/dt});
+		/*if(myMouse[myMouse.BUTTONS.LEFT] != null)
+		{
+			socket.send({mb:myMouse.BUTTONS.LEFT,pos:myMouse[myMouse.BUTTONS.LEFT]});
+			myMouse[myMouse.BUTTONS.LEFT] = undefined;
+		}
+		if(myMouse[myMouse.BUTTONS.RIGHT] != null)
+		{
+			socket.send({mb:myMouse.BUTTONS.RIGHT,pos:myMouse[myMouse.BUTTONS.RIGHT]});
+			myMouse[myMouse.BUTTONS.RIGHT] = undefined;
+		}*/
 		resetMouse();
 	}
 }
@@ -232,7 +242,11 @@ function interpolateWiValue(obj, val){
 	var now = Date.now().valueOf();
 	//console.log(updateInterval);
 	var perc = (now - lastWorldUpdate)/wiInterval;
-	obj[val] = lerp(worldInfo.previousTargets[obj.id][val], worldInfo.targets[obj.id][val], clamp(0,perc,1));
+	var prevObj = worldInfo.previousTargets[obj.id];
+	var currentObj = worldInfo.targets[obj.id];
+	if(!currentObj)
+		var c = 0;
+	obj[val] = lerp(prevObj[val], currentObj[val], clamp(0,perc,1));
 	return obj[val];
 }
 

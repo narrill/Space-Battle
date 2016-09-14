@@ -19,6 +19,7 @@ function pointerInit(c){
 		canvas.webkitRequestPointerLock;
 	//canvas.onclick = requestLock;
 	//canvas.onmousedown = 
+	canvas.onselectstart = function(){ return false; };
 }
 
 var myKeys = {};
@@ -122,17 +123,25 @@ function mouseDown(e){
 	//console.log(e.button);
 	//myMouse.mousedown[e.button] = true;
 	//socket.send({mouseLeft})
-	socket.send({mb:e.button,pos:1});
+	//socket.send({mb:e.button,pos:1});
+	myMouse[e.button] = true;
+	e.preventDefault();
+	e.stopPropagation();
 }
 
 function mouseUp(e){
 	//console.log('up');
 	//myMouse.mousedown[e.button] = false;
-	socket.send({mb:e.button,pos:0});
+	//socket.send({mb:e.button,pos:0});
+	myMouse[e.button] = false;
+	e.preventDefault();
+	e.stopPropagation();
 }
 
 function mouseWheel(e){
 	myMouse.wheel += e.wheelDelta;
+	e.preventDefault();
+	e.stopPropagation();
 }
 
 function changeCallback(){
@@ -145,7 +154,10 @@ function changeCallback(){
 		window.addEventListener("mousedown",mouseDown,false);
 		window.addEventListener("mouseup",mouseUp,false);
 		window.addEventListener("mousewheel",mouseWheel,false);
-		document.addEventListener("mousemove", moveCallback, false);
+		canvas.addEventListener("mousemove", moveCallback, false);
+		canvas.addEventListener("drag", function(){
+			var c = 0;
+		}, false);
 		canvas.onclick = undefined;
 		locked = true;
 	} else {
@@ -154,8 +166,11 @@ function changeCallback(){
 		window.removeEventListener("mousedown",mouseDown,false);
 		window.removeEventListener("mouseup",mouseUp,false);
 		window.removeEventListener("mousewheel",mouseWheel,false);
-		canvas.addEventListener("mouseup",requestLock,false);
-		document.removeEventListener("mousemove", moveCallback, false);
+		document.addEventListener("mouseup",requestLock,false);
+		canvas.removeEventListener("mousemove", moveCallback, false);
+		canvas.removeEventListener("drag", function(){
+			var c = 0;
+		}, false);
 		//this.unlockHook(this.canvas);
 		canvas.onclick = function(){
 			// Ask the browser to lock the pointer
@@ -166,13 +181,9 @@ function changeCallback(){
 }
 function moveCallback(e){
 	//console.log('move');
-	var movementX = e.movementX ||
-		e.mozMovementX          ||
-		0;
+	var movementX = e.movementX;
 
-  	var movementY = e.movementY ||
-		e.mozMovementY      ||
-		0;
+  	var movementY = e.movementY;
 	myMouse.direction += movementX;
 }
 function resetMouse(){
