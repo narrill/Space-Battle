@@ -115,7 +115,7 @@ function update(dt){
 		//game.clearCamera(cameras.minimapCamera);
 		//console.log(myMouse.direction);
 		socket.send({md:(myMouse.direction*myMouse.sensitivity)/dt});
-		/*if(myMouse[myMouse.BUTTONS.LEFT] != null)
+		if(myMouse[myMouse.BUTTONS.LEFT] != null)
 		{
 			socket.send({mb:myMouse.BUTTONS.LEFT,pos:myMouse[myMouse.BUTTONS.LEFT]});
 			myMouse[myMouse.BUTTONS.LEFT] = undefined;
@@ -124,7 +124,7 @@ function update(dt){
 		{
 			socket.send({mb:myMouse.BUTTONS.RIGHT,pos:myMouse[myMouse.BUTTONS.RIGHT]});
 			myMouse[myMouse.BUTTONS.RIGHT] = undefined;
-		}*/
+		}
 		resetMouse();
 	}
 }
@@ -154,8 +154,10 @@ function messageHandler(data){
 	if(data.interval) wiInterval = data.interval;
 	if(data.x) 
 	{
+		var veryLastPlayerinfoX = lastPlayerInfo.x;
 		lastPlayerInfo.x = playerInfo.x;
 		playerInfo.x = data.x;
+		console.log((playerInfo.x - lastPlayerInfo.x) - (lastPlayerInfo.x - veryLastPlayerinfoX));
 	}
 	if(data.y) 
 	{

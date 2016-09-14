@@ -43,30 +43,31 @@ var drawing = {
 		{
 			if(grid) drawing.drawGrid(cameras.gridCamera, grid);
 			drawing.drawAsteroidsOverlay(worldInfo.asteroids,cameras.camera,cameras.gridCamera);
-			for(var n = worldInfo.objs.length-1;n>=0;n--){
+			for(var n = 0;n<worldInfo.objs.length;n++){
 				var ship = worldInfo.objs[n];
 				if(!worldInfo.drawing[ship.id])
 					continue;
 				if(!worldInfo.targets[ship.id])
 				{
-					removeIndexFromWiCollection(n,worldInfo.objs);
-					n--;
+					//removeIndexFromWiCollection(n,worldInfo.objs);
+					//n--;
 					continue;
 				}
 				drawing.drawShipOverlay(ship,cameras.camera,cameras.gridCamera);
 			}
 			drawing.drawProjectiles(worldInfo.prjs, cameras.camera, dt);
 			drawing.drawHitscans(worldInfo.hitscans, cameras.camera);
-			for(var c = worldInfo.objs.length-1;c>=0;c--){
+			for(var c = 0; c<worldInfo.objs.length;c++){
 				var ship = worldInfo.objs[c];
+				if(!worldInfo.drawing[ship.id])
+					continue;
 				if(!worldInfo.targets[ship.id])
 				{
 					removeIndexFromWiCollection(c,worldInfo.objs);
 					c--;
 					continue;
 				}
-				if(worldInfo.drawing[ship.id])
-					drawing.drawShip(ship,cameras.camera);
+				drawing.drawShip(ship,cameras.camera);
 			}
 			drawing.drawRadials(worldInfo.radials, cameras.camera, dt);
 			drawing.drawAsteroids(worldInfo.asteroids,cameras.camera, cameras.gridCamera);
@@ -167,7 +168,9 @@ var drawing = {
 	//draws the projected overlay (shields, health, laser range) for the given ship using the two given cameras (one for the gameplay plane and one for the projected plane)
 	drawShipOverlay:function(ship,camera,gridCamera){
 		var ctx = camera.ctx;
-		
+		interpolateWiValue(ship,'x');
+		interpolateWiValue(ship,'y');
+		interpolateWiValue(ship,'rotation');
 		var shipPosInCameraSpace = worldPointToCameraSpace(ship.x,ship.y,camera); //get ship's position in camera space
 		var shipPosInGridCameraSpace = worldPointToCameraSpace(ship.x,ship.y,gridCamera);
 		ctx.save();

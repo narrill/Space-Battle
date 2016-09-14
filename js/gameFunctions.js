@@ -353,8 +353,8 @@ var gameFunctions = {
 
 	processReportQueue:function(game, dt){
 		var map = {};
-		map.position = [game.tileArray.min[0],game.tileArray.min[1]];
-		map.size = [game.tileArray.max[0]-game.tileArray.min[0], game.tileArray.max[1]-game.tileArray.min[1]];
+		map.position = [game.tileArray.min[0]-2,game.tileArray.min[1]-2];
+		map.size = [game.tileArray.max[0]-game.tileArray.min[0]+4, game.tileArray.max[1]-game.tileArray.min[1]+4];
 		map.precision = 120000;
 		var taSize = mapFunctions.posTo1dIndex([map.position[0]+map.size[0],map.position[1]+map.size[1]],map);
 		for(var c = 0;c<=taSize;c++)
