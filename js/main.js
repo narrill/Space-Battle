@@ -39,7 +39,7 @@ app.main = {
 	ship:{},
 	otherShips:[],
 	otherShipCount:0,
-	maxOtherShips:8,
+	maxOtherShips:5,
 	factions:4,
 	respawnQueue:[],
 	factionColors:[],

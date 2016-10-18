@@ -219,7 +219,7 @@ var updaters = {
 		}
 	},
 
-	updateShieldComponent:function(obj,dt){
+	updateDestructibleComponent:function(obj,dt){
 		//refresh shields
 			if(obj.destructible.shield.current<obj.destructible.shield.max)
 			{
@@ -408,7 +408,7 @@ var collisions = {
 	},
 	basicLaserCollision:function(laser, obj, tValOfObj, dt){
 		collisions.dealDamage(obj, laser.power*dt*(1-tValOfObj));
-		obj.destructible.shield.current-=laser.power*dt*(1-tValOfObj);
+		//obj.destructible.shield.current-=laser.power*dt*(1-tValOfObj);
 		//console.log('damage: '+laser.power*dt*(1-tValOfObj));
 		/*if(obj.destructible.shield.current<0)
 		{

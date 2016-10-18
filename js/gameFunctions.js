@@ -448,7 +448,7 @@ var gameFunctions = {
 	resetGame:function(game){
 		clearFunctions.clearProjectiles(game.projectiles);
 		game.ship = {};
-		game.ship = constructors.createShip(ships.gull,game);
+		game.ship = constructors.createShip(ships.cheetah,game);
 		constructors.makeAsteroids.bind(game,game.asteroids,game.grid)();
 		game.otherShips = [];
 		game.otherShipCount = 1;
